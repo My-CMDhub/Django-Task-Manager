@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+
+{% block title %}Test Email Domain{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h4>Email Domain Validation Test</h4>
+                </div>
+                <div class="card-body">
+                    <div id="results" class="mb-3"></div>
+
+                    <form id="testForm">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label for="email" class="form-label">Email Address</label>
+                            <input type="email" class="form-control" id="email" name="email" required>
+                        </div>
+                        <button type="button" id="testButton" class="btn btn-primary">Test Domain</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('testButton').addEventListener('click', function() {
+    var email = document.getElementById('email').value;
+    var resultsDiv = document.getElementById('results');
+    
+    if (!email) {
+        resultsDiv.innerHTML = '<div class="alert alert-warning">Please enter an email address</div>';
+        return;
+    }
+    
+    // Extract domain from email
+    var domain = email.split('@')[1];
+    
+    // Send AJAX request to test the domain
+    fetch('/auth/api/test-domain/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        },
+        body: JSON.stringify({ email: email })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.valid) {
+            resultsDiv.innerHTML = '<div class="alert alert-success">' + 
+                '<strong>Valid:</strong> ' + domain + ' is allowed.</div>';
+        } else {
+            resultsDiv.innerHTML = '<div class="alert alert-danger">' + 
+                '<strong>Invalid:</strong> ' + data.message + '</div>';
+        }
+    })
+    .catch(error => {
+        resultsDiv.innerHTML = '<div class="alert alert-danger">Error: ' + error.message + '</div>';
+    });
+});
+</script>
+{% endblock %} 

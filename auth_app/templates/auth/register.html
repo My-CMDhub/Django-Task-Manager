@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+
+{% block title %}Register{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0">Create Account</h4>
+                </div>
+                <div class="card-body">
+                    {% if messages %}
+                    <div class="mb-3">
+                        {% for message in messages %}
+                        <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show" role="alert">
+                            {{ message|safe }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                    
+                    <form method="post" action="{% url 'register' %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+                        
+                        <div class="mb-3">
+                            <label for="username" class="form-label">Username</label>
+                            <input type="text" class="form-control" id="username" name="username" required minlength="3" value="{% if username %}{{ username }}{% endif %}">
+                            <small class="form-text text-muted">Use only letters, numbers, and underscores</small>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="email" class="form-label">Email</label>
+                            <input type="email" class="form-control" id="email" name="email" required value="{% if email %}{{ email }}{% endif %}">
+                            <small class="form-text text-muted">We'll send a verification link to this email</small>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="password1" class="form-label">Password</label>
+                            <input type="password" class="form-control" id="password1" name="password1" required minlength="8">
+                            <div class="form-text">Minimum 8 characters with numbers and symbols</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="password2" class="form-label">Confirm Password</label>
+                            <input type="password" class="form-control" id="password2" name="password2" required>
+                        </div>
+                        
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" class="form-check-input" id="accept_terms" name="accept_terms" required>
+                            <label class="form-check-label" for="accept_terms">
+                                I agree to the <a href="#" data-bs-toggle="modal" data-bs-target="#termsModal">Terms of Service</a>
+                            </label>
+                        </div>
+                        
+                        {% if show_force_clean or email %}
+                        <div class="card bg-light mb-3">
+                            <div class="card-body">
+                                <h5 class="card-title text-danger">Having trouble registering?</h5>
+                                <div class="form-check mt-2">
+                                    <input type="checkbox" id="force_clean" name="force_clean" value="true" class="form-check-input">
+                                    <label for="force_clean" class="form-check-label">
+                                        <strong>Force Reset Account</strong>
+                                    </label>
+                                    <p class="mt-1 mb-1 small">This option will completely erase any existing accounts with this email from both Django and Supabase systems.</p>
+                                    <p class="small"><strong>When to use:</strong></p>
+                                    <ul class="small">
+                                        <li>You get "email already registered" errors</li>
+                                        <li>You've tried to reset your password but aren't receiving emails</li>
+                                        <li>You've deleted your account from Supabase directly</li>
+                                        <li>You're stuck in an authentication loop</li>
+                                    </ul>
+                                </div>
+                                
+                                {% if show_direct %}
+                                <div class="form-check mt-3">
+                                    <input type="checkbox" id="direct_registration" name="direct_registration" value="true" class="form-check-input">
+                                    <label for="direct_registration" class="form-check-label">
+                                        <strong>Direct Registration Mode</strong> - Last resort option when all else fails.
+                                    </label>
+                                    <small class="text-muted d-block mt-1">This bypasses existence checks completely and attempts to create your account directly. Note that you may still need to verify your email.</small>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endif %}
+                        
+                        <button type="submit" class="btn btn-primary w-100">Register</button>
+                    </form>
+                    
+                    <div class="mt-3 text-center">
+                        Already have an account? <a href="{% url 'login' %}">Login</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Terms Modal -->
+<div class="modal fade" id="termsModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Terms of Service</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>By registering an account, you agree to use the service responsibly and in accordance with applicable laws and regulations. We respect your privacy and will protect your personal information according to our Privacy Policy.</p>
+                <p>Your account information will be shared between our Django application and Supabase authentication services to ensure a seamless experience.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Help prevent CSRF issues by refreshing the page once it loads
+document.addEventListener('DOMContentLoaded', function() {
+    // If coming from another page, refresh the CSRF token
+    if (document.referrer && document.referrer !== window.location.href) {
+        // Don't refresh immediately to allow seeing flash messages
+        setTimeout(function() {
+            // But only refresh if the page still has the user's attention
+            if (document.visibilityState === 'visible') {
+                // Reload the page but only if not from a form submission
+                if (!document.referrer.includes('register')) {
+                    window.location.reload();
+                }
+            }
+        }, 5000);
+    }
+});
+</script>
+{% endblock %}

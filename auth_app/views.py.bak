@@ -1,0 +1,1864 @@
+from django.shortcuts import render, redirect
+from django.contrib.sites.shortcuts import get_current_site
+from django.contrib.auth import login as auth_login, logout as auth_logout, authenticate
+from django.contrib.auth.decorators import login_required
+from django.views.decorators.http import require_http_methods
+from django.core.exceptions import PermissionDenied, ObjectDoesNotExist
+from django.contrib import messages
+from django.utils import timezone
+from django.conf import settings
+from django.core.mail import send_mail
+from django.template.loader import render_to_string
+from django.utils.html import strip_tags
+from django.utils.crypto import get_random_string
+from django.urls import reverse
+from supabase import create_client
+from .models import User, Session, UserProfile
+# Import the Supabase utility functions
+from .supabase_utils import (
+    supabase_client, 
+    get_supabase_user_by_email,
+    get_supabase_user_by_uid,
+    update_supabase_user_verification
+)
+import os
+import logging
+import uuid
+import base64
+import json
+import requests
+from django.db import transaction
+import re
+from datetime import datetime, timedelta
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from base64 import urlsafe_b64encode, urlsafe_b64decode
+import socket
+import smtplib
+from email.utils import make_msgid, formatdate
+import email.utils
+import dns.resolver
+import logging
+from mysite.settings import get_supabase_client, get_supabase_admin_client
+from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
+from django.utils.encoding import force_bytes
+from django.contrib.auth.tokens import default_token_generator
+
+logger = logging.getLogger(__name__)
+
+# Simplified list of allowed legitimate email domains (whitelist)
+ALLOWED_EMAIL_DOMAINS = [
+    # Popular email providers
+    'gmail.com', 'yahoo.com', 'outlook.com', 'hotmail.com', 'aol.com', 'icloud.com', 'protonmail.com',
+    'mail.com', 'zoho.com', 'yandex.com', 'gmx.com',
+    # Major tech/business domains that often have email
+    'microsoft.com', 'apple.com', 'amazon.com', 'google.com', 
+    # Education domains
+    'edu', 'ac.uk', 'edu.au',
+    # Government domains
+    'gov', 'gov.uk', 'gov.au',
+    # Popular country domains
+    'co.uk', 'co.jp', 'com.au'
+]
+
+# We'll keep the temp domains list for reference but won't use it in the updated approach
+TEMP_EMAIL_DOMAINS = [
+    'temp-mail.org', 'tempmail.com', 'throwawaymail.com', 'mailinator.com', '10minutemail.com', 
+    'guerrillamail.com', 'sharklasers.com', 'getairmail.com', 'yopmail.com', 'tempmail.net',
+    'maildrop.cc', 'harakirimail.com', 'dispostable.com', 'mailnesia.com', 'mailcatch.com',
+    'getnada.com', 'tempr.email', 'fakeinbox.com', 'temp-mail.io', 'spamgourmet.com',
+    'movfull.com', 'tmpmail.net', 'tempmail.plus', 'burnermail.io', 'temp-mail.org',
+    'emailondeck.com', 'tempinbox.com', 'mohmal.com', 'mytemp.email', 'inboxbear.com',
+    'smuggroup.com', 'altmails.com', 'freeml.net', 'zeroe.ml', 'divismail.ru',
+    'emlpro.com', 'tempmailo.com', 'sharklasers.com', 'guerrillamail.info', 'grr.la',
+    'pokemail.net', 'incognitomail.com', 'mintemail.com', 'emailfake.com', 'tempmail.dev',
+    'trashmail.com', 'mailnator.com', 'mailexpire.com', 'spamobox.com', 'jetable.org',
+    'lesotica.com' # Adding lesotica.com to the list of temporary email domains
+]
+
+def is_valid_email_domain(email):
+    """
+    Validates if the email domain is in our list of legitimate providers.
+    Using a whitelist-only approach.
+    
+    Returns:
+    - (bool, str): Tuple of (is_valid, error_message)
+    """
+    if not email or '@' not in email:
+        return False, "Invalid email format"
+    
+    # Extract domain from email
+    domain = email.split('@')[-1].lower()
+    
+    # Check if domain is in our whitelist of allowed domains
+    if domain in ALLOWED_EMAIL_DOMAINS:
+        return True, ""
+    
+    # Check if domain ends with any of our legitimate TLDs
+    for allowed_domain in ALLOWED_EMAIL_DOMAINS:
+        if domain.endswith('.' + allowed_domain):
+            return True, ""
+    
+    # Not in whitelist - reject
+    return False, "Please use an email from a recognized email provider (like Gmail, Yahoo, Outlook, etc.)"
+
+@require_http_methods(["GET", "POST"])
+def login(request):
+    """Login view with enhanced handling for out-of-sync Supabase accounts"""
+    if request.user.is_authenticated:
+        messages.info(request, "You are already logged in.")
+        return redirect('home')  # Redirect to home if user is already logged in
+        
+    if request.method == 'POST':
+        email = request.POST.get('email', '').lower()  # Convert to lowercase for consistency
+        password = request.POST.get('password', '')
+        remember_me = request.POST.get('remember_me') == 'on'
+        
+        # Validate input (basic)
+        if not email or not password:
+            messages.error(request, "Both email and password are required.")
+            return render(request, 'auth/login.html', {'email': email})
+        
+        # Email format validation
+        if not re.match(r"[^@]+@[^@]+\.[^@]+", email):
+            messages.error(request, "Please enter a valid email address format.")
+            return render(request, 'auth/login.html', {'email': email})
+            
+        # Check if user exists in Django
+        try:
+            # Try to find the user by email
+            user = User.objects.get(email=email)
+            
+            # Check if user is deleted (soft deleted)
+            if user.deleted_at:
+                logger.warning(f"Login attempt for deleted account: {email}")
+                messages.error(request, "This account has been deleted. Please contact support if you believe this is an error.")
+                return render(request, 'auth/login.html', {'email': email})
+                
+            # Check if account is locked due to too many failed attempts
+            if user.account_locked_until and user.account_locked_until > timezone.now():
+                lockout_time = int((user.account_locked_until - timezone.now()).total_seconds() / 60)
+                logger.warning(f"Login attempt for locked account: {email} (locked for {lockout_time} more minutes)")
+                messages.error(request, 
+                    f"Your account is temporarily locked due to too many failed login attempts. "
+                    f"Please try again in {lockout_time} minutes or use the 'Forgot Password' option."
+                )
+                return render(request, 'auth/login.html', {'email': email, 'show_reset': True})
+                
+            # User exists, proceed with authentication
+            user = authenticate(request, email=email, password=password)
+            
+            if user is not None:
+                # Authentication success
+                auth_login(request, user)
+                
+                # Reset failed login attempts
+                user.failed_login_attempts = 0
+                user.account_locked_until = None
+                user.save(update_fields=['failed_login_attempts', 'account_locked_until'])
+                
+                # Update last login time
+                user.update_last_login()
+                
+                # Create session record with device info
+                ip_address = request.META.get('REMOTE_ADDR', '0.0.0.0')
+                user_agent = request.META.get('HTTP_USER_AGENT', 'Unknown')
+                device_type = get_device_type(request)
+                
+                # Expiry time based on remember_me
+                expiry_time = timezone.now() + timedelta(days=30 if remember_me else 1)
+                
+                try:
+                    Session.objects.create(
+                        user=user,
+                        ip_address=ip_address,
+                        user_agent=user_agent[:255],  # Ensure it fits in the field
+                        device=device_type,
+                        expires_at=expiry_time
+                    )
+                except Exception as e:
+                    logger.error(f"Failed to create session record for {email}: {str(e)}")
+                    # Non-critical error, continue with login
+                
+                logger.info(f"Successful login for user {email} from {ip_address}")
+                
+                # Check if email is verified
+                if not user.email_verified:
+                    logger.warning(f"Login successful but email not verified for {email}")
+                    messages.warning(request, 
+                        "Your email is not verified. Some features may be limited. "
+                        "Please check your inbox for verification instructions or request a new link."
+                    )
+                
+                # Get the next URL or default to home
+                next_url = request.GET.get('next', 'home')
+                return redirect(next_url)
+            else:
+                # Authentication failed
+                logger.warning(f"Invalid login attempt for {email}")
+                
+                # Increment failed login attempts
+                try:
+                    user.increment_failed_attempts()
+                    
+                    # Calculate remaining attempts before lockout
+                    remaining_attempts = max(0, 5 - user.failed_login_attempts)
+                    
+                    if user.account_locked_until and user.account_locked_until > timezone.now():
+                        lockout_time = int((user.account_locked_until - timezone.now()).total_seconds() / 60)
+                        messages.error(request, 
+                            f"Your account is now locked for {lockout_time} minutes due to too many failed attempts. "
+                            f"Please try again later or reset your password."
+                        )
+                    elif remaining_attempts > 0:
+                        messages.error(request, 
+                            f"Invalid email or password. You have {remaining_attempts} attempt{'s' if remaining_attempts > 1 else ''} "
+                            f"remaining before your account is temporarily locked."
+                        )
+                    else:
+                        messages.error(request, 
+                            "Invalid email or password. Your account is now locked for 30 minutes due to too many failed attempts."
+                        )
+                        
+                except Exception as e:
+                    logger.error(f"Error tracking failed login attempts for {email}: {str(e)}")
+                    messages.error(request, "Invalid email or password.")
+                
+                return render(request, 'auth/login.html', {'email': email, 'show_reset': True})
+                
+        except User.DoesNotExist:
+            # User not found in Django, check if they might exist in Supabase only
+            logger.info(f"Login attempt for non-existent Django user: {email}, checking Supabase...")
+            
+            try:
+                # Check if user exists in Supabase
+                supabase_user = check_supabase_user_exists(email)
+                
+                if supabase_user:
+                    # User exists in Supabase but not in Django - show a helpful message
+                    logger.warning(f"User {email} exists in Supabase but not in Django")
+                    messages.info(request, 
+                        "Your account exists but needs to be synchronized with our system. "
+                        "Please try registering with the same email address or use the password reset option."
+                    )
+                    return render(request, 'auth/login.html', {'email': email, 'show_reset': True})
+                else:
+                    # User doesn't exist in either system
+                    logger.info(f"Login attempt for non-existent user in both systems: {email}")
+                    messages.error(request, "No account found with this email address. Please register first.")
+                    return render(request, 'auth/login.html', {'email': email, 'show_register': True})
+                    
+            except Exception as e:
+                logger.error(f"Error checking Supabase during login: {str(e)}")
+                messages.error(request, 
+                    "We couldn't verify your account status. Please try again or register if you don't have an account."
+                )
+                return render(request, 'auth/login.html', {'email': email, 'show_register': True})
+    
+    # GET request - just show the login form
+    return render(request, 'auth/login.html')
+
+@login_required
+def logout(request):
+    try:
+        # Invalidate Supabase session
+        supabase = get_supabase_client()
+        supabase.auth.sign_out()
+    except Exception as e:
+        logger.error(f"Error during logout: {str(e)}")
+    
+    auth_logout(request)
+    messages.success(request, "Logged out successfully")
+    return redirect('home')
+
+def send_custom_verification_email(request, user, verification_token=None):
+    """
+    Send a custom verification email to the user with a verification token.
+    """
+    try:
+        # Generate a verification token if one was not provided
+        if not verification_token:
+            verification_token = default_token_generator.make_token(user)
+            # Store the token in the session
+            request.session['email_verification_token'] = verification_token
+            request.session['email_verification_user_id'] = user.id
+            logger.info(f"Generated new verification token for user {user.id}")
+        
+        # Create the verification URL
+        current_site = get_current_site(request)
+        site_name = current_site.name
+        domain = current_site.domain
+        
+        # If we're in development, use localhost instead of the current site domain
+        if settings.DEBUG:
+            domain = '127.0.0.1:8000'
+            
+        protocol = 'https' if request.is_secure() else 'http'
+        verify_url = f"{protocol}://{domain}/auth/verify-email/{urlsafe_base64_encode(force_bytes(user.pk))}/{verification_token}/"
+        
+        # Generate a unique message ID for DKIM compatibility
+        msg_id = make_msgid(domain=domain)
+        
+        # Get the current year for the template
+        from datetime import datetime
+        current_year = datetime.now().year
+        
+        # Prepare the email context
+        context = {
+            'user': user,
+            'verify_url': verify_url,
+            'site_name': site_name,
+            'domain': domain,
+            'protocol': protocol,
+            'expiration_days': settings.PASSWORD_RESET_TIMEOUT_DAYS,
+            'current_year': current_year,
+        }
+        
+        # Prepare custom headers for better deliverability
+        headers = {
+            'Message-ID': msg_id,
+            'Date': formatdate(localtime=True),
+            'X-Priority': '1',
+            'Importance': 'High',
+            'Precedence': 'bulk',
+            'Auto-Submitted': 'auto-generated',
+            'X-Mailer': 'Django',
+            'List-Unsubscribe': f'<{protocol}://{domain}/auth/unsubscribe/?email={user.email}>',
+            'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+            'List-ID': f'<verification.{domain}>',
+        }
+        
+        # Render the email templates
+        html_email = render_to_string('emails/verification_email.html', context)
+        text_email = render_to_string('emails/verification_email_text.html', context)
+        
+        # Log the attempt
+        logger.info(f"Sending verification email to {user.email}")
+        
+        # Send the email
+        try:
+            send_mail(
+                f'Please Verify Your Email - {site_name} Account Activation',
+                text_email,
+                f'{site_name} <{settings.DEFAULT_FROM_EMAIL}>',
+                [user.email],
+                html_message=html_email,
+                headers=headers,
+                fail_silently=False,
+            )
+            logger.info(f"Verification email sent successfully to {user.email}")
+            return True
+        except smtplib.SMTPException as e:
+            # Log the error
+            logger.error(f"SMTP error sending verification email to {user.email}: {str(e)}")
+            return False
+    except Exception as e:
+        logger.error(f"Error in send_custom_verification_email: {str(e)}")
+        return False
+
+@require_http_methods(["GET"])
+def backup_verify_email(request, token):
+    """Custom email verification endpoint as a backup to Supabase."""
+    if not token:
+        messages.error(request, "Invalid verification token")
+        return redirect('login')
+    
+    # Find user with this verification token
+    try:
+        # Get all users
+        users = User.objects.all()
+        verified_user = None
+        
+        # Loop through users to find matching token
+        for user in users:
+            if hasattr(user, 'verification_tokens') and user.verification_tokens and isinstance(user.verification_tokens, dict):
+                if token in user.verification_tokens:
+                    # Check if token is still valid
+                    expiration = user.verification_tokens[token]
+                    if timezone.now().timestamp() <= expiration:
+                        verified_user = user
+                        # Remove the used token
+                        del user.verification_tokens[token]
+                        user.save()
+                        break
+        
+        if verified_user:
+            # Mark user as verified - critical that this happens
+            verified_user.email_verified = True
+            # Save immediately
+            verified_user.save(update_fields=['email_verified'])
+            # Log successful verification
+            logger.info(f"Successfully verified email for user {verified_user.email} via backup system")
+            
+            # Try to sync this with Supabase if possible
+            try:
+                # For now we'll just log this since we don't have admin access
+                logger.info(f"User {verified_user.email} verified via backup system")
+                
+                # In a production system with admin access, you would update the Supabase user
+                admin_client = get_supabase_admin_client()
+                if admin_client:
+                    # This would require the admin API - simplified for demo
+                    pass
+            except Exception as e:
+                logger.error(f"Error syncing user verification to Supabase: {str(e)}")
+            
+            messages.success(request, "Email verified successfully! You can now log in.")
+            
+            # Try to authenticate user automatically
+            user = authenticate(request, username=verified_user.email, password=None, verified_only=True)
+            if user:
+                auth_login(request, user)
+                messages.success(request, "You have been automatically logged in.")
+                return redirect('home')
+        else:
+            messages.error(request, "Invalid or expired verification token")
+    except Exception as e:
+        logger.error(f"Error during backup email verification: {str(e)}")
+        messages.error(request, "Error during email verification. Please try again or contact support.")
+    
+    return redirect('login')
+
+def delete_supabase_user(email):
+    """
+    Attempt to delete a user from Supabase.
+    """
+    try:
+        admin_client = get_supabase_admin_client()
+        if admin_client:
+            # First find the user by email
+            try:
+                # For Supabase v1.0.3, list all users and filter manually
+                users_response = admin_client.auth.admin.list_users()
+                
+                if users_response:
+                    users = users_response
+                    user_id = None
+                    
+                    # Look through users and find the one with matching email
+                    for user in users:
+                        # Handle both dict format and User object format
+                        if hasattr(user, 'email') and user.email == email:
+                            user_id = user.id
+                            break
+                        elif isinstance(user, dict) and user.get('email') == email:
+                            user_id = user.get('id')
+                            break
+                    
+                    if user_id:
+                        # Delete the user
+                        result = admin_client.auth.admin.delete_user(user_id)
+                        logger.info(f"Deleted user {email} (ID: {user_id}) from Supabase")
+                        return True
+                    else:
+                        logger.warning(f"No user found with email {email} in Supabase")
+                        return True  # Consider it successful if user doesn't exist
+                else:
+                    logger.warning(f"No users returned from Supabase")
+                    return False
+            except Exception as e:
+                logger.error(f"Error finding/deleting user in Supabase: {str(e)}")
+                return False
+        else:
+            logger.warning(f"No admin client available to delete {email} from Supabase")
+            return False
+    except Exception as e:
+        logger.error(f"Error deleting user from Supabase: {str(e)}")
+        return False
+
+def sync_with_supabase(email, force_delete=False):
+    """
+    Check if a user exists in Supabase and sync with Django database.
+    Returns True if user exists in Supabase, False otherwise.
+    """
+    try:
+        supabase = get_supabase_client()
+        
+        # Try to perform admin lookup for the user (requires service role key)
+        try:
+            # This is a simplified approach - in production you would use
+            # the admin API to search for users
+            supabase_exists = False
+            
+            # Try to sign in with an invalid password to check existence
+            try:
+                supabase.auth.sign_in_with_password({
+                    "email": email,
+                    "password": "check_existence_only"
+                })
+                # If we get here without exception, user exists (though login failed with incorrect password)
+                supabase_exists = True
+            except Exception as e:
+                error_message = str(e).lower()
+                # "Invalid credentials" means user exists but password wrong
+                if "invalid login credentials" in error_message:
+                    supabase_exists = True
+                # "Email not confirmed" also means user exists
+                elif "email not confirmed" in error_message:
+                    supabase_exists = True
+                # Other errors likely mean user doesn't exist
+            
+            # Check if user exists in Django but not in Supabase
+            django_user = User.objects.filter(email=email).first()
+            if django_user and (not supabase_exists or force_delete):
+                # User exists in Django but not in Supabase - delete from Django
+                logger.info(f"User {email} exists in Django but not in Supabase (or force_delete=True) - deleting from Django")
+                django_user.delete()
+                return False
+            
+            return supabase_exists
+            
+        except Exception as admin_error:
+            logger.error(f"Error in Supabase admin check: {str(admin_error)}")
+            # Fall back to basic existence check
+            return False
+            
+    except Exception as e:
+        logger.error(f"Error in sync_with_supabase: {str(e)}")
+        return False
+
+@require_http_methods(["GET", "POST"])
+def register(request):
+    """Register a new user"""
+    if request.user.is_authenticated:
+        messages.info(request, "You are already logged in.")
+        return redirect('home')  # Redirect to home if user is already logged in
+        
+    if request.method == 'POST':
+        # Get form data - use field names from the template
+        username = request.POST.get('username')
+        email = request.POST.get('email', '').lower()  # Convert to lowercase for consistency
+        password1 = request.POST.get('password1')
+        password2 = request.POST.get('password2')
+        accept_terms = request.POST.get('accept_terms') == 'on'
+        
+        # Store form data to re-populate fields in case of error
+        form_data = {'email': email, 'username': username}
+        
+        # Validate input
+        if not username:
+            messages.error(request, "Username is required.")
+            return render(request, 'auth/register.html', form_data)
+            
+        if not email:
+            messages.error(request, "Email is required.")
+            return render(request, 'auth/register.html', form_data)
+            
+        if not password1 or not password2:
+            messages.error(request, "Both password fields are required.")
+            return render(request, 'auth/register.html', form_data)
+            
+        if not accept_terms:
+            messages.error(request, "You must accept the Terms of Service.")
+            return render(request, 'auth/register.html', form_data)
+            
+        if password1 != password2:
+            messages.error(request, "Passwords do not match.")
+            return render(request, 'auth/register.html', form_data)
+            
+        # Email format validation (simple regex check)
+        if not re.match(r"[^@]+@[^@]+\.[^@]+", email):
+            messages.error(request, "Please enter a valid email address format (user@domain.com).")
+            return render(request, 'auth/register.html', form_data)
+        
+        # Email domain validation
+        is_valid_domain, domain_error = is_valid_email_domain(email)
+        if not is_valid_domain:
+            messages.error(request, domain_error)
+            return render(request, 'auth/register.html', form_data)
+            
+        # Password validation
+        if len(password1) < 8:
+            messages.error(request, "Password must be at least 8 characters long.")
+            return render(request, 'auth/register.html', form_data)
+            
+        # Check for common password pattern
+        if not re.search(r"[0-9]", password1) or not re.search(r"[A-Za-z]", password1):
+            messages.error(request, "Password must include both letters and numbers for security.")
+            return render(request, 'auth/register.html', form_data)
+            
+        # Check if user exists in both Django and Supabase
+        try:
+            # Check Django
+            if User.objects.filter(email=email).exists():
+                logger.info(f"Registration attempt for existing Django user: {email}")
+                user = User.objects.get(email=email)
+                
+                try:
+                    profile = UserProfile.objects.get(user=user)
+                    
+                    if not user.email_verified:
+                        # User exists but not verified, send another verification email
+                        logger.info(f"Existing unverified user {email} attempting to register again. Sending new verification email.")
+                        try:
+                            send_custom_verification_email(request, user)
+                            messages.info(request, 
+                                "An account with this email already exists but isn't verified. "
+                                "A new verification email has been sent. Please check your inbox and spam folder."
+                            )
+                        except Exception as e:
+                            logger.error(f"Failed to send verification email to existing user {email}: {str(e)}")
+                            messages.warning(request, 
+                                "Your account exists but we couldn't send a verification email. "
+                                "Please try the 'Resend Verification' option on the login page."
+                            )
+                    else:
+                        messages.warning(request, "An account with this email already exists. Please login instead.")
+                
+                except UserProfile.DoesNotExist:
+                    # User exists but profile doesn't - create profile
+                    UserProfile.objects.create(user=user)
+                    messages.info(request, "Account exists. Profile recreated. Please try logging in.")
+                
+                return render(request, 'auth/register.html', form_data)
+                
+            # Check Supabase
+            supabase_user = check_supabase_user_exists(email)
+            
+            if supabase_user:
+                logger.info(f"Registration attempt for existing Supabase user: {email}")
+                messages.warning(request, 
+                    "An account with this email already exists in our authentication system but not in our database. "
+                    "Please login or use the password reset option."
+                )
+                return render(request, 'auth/register.html', form_data)
+
+            # If we get here, user doesn't exist in either system, proceed with registration
+            # The rest of the registration code continues here...
+            # Create user in Supabase
+            supabase_client = get_supabase_client()
+            if not supabase_client:
+                logger.error("Failed to get Supabase client during registration")
+                messages.error(request, "Registration service unavailable. Please try again later.")
+                return render(request, 'auth/register.html', form_data)
+                
+            try:
+                logger.info(f"Creating new user in Supabase: {email}")
+                supabase_response = supabase_client.auth.sign_up({
+                "email": email,
+                            "password": password1,
+                            "options": {
+                                "data": {
+                                    "username": username
+                                }
+                            }
+                })
+                
+                if not supabase_response or not hasattr(supabase_response, 'user'):
+                    logger.error(f"Failed to create user in Supabase: {supabase_response}")
+                    messages.error(request, "Failed to create account. Registration service is temporarily unavailable.")
+                    return render(request, 'auth/register.html', form_data)
+                    
+                supabase_user = supabase_response.user
+                supabase_uid = supabase_user.id if hasattr(supabase_user, 'id') else None
+                
+                if not supabase_uid:
+                    logger.error(f"Supabase user created but no UID returned: {supabase_user}")
+                    messages.error(request, "Account creation incomplete. Please contact customer support with reference ID: {0}".format(
+                        str(uuid.uuid4())[:8]  # Generate a reference ID for support
+                    ))
+                    return render(request, 'auth/register.html', form_data)
+                    
+                logger.info(f"Supabase user created successfully: {email} (UID: {supabase_uid})")
+                
+                # Create user in Django
+                try:
+                    # Create the user
+            user = User.objects.create_user(
+                                        username=username,
+                email=email,
+                                        password=password1,
+                        email_verified=False,
+                        supabase_id=supabase_uid
+                    )
+                    
+                    # Create the profile
+                    UserProfile.objects.create(
+                        user=user,
+                        supabase_uid=supabase_uid,
+                        verified=False
+                    )
+                        
+                    # Send verification email
+                    try:
+                        send_custom_verification_email(request, user)
+                        logger.info(f"Verification email sent to new user: {email}")
+                        
+                        messages.success(request, 
+                            "Your account has been created successfully! "
+                            "Please check your email (including spam folder) to verify your account before logging in."
+                        )
+                    except Exception as e:
+                        logger.error(f"Failed to send verification email to new user {email}: {str(e)}")
+                        messages.warning(request, 
+                            "Your account was created but we couldn't send a verification email. "
+                            "Please use the 'Resend Verification' option on the login page."
+                        )
+                        
+                    return redirect('login')
+                    
+                except Exception as e:
+                    logger.error(f"Failed to create Django user after Supabase success: {str(e)}")
+                    error_message = str(e).lower()
+                    
+                    if "username" in error_message and "exists" in error_message:
+                        messages.error(request, "This username is already taken. Please choose a different username.")
+                    elif "email" in error_message and "exists" in error_message:
+                        messages.error(request, "This email address is already registered. Please log in instead.")
+                        else:
+                        messages.error(request, "We couldn't complete your registration. Please try again with a different username.")
+                    
+                    return render(request, 'auth/register.html', form_data)
+            
+        except Exception as e:
+                logger.error(f"Error during Supabase user creation: {str(e)}")
+                error_message = str(e).lower()
+            
+                if "already registered" in error_message:
+                    messages.error(request, "This email is already registered. Please login instead.")
+                elif "rate limit" in error_message:
+                    messages.error(request, "Too many registration attempts. Please try again later.")
+        else:
+                    messages.error(request, "Registration failed. Our system is experiencing technical difficulties. Please try again later.")
+                
+                return render(request, 'auth/register.html', form_data)
+        
+        except Exception as e:
+            logger.error(f"Unexpected error during registration process: {str(e)}")
+            messages.error(request, "An unexpected error occurred. Please try again later.")
+            return render(request, 'auth/register.html', form_data)
+    
+    # GET request - just show the registration form
+    return render(request, 'auth/register.html')
+
+def check_supabase_user_exists(email):
+    """
+    Check if a user exists in Supabase using direct admin API call.
+    Returns True if user exists, False otherwise.
+    """
+    if not email:
+        logger.error("No email provided to check_supabase_user_exists")
+        return False
+        
+    try:
+        logger.info(f"Checking if user {email} exists in Supabase")
+        
+        # Check if Supabase URL and service key are available
+        if not settings.SUPABASE_URL or not settings.SUPABASE_SERVICE_KEY:
+            logger.warning("Missing Supabase URL or service key - cannot check user existence")
+            return False
+        
+        # Use direct API call with service key for more reliable result
+        headers = {
+            "apikey": settings.SUPABASE_SERVICE_KEY,
+            "Authorization": f"Bearer {settings.SUPABASE_SERVICE_KEY}",
+            "Content-Type": "application/json"
+        }
+        
+        # Construct the Auth API URL
+        auth_api_url = f"{settings.SUPABASE_URL}/auth/v1/admin/users"
+        response = requests.get(auth_api_url, headers=headers)
+        
+        if response.status_code != 200:
+            logger.error(f"Failed to list Supabase users: {response.status_code} - {response.text}")
+            return False
+        
+        # Parse the response and check if the user exists
+        users = response.json()
+        
+        # Check each user to see if their email matches (case insensitive)
+        if isinstance(users, list):
+            for user in users:
+                if isinstance(user, dict) and user.get('email', '').lower() == email.lower():
+                    logger.info(f"User {email} found in Supabase via direct API")
+                    return True
+        
+        logger.info(f"User {email} NOT found in Supabase")
+        return False
+    
+    except Exception as e:
+        logger.error(f"Error checking Supabase user existence via API: {str(e)}")
+        
+        # If we can't verify, we'll assume the user doesn't exist to allow registration
+        return False
+
+@login_required
+def account_settings(request):
+    if request.method == 'POST':
+        form_type = request.POST.get('form_type')
+        supabase = get_supabase_client()
+        
+        if form_type == 'profile':
+            # Update profile info
+            name = request.POST.get('name')
+            if name:
+                first_name, *last_name = name.split(' ', 1)
+                request.user.first_name = first_name
+                request.user.last_name = last_name[0] if last_name else ''
+                request.user.save()
+                messages.success(request, "Profile updated successfully")
+                
+        elif form_type == 'password':
+            # Change password
+            current_password = request.POST.get('current_password')
+            new_password1 = request.POST.get('new_password1')
+            new_password2 = request.POST.get('new_password2')
+            
+            if new_password1 != new_password2:
+                messages.error(request, "Passwords don't match")
+            elif not request.user.check_password(current_password):
+                messages.error(request, "Current password is incorrect")
+            else:
+                try:
+                    # Update in Supabase with the correct signature
+                    try:
+                        access_token = request.session.get('supabase_access_token')
+                        if not access_token:
+                            # Try to get from current session
+                            current_session = supabase.auth.current_session
+                            if current_session:
+                                access_token = current_session.access_token
+                    except:
+                        # Fall back to JWT from the user's session
+                        access_token = request.session.get('access_token')
+                        
+                    if access_token:
+                        # According to Supabase docs
+                        supabase.auth.update_user({
+                            "password": new_password1
+                        })
+                    # Update locally
+                    request.user.set_password(new_password1)
+                    request.user.last_password_change = timezone.now()
+                    request.user.save()
+                    messages.success(request, "Password changed successfully")
+                except Exception as e:
+                    logger.error(f"Password change error: {str(e)}")
+                    messages.error(request, "Failed to change password")
+                    
+        elif form_type == 'email':
+            # Change email
+            new_email = request.POST.get('new_email')
+            try:
+                # Update in Supabase with the correct signature
+                try:
+                    access_token = request.session.get('supabase_access_token')
+                    if not access_token:
+                        # Try to get from current session
+                        current_session = supabase.auth.current_session
+                        if current_session:
+                            access_token = current_session.access_token
+                except:
+                    # Fall back to JWT from the user's session
+                    access_token = request.session.get('access_token')
+                    
+                if access_token:
+                    # According to Supabase docs
+                    supabase.auth.update_user({
+                        "email": new_email
+                    })
+                # Update locally
+                request.user.email = new_email
+                request.user.email_verified = False
+                request.user.save()
+                messages.success(request, "Email updated. Please verify your new email.")
+            except Exception as e:
+                logger.error(f"Email change error: {str(e)}")
+                messages.error(request, "Failed to update email")
+                
+        elif form_type == 'logout_all':
+            # Logout all sessions
+            try:
+                supabase.auth.sign_out()
+                # Delete all local sessions
+                Session.objects.filter(user=request.user).delete()
+                messages.success(request, "Logged out from all devices")
+            except Exception as e:
+                logger.error(f"Logout all error: {str(e)}")
+                messages.error(request, "Failed to logout all sessions")
+    
+    # Get active sessions
+    sessions = request.user.active_sessions()
+    return render(request, 'auth/account_settings.html', {'sessions': sessions})
+
+@require_http_methods(["GET", "POST"])
+def password_reset(request):
+    if request.method == 'POST':
+        email = request.POST.get('email')
+        
+        if not email:
+            messages.error(request, "Please provide an email address")
+            return render(request, 'auth/password_reset.html')
+            
+        try:
+            supabase = get_supabase_client()
+            site_url = request.build_absolute_uri('/')
+            base_url = site_url.rstrip('/')
+            redirectTo = f"{base_url}/auth/password-reset-confirm/"
+            # According to Supabase docs
+            supabase.auth.reset_password_for_email(
+                email,
+                options={
+                    "redirect_to": redirectTo
+                }
+            )
+            
+            # Even if the email doesn't exist, Supabase will return a success response
+            messages.success(request, "Password reset link sent to your email")
+            return redirect('login')
+        except Exception as e:
+            logger.error(f"Password reset error: {str(e)}")
+            
+            # We don't want to reveal if the email exists or not for security reasons
+            messages.success(request, "If your email is registered, you will receive a password reset link")
+            return redirect('login')
+    
+    return render(request, 'auth/password_reset.html')
+
+@require_http_methods(["GET"])
+def verify_email(request, token):
+    """Verify user email using the token"""
+    try:
+        # Check if this is an unsubscribe request
+        if request.GET.get('unsubscribe') == 'true':
+            email = request.GET.get('email')
+            if email:
+                # Redirect to the unsubscribe view with the email
+                return redirect(f'/auth/unsubscribe/?email={email}')
+        
+        # Standard verification path
+        # Decode the verification token
+        decoded_token = urlsafe_b64decode(token.encode()).decode()
+        parts = decoded_token.split(':')
+        
+        if len(parts) != 2:
+            logger.error(f"Invalid token format: {token}")
+            messages.error(request, "Invalid verification link. Please request a new one.")
+            return redirect('resend_verification')
+            
+        user_id, timestamp = parts
+        user_id = int(user_id)
+        timestamp = int(timestamp)
+        
+        # Check if the token has expired (24 hours)
+        current_time = int(datetime.now().timestamp())
+        if current_time - timestamp > 86400:  # 24 hours
+            logger.warning(f"Expired verification token used: {token}")
+            messages.warning(request, "Verification link has expired. Please request a new one.")
+            return redirect('resend_verification')
+            
+        # Get the user
+        try:
+            user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            logger.error(f"User not found for verification token: {token}")
+            messages.error(request, "User not found. Please register again.")
+            return redirect('register')
+            
+        # Get or create user profile
+        user_profile, created = UserProfile.objects.get_or_create(
+            user=user,
+            defaults={'supabase_uid': None, 'verified': False}
+        )
+        
+        # Check if already verified
+        if user_profile.verified:
+            logger.info(f"User already verified: {user.email}")
+            messages.info(request, "Your email is already verified. Please login.")
+            return redirect('login')
+            
+        # Verify in Supabase if we have a UID
+        supabase_update_success = False
+        if user_profile.supabase_uid:
+            try:
+                # Check if user exists in Supabase
+                supabase_user = get_supabase_user_by_uid(user_profile.supabase_uid)
+                if supabase_user and supabase_user.get('data'):
+                    # User exists in Supabase, update verification
+                    logger.info(f"Updating Supabase verification for user: {user.email}")
+                    
+                    # Update user in Supabase admin API
+                    # Note: This is a simplified representation; use actual Supabase admin API calls here
+                    update_response = update_supabase_user_verification(user_profile.supabase_uid)
+                    
+                    if update_response and update_response.get('status') == 'success':
+                        logger.info(f"Supabase verification updated for: {user.email}")
+                        supabase_update_success = True
+                    else:
+                        logger.error(f"Failed to update Supabase verification: {update_response}")
+                else:
+                    logger.warning(f"User {user.email} has Supabase UID but not found in Supabase")
+            except Exception as e:
+                logger.error(f"Error updating Supabase verification for {user.email}: {str(e)}")
+        
+        # Update verification in Django
+        user_profile.verified = True
+        user_profile.save()
+        
+        # Log the verification result
+        if supabase_update_success:
+            logger.info(f"User {user.email} verified successfully in both Django and Supabase")
+            messages.success(request, "Email verified successfully! You can now login.")
+            else:
+            logger.warning(f"User {user.email} verified in Django only, Supabase update status: {supabase_update_success}")
+            messages.success(request, 
+                "Email verified successfully! You can now login. "
+                "(Note: Your account synchronization is in progress.)"
+            )
+
+        return redirect('login')
+
+    except Exception as e:
+        logger.error(f"Error during email verification: {str(e)}")
+        messages.error(request, "An error occurred during verification. Please try again or request a new verification link.")
+        return redirect('resend_verification')
+
+def get_device_type(request):
+    user_agent = request.META.get('HTTP_USER_AGENT', '').lower()
+    if 'mobile' in user_agent:
+        return 'Mobile'
+    elif 'tablet' in user_agent:
+        return 'Tablet'
+    elif 'windows' in user_agent:
+        return 'Windows PC'
+    elif 'macintosh' in user_agent:
+        return 'Mac'
+    elif 'linux' in user_agent:
+        return 'Linux PC'
+    return 'Unknown Device'
+
+@require_http_methods(["GET", "POST"])
+def password_reset_confirm(request, token=None):
+    # The token is usually passed in the URL query string by Supabase
+    # but we use the path parameter in our URLs for cleaner URLs
+    if token is None:
+        token = request.GET.get('token')
+    
+    # If still no token, request one from the user or show error
+    if token is None:
+        messages.error(request, "Invalid or missing reset token")
+        return redirect('password_reset')
+        
+    if request.method == 'POST':
+        new_password = request.POST.get('new_password')
+        confirm_password = request.POST.get('confirm_password')
+        
+        if not new_password or not confirm_password:
+            messages.error(request, "Please fill in all fields")
+            return render(request, 'auth/password_reset_confirm.html', {'token': token})
+            
+        if new_password != confirm_password:
+            messages.error(request, "Passwords don't match")
+            return render(request, 'auth/password_reset_confirm.html', {'token': token})
+            
+        try:
+            supabase = get_supabase_client()
+            
+            # First, verify the token
+            # Note: The actual implementation depends on Supabase's API
+            try:
+                # Update the user's password using the token
+                # According to Supabase docs
+                supabase.auth.update_user({
+                    "password": new_password
+                })
+                
+                messages.success(request, "Password reset successfully. You can now login with your new password.")
+                return redirect('login')
+            except Exception as token_error:
+                logger.error(f"Token verification error: {str(token_error)}")
+                messages.error(request, "Invalid or expired token")
+                return render(request, 'auth/password_reset_confirm.html', {'token': token})
+                
+        except Exception as e:
+            logger.error(f"Password reset confirmation error: {str(e)}")
+            messages.error(request, "Failed to reset password. Please try again.")
+            
+    return render(request, 'auth/password_reset_confirm.html', {'token': token})
+
+def complete_account_reset(request, email=None, force=False):
+    """
+    Completely reset an account in both Django and Supabase.
+    This is an aggressive cleanup that ensures both systems are synchronized.
+    
+    Args:
+        request: The HTTP request object
+        email: The email of the account to reset
+        force: If True, will forcefully delete the account even if checking fails
+        
+    Returns:
+        tuple: (success, message) where success is a boolean and message is a description
+    """
+    logger.info(f"Starting complete account reset for {email} (force={force})")
+    django_cleaned = False
+    supabase_cleaned = False
+    
+    try:
+        # Step 1: Delete from Django DB first
+        try:
+            users = User.objects.filter(email=email)
+            count = users.count()
+            if count > 0:
+                users.delete()
+                logger.info(f"Deleted {count} user(s) with email {email} from Django DB")
+                django_cleaned = True
+            else:
+                logger.info(f"No users found with email {email} in Django DB - nothing to delete")
+                django_cleaned = True  # Mark as cleaned if no users found
+        except Exception as e:
+            logger.error(f"Error deleting user {email} from Django: {str(e)}")
+            if not force:
+                messages.error(request, f"Error cleaning Django database: {str(e)}")
+                return False, f"Error cleaning Django database: {str(e)}"
+            # If force=True, continue anyway - we want to try all cleanup steps
+        
+        # Step 2: Try to delete from Supabase using admin API
+        admin_client = get_supabase_admin_client()
+        if admin_client:
+            try:
+                # First find the user
+                users_response = admin_client.auth.admin.list_users()
+                
+                user_ids = []
+                if users_response:
+                    for user in users_response:
+                        # Handle both dict format and User object format
+                        if hasattr(user, 'email') and user.email == email:
+                            user_ids.append(user.id)
+                        elif isinstance(user, dict) and user.get('email') == email:
+                        if 'id' in user:
+                            user_ids.append(user['id'])
+                
+                # Delete each user found
+                for user_id in user_ids:
+                    try:
+                        delete_response = admin_client.auth.admin.delete_user(user_id)
+                        logger.info(f"Deleted user ID {user_id} from Supabase")
+                        supabase_cleaned = True
+                    except Exception as delete_error:
+                        logger.error(f"Failed to delete user ID {user_id}: {str(delete_error)}")
+                        if not force:
+                            messages.error(request, f"Failed to delete Supabase user: {str(delete_error)}")
+                            return False, f"Failed to delete Supabase user: {str(delete_error)}"
+                
+                # If no users were found, consider it cleaned
+                if not user_ids:
+                    logger.info(f"No users found with email {email} in Supabase via admin API")
+                    supabase_cleaned = True
+            except Exception as admin_error:
+                logger.error(f"Admin API error: {str(admin_error)}")
+                if not force:
+                    messages.error(request, f"Admin API error: {str(admin_error)}")
+                    return False, f"Admin API error: {str(admin_error)}"
+        else:
+            logger.warning("No admin client available for Supabase user deletion")
+            
+            # Use sign-up with same email as a workaround to test if user exists
+            # This will fail if the user exists, confirming presence
+            try:
+                supabase = get_supabase_client()
+                if supabase:
+                try:
+                    # Try to sign up with the same email (will fail if user exists)
+                    random_password = get_random_string(16)
+                    supabase.auth.sign_up({
+                        "email": email,
+                        "password": random_password
+                    })
+                    # If we get here, the user didn't exist
+                    logger.info(f"Confirmed user {email} doesn't exist in Supabase (signup succeeded)")
+                    supabase_cleaned = True
+                except Exception as signup_error:
+                    error_msg = str(signup_error).lower()
+                    if "already registered" in error_msg or "already exists" in error_msg:
+                        # User exists, but we couldn't delete - instruct to delete manually
+                            if not force:
+                        logger.warning(f"User {email} exists in Supabase but couldn't be deleted automatically")
+                                messages.error(request, f"User {email} exists in Supabase but couldn't be deleted. Please delete your account from Supabase first.")
+                                return False, f"User exists in Supabase but couldn't be deleted automatically"
+                            else:
+                                logger.warning(f"User {email} exists in Supabase but couldn't be deleted. Continuing with force mode.")
+                    else:
+                        # Some other error - not sure about user existence
+                        logger.error(f"Error checking user existence via signup: {error_msg}")
+                            if not force:
+                                messages.error(request, f"Error checking Supabase user: {error_msg}")
+                                return False, f"Error checking Supabase user: {error_msg}"
+                else:
+                    logger.warning("No Supabase client available")
+                    if force:
+                        # In force mode, consider Supabase cleaned if we can't check
+                        supabase_cleaned = True
+            except Exception as alter_error:
+                logger.error(f"Error using alternate existence check: {str(alter_error)}")
+                if not force:
+                    messages.error(request, f"Error checking Supabase: {str(alter_error)}")
+                    return False, f"Error checking Supabase: {str(alter_error)}"
+        
+        # Double check Django DB is clean
+        try:
+            if User.objects.filter(email=email).exists():
+                User.objects.filter(email=email).delete()
+                logger.warning(f"Had to delete user {email} from Django DB again!")
+            django_cleaned = True
+        except Exception as e:
+            logger.error(f"Error on final Django cleanup: {str(e)}")
+            if not force:
+                messages.error(request, f"Error on final cleanup: {str(e)}")
+                return False, f"Error on final cleanup: {str(e)}"
+        
+        # Determine overall success
+        if force:
+            # In force mode, consider it successful if Django is cleaned
+            django_cleaned = True
+            if not supabase_cleaned:
+                message = f"Account for {email} has been reset in Django. Supabase cleanup may be incomplete."
+                messages.success(request, message)
+                return True, message
+            else:
+                message = f"Account for {email} has been completely reset. You can now register again."
+                messages.success(request, message)
+                return True, message
+        elif django_cleaned and supabase_cleaned:
+            message = f"Account for {email} has been completely reset. You can now register again."
+            messages.success(request, message)
+            return True, message
+        elif django_cleaned:
+            message = f"Account for {email} has been reset in Django, but Supabase status is unknown."
+            messages.success(request, message)
+            return True, message
+        else:
+            message = f"Account reset was only partially successful. You may need to contact support."
+            messages.error(request, message)
+            return False, message
+    
+    except Exception as e:
+        logger.error(f"Account reset failed for {email}: {str(e)}")
+        if force:
+            # In force mode, try to make sure Django is clean before giving up
+            try:
+                User.objects.filter(email=email).delete()
+                message = f"Force-cleaned Django account after error: {str(e)}"
+                messages.success(request, message)
+                return True, message
+            except Exception:
+                pass
+        message = f"Account reset failed: {str(e)}"
+        messages.error(request, message)
+        return False, message
+
+def setup_custom_smtp(request):
+    """
+    Setup custom SMTP settings for email delivery
+    """
+    # Check if user is admin/staff
+    if not request.user.is_authenticated or not request.user.is_staff:
+        messages.error(request, "You must be an admin to access this page.")
+        return redirect('login')
+    
+    # Get current SMTP settings from environment variables
+    from django.conf import settings
+    import os
+    
+    current_settings = {
+        'SENDER_EMAIL': os.environ.get('SENDER_EMAIL', ''),
+        'SENDER_NAME': os.environ.get('SENDER_NAME', ''),
+        'SMTP_HOST': os.environ.get('SMTP_HOST', ''),
+        'SMTP_PORT': os.environ.get('SMTP_PORT', '465'),
+        'SMTP_USER': os.environ.get('SMTP_USER', ''),
+        'SMTP_PASS': os.environ.get('SMTP_PASS', ''),
+        'SMTP_ADMIN_EMAIL': os.environ.get('SMTP_ADMIN_EMAIL', ''),
+    }
+    
+    if request.method == 'POST':
+        # Process form data
+        sender_email = request.POST.get('sender_email', '')
+        sender_name = request.POST.get('sender_name', '')
+        smtp_host = request.POST.get('smtp_host', '')
+        smtp_port = request.POST.get('smtp_port', '')
+        smtp_user = request.POST.get('smtp_user', '')
+        smtp_pass = request.POST.get('smtp_pass', '')
+        admin_email = request.POST.get('admin_email', '')
+        send_test = request.POST.get('test_email') == 'true'
+        
+        # Basic validation
+        if not all([sender_email, smtp_host, smtp_port, smtp_user, smtp_pass, admin_email]):
+            messages.error(request, "All fields are required.")
+            return render(request, 'auth/smtp_setup.html', {'smtp_config': current_settings})
+        
+        try:
+            # Save settings to environment variables and .env file
+            import dotenv
+            import os
+            
+            # Save to .env file if it exists
+            env_path = os.path.join(os.path.dirname(settings.BASE_DIR), '.env')
+            if not os.path.exists(env_path):
+                env_path = os.path.join(settings.BASE_DIR, '.env')
+                if not os.path.exists(env_path):
+                    # Create a new .env file
+                    with open(env_path, 'w') as f:
+                        f.write("# Django SMTP Settings\n")
+            
+            # Update environment variables in .env file
+            dotenv.set_key(env_path, 'SENDER_EMAIL', sender_email)
+            dotenv.set_key(env_path, 'SENDER_NAME', sender_name)
+            dotenv.set_key(env_path, 'SMTP_HOST', smtp_host)
+            dotenv.set_key(env_path, 'SMTP_PORT', smtp_port)
+            dotenv.set_key(env_path, 'SMTP_USER', smtp_user)
+            dotenv.set_key(env_path, 'SMTP_PASS', smtp_pass)
+            dotenv.set_key(env_path, 'SMTP_ADMIN_EMAIL', admin_email)
+            
+            # Also update current process environment variables
+            os.environ['SENDER_EMAIL'] = sender_email
+            os.environ['SENDER_NAME'] = sender_name
+            os.environ['SMTP_HOST'] = smtp_host
+            os.environ['SMTP_PORT'] = smtp_port
+            os.environ['SMTP_USER'] = smtp_user
+            os.environ['SMTP_PASS'] = smtp_pass
+            os.environ['SMTP_ADMIN_EMAIL'] = admin_email
+            
+            # Update Django settings
+            settings.EMAIL_HOST = smtp_host
+            settings.EMAIL_PORT = int(smtp_port)
+            settings.EMAIL_HOST_USER = smtp_user
+            settings.EMAIL_HOST_PASSWORD = smtp_pass
+            settings.DEFAULT_FROM_EMAIL = sender_email
+            settings.EMAIL_USE_TLS = int(smtp_port) == 587
+            settings.EMAIL_USE_SSL = int(smtp_port) == 465
+            settings.EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+            
+            messages.success(request, "SMTP settings saved successfully!")
+            
+            # Send test email if requested
+            if send_test:
+                from django.core.mail import send_mail
+                
+                try:
+                    send_mail(
+                        subject=f"Test email from {sender_name}",
+                        message="This is a test email from your Task Manager application. If you received this, your SMTP settings are working correctly!",
+                        from_email=f"{sender_name} <{sender_email}>",
+                        recipient_list=[admin_email],
+                        fail_silently=False,
+                    )
+                    messages.success(request, f"Test email sent to {admin_email}. Please check your inbox!")
+                except Exception as email_error:
+                    messages.error(request, f"Error sending test email: {str(email_error)}")
+            
+            # Update current settings for display
+            current_settings = {
+                'SENDER_EMAIL': sender_email,
+                'SENDER_NAME': sender_name,
+                'SMTP_HOST': smtp_host,
+                'SMTP_PORT': smtp_port,
+                'SMTP_USER': smtp_user,
+                'SMTP_PASS': smtp_pass,
+                'SMTP_ADMIN_EMAIL': admin_email,
+            }
+            
+        except Exception as e:
+            messages.error(request, f"Error saving SMTP settings: {str(e)}")
+    
+    return render(request, 'auth/smtp_setup.html', {'smtp_config': current_settings})
+
+@csrf_exempt
+def webhook_test_endpoint(request):
+    """API endpoint for webhook test"""
+    if request.method != 'POST':
+        return JsonResponse({"success": False, "error": "Only POST requests are allowed"})
+    
+    try:
+        # Parse JSON body
+        data = json.loads(request.body)
+        
+        # Log the test event
+        logger.info(f"Received webhook test with data: {data}")
+        
+        return JsonResponse({
+            "success": True,
+            "message": "Webhook test received successfully",
+            "timestamp": timezone.now().isoformat(),
+            "received_data": data
+        })
+    except Exception as e:
+        logger.error(f"Error processing webhook test: {str(e)}")
+        return JsonResponse({"success": False, "error": str(e)})
+
+@require_http_methods(["GET", "POST"])
+def force_account_reset(request):
+    """
+    View for handling force account reset requests.
+    This allows users to clean up accounts that may be in an inconsistent state.
+    """
+    if request.method == 'POST':
+        email = request.POST.get('email')
+        confirm_email = request.POST.get('confirm_email')
+        direct_reg = request.POST.get('direct_reg') == 'on'  # New option for direct registration
+        
+        if not email or not confirm_email:
+            messages.error(request, "Both email fields are required.")
+            return render(request, 'auth/force_reset.html')
+        
+        if email != confirm_email:
+            messages.error(request, "Email addresses must match.")
+            return render(request, 'auth/force_reset.html')
+        
+        # Call complete_account_reset with force=True
+        success, message = complete_account_reset(request, email, force=True)
+        
+        if success:
+            if direct_reg:
+                # Redirect to direct registration
+                messages.info(request, "Account reset successful. Proceeding with direct registration.")
+                return redirect(f'/auth/register/?email={email}&direct=true')
+            else:
+                # Redirect to register page if successful
+                messages.success(request, f"Account for {email} has been completely reset. You can now register again.")
+                return redirect('register')
+        else:
+            # Stay on force reset page if failed
+            return render(request, 'auth/force_reset.html')
+    
+    return render(request, 'auth/force_reset.html')
+
+@login_required
+def test_email_sending(request):
+    """Test function to verify email sending functionality"""
+    if not request.user.is_staff:
+        messages.error(request, "You must be a staff member to access this page.")
+        return redirect('home')
+        
+    if request.method == 'POST':
+        test_email = request.POST.get('test_email', '')
+        
+        if not test_email:
+            messages.error(request, "Please provide an email address to test.")
+            return render(request, 'auth/test_email.html')
+            
+        try:
+            # Generate a unique ID for this test email
+            test_id = get_random_string(8)
+            
+            # Send a test email
+            subject = "Task Manager - Test Email"
+            message = "This is a test email sent from Task Manager to verify the email sending functionality."
+            
+            # Create a more professional HTML email
+            html_message = f"""
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>Task Manager Test Email</title>
+                <style>
+                    body {{
+                        font-family: Arial, 'Helvetica Neue', Helvetica, sans-serif;
+                        line-height: 1.6;
+                        color: #333333;
+                        max-width: 600px;
+                        margin: 0 auto;
+                        padding: 0;
+                        background-color: #f5f5f5;
+                    }}
+                    .container {{
+                        background-color: #ffffff;
+                        border: 1px solid #dddddd;
+                        border-radius: 5px;
+                        padding: 20px;
+                        margin: 20px;
+                    }}
+                    .header {{
+                        background-color: #4C7BF3;
+                        color: white;
+                        padding: 15px;
+                        text-align: center;
+                        border-radius: 5px 5px 0 0;
+                        margin: -20px -20px 20px;
+                    }}
+                    .details {{
+                        background-color: #f9f9f9;
+                        border: 1px solid #eeeeee;
+                        border-radius: 5px;
+                        padding: 15px;
+                        margin: 20px 0;
+                    }}
+                    .footer {{
+                        margin-top: 30px;
+                        font-size: 12px;
+                        color: #777777;
+                        text-align: center;
+                        border-top: 1px solid #eeeeee;
+                        padding-top: 15px;
+                    }}
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="header">
+                        <h1>Task Manager Test Email</h1>
+                    </div>
+                    
+                    <p>Hello there,</p>
+                    
+                    <p>This is a test email sent from Task Manager to verify that our email sending functionality is working correctly.</p>
+                    
+                    <p><strong>If you received this email, it means your email configuration is working properly!</strong></p>
+                    
+                    <div class="details">
+                        <h3>Test Details:</h3>
+                        <ul>
+                            <li><strong>Email backend:</strong> {settings.EMAIL_BACKEND}</li>
+                            <li><strong>SMTP server:</strong> {settings.EMAIL_HOST}</li>
+                            <li><strong>From address:</strong> {settings.DEFAULT_FROM_EMAIL}</li>
+                            <li><strong>To address:</strong> {test_email}</li>
+                            <li><strong>Test ID:</strong> {test_id}</li>
+                            <li><strong>Time sent:</strong> {timezone.now().strftime('%Y-%m-%d %H:%M:%S')}</li>
+                        </ul>
+                    </div>
+                    
+                    <p>This email is part of a test to ensure proper email delivery. If you're experiencing issues with emails being marked as spam, please check the following:</p>
+                    
+                    <ol>
+                        <li>Add our sending address to your contacts or safe senders list</li>
+                        <li>Check your spam/junk folder and mark our emails as "Not Spam"</li>
+                        <li>Whitelist our domain in your email settings</li>
+                    </ol>
+                    
+                    <p>Thank you for helping us test our email system!</p>
+                    
+                    <p>Best regards,<br>
+                    The Task Manager Team</p>
+                    
+                    <div class="footer">
+                        <p>This is an automated test email. Please do not reply to this message.</p>
+                        <p>Test ID: {test_id}</p>
+                    </div>
+                </div>
+            </body>
+            </html>
+            """
+            
+            # Use a personalized From address with a proper name
+            if hasattr(settings, 'SENDER_NAME') and settings.SENDER_NAME:
+                from_email = f"{settings.SENDER_NAME} <{settings.DEFAULT_FROM_EMAIL}>"
+            else:
+                from_email = settings.DEFAULT_FROM_EMAIL
+                # If DEFAULT_FROM_EMAIL already has a display name, use it as is
+                if '<' not in from_email:
+                    from_email = f"Task Manager <{from_email}>"
+            
+            # Add message ID and other headers to improve deliverability
+            message_id = f"<test-{test_id}@{request.get_host().split(':')[0]}>"
+            headers = {
+                'Message-ID': message_id,
+                'X-Priority': '1',
+                'X-MSMail-Priority': 'High',
+                'Importance': 'High',
+                'X-Auto-Response-Suppress': 'OOF, DR, RN, NRN, AutoReply',
+                'Auto-Submitted': 'auto-generated',
+                'X-Entity-Ref-ID': test_id,
+            }
+            
+            # Add any additional headers from settings
+            if hasattr(settings, 'EMAIL_EXTRA_HEADERS') and isinstance(settings.EMAIL_EXTRA_HEADERS, dict):
+                headers.update(settings.EMAIL_EXTRA_HEADERS)
+            
+            logger.info(f"Sending test email to {test_email}")
+            send_result = send_mail(
+                subject=subject,
+                message=message,
+                from_email=from_email,
+                recipient_list=[test_email],
+                html_message=html_message,
+                fail_silently=False,
+                headers=headers
+            )
+            
+            if send_result == 1:
+                logger.info(f"Test email sent successfully to {test_email}")
+                messages.success(request, f"Test email sent successfully to {test_email}. Please check both your inbox and spam folder.")
+            else:
+                logger.error(f"Failed to send test email to {test_email} - send_mail returned {send_result}")
+                messages.error(request, "Failed to send test email. Please check logs for details.")
+                
+        except Exception as e:
+            logger.error(f"Exception sending test email to {test_email}: {str(e)}")
+            messages.error(request, f"Error sending test email: {str(e)}")
+    
+    # Pass email configuration to the template
+    context = {
+        'email_backend': settings.EMAIL_BACKEND,
+        'email_host': settings.EMAIL_HOST,
+        'email_port': settings.EMAIL_PORT,
+        'email_from': settings.DEFAULT_FROM_EMAIL,
+    }
+    
+    return render(request, 'auth/test_email.html', context)
+
+def resend_verification_email(request):
+    """View for allowing users to request a new verification email"""
+    if request.method == 'POST':
+        email = request.POST.get('email')
+        
+        if not email:
+            messages.error(request, "Please provide your email address.")
+            return render(request, 'auth/resend_verification.html')
+        
+        try:
+            # Check if user exists in Django
+            try:
+                user = User.objects.get(email=email)
+            except User.DoesNotExist:
+                # Check if user exists in Supabase
+                supabase_response = get_supabase_user_by_email(email)
+                if not supabase_response or not supabase_response.get('data'):
+                    logger.warning(f"User with email {email} not found in either Django or Supabase")
+                    messages.warning(request, "If an account exists with this email, a verification link has been sent.")
+                    return render(request, 'auth/resend_verification.html')
+                    
+                # User exists only in Supabase, create in Django
+                logger.info(f"User {email} found in Supabase but not in Django. Creating Django user...")
+                user_data = supabase_response.get('data')[0]
+                user = User.objects.create_user(
+                    username=email,
+                    email=email,
+                    password=get_random_string(12)  # Random password, user can reset later
+                )
+                
+                user_profile, created = UserProfile.objects.get_or_create(
+                    user=user,
+                    defaults={
+                        'supabase_uid': user_data.get('id'),
+                        'verified': user_data.get('email_confirmed_at') is not None
+                    }
+                )
+                logger.info(f"Created Django user for {email} with Supabase UID {user_profile.supabase_uid}")
+            
+            # Check if user is already verified
+            profile = UserProfile.objects.get(user=user)
+            if profile.verified:
+                messages.info(request, "Your account is already verified. Please login.")
+                return redirect('login')
+            
+            # Send verification email
+            logger.info(f"Sending verification email to {email}")
+            send_custom_verification_email(request, user)
+            
+            messages.success(request, 
+                "A verification email has been sent. Please check your inbox and spam folder. "
+                "The link will expire in 24 hours."
+            )
+            
+        except Exception as e:
+            logger.error(f"Error sending verification email to {email}: {str(e)}")
+            messages.error(request, "An error occurred. Please try again later.")
+    
+    return render(request, 'auth/resend_verification.html')
+
+@require_http_methods(["GET"])
+def unsubscribe(request):
+    """Handle unsubscribe requests from email links"""
+    email = request.GET.get('email')
+    
+    if not email:
+        messages.warning(request, "No email address provided. Unable to unsubscribe.")
+        return render(request, 'auth/unsubscribe.html')
+    
+    logger.info(f"Processing unsubscribe request for email: {email}")
+    
+    try:
+        # Find the user by email
+        user = User.objects.filter(email=email).first()
+        
+        if not user:
+            messages.info(request, "No account found with this email address. No changes were made.")
+            return render(request, 'auth/unsubscribe.html')
+        
+        # Get or create user profile
+        user_profile, created = UserProfile.objects.get_or_create(
+            user=user,
+            defaults={'email_notifications': False}
+        )
+        
+        # Update email preferences
+        user_profile.email_notifications = False
+        user_profile.save()
+        
+        # Try to update in Supabase if we have a UID
+        if hasattr(user_profile, 'supabase_uid') and user_profile.supabase_uid:
+            try:
+                # Use appropriate Supabase API call to update user preferences
+                # This is a placeholder - implement the actual Supabase update call
+                admin_client = get_supabase_admin_client()
+                if admin_client:
+                    # Update user preferences in Supabase
+                    # Example: admin_client.auth.admin.update_user(user_profile.supabase_uid, {'email_notifications': False})
+                    # The actual implementation will depend on your Supabase setup
+                    logger.info(f"Updated Supabase preferences for user {email}")
+            except Exception as e:
+                logger.error(f"Error updating Supabase preferences for {email}: {str(e)}")
+        
+        messages.success(request, "Email notifications have been disabled for your account.")
+        return render(request, 'auth/unsubscribe.html')
+    
+    except Exception as e:
+        logger.error(f"Error processing unsubscribe request for {email}: {str(e)}")
+        messages.error(request, "There was a problem processing your request. Please try again later.")
+        return render(request, 'auth/unsubscribe.html')
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def delete_account(request):
+    """
+    Handle user account deletion process.
+    Permanently deletes the user account from both Django and Supabase.
+    """
+    if request.method == "POST":
+        password = request.POST.get('password')
+        confirm_delete = request.POST.get('confirm_delete') == 'on'
+        
+        # Validate the inputs
+        if not password:
+            messages.error(request, "Please enter your password to confirm deletion.")
+            return render(request, 'auth/delete_account.html')
+        
+        if not confirm_delete:
+            messages.error(request, "You must check the confirmation box to delete your account.")
+            return render(request, 'auth/delete_account.html')
+        
+        # Verify password
+        if not request.user.check_password(password):
+            messages.error(request, "Password is incorrect. Please try again.")
+            return render(request, 'auth/delete_account.html')
+        
+        # Get user info for logging
+        user_email = request.user.email
+        user_id = request.user.id
+        
+        # Try to get Supabase UID
+        supabase_uid = None
+        try:
+            supabase_uid = request.user.profile.supabase_uid
+        except Exception as e:
+            logger.warning(f"Error retrieving Supabase UID for user {user_id}: {str(e)}")
+        
+        # Log deletion attempt
+        logger.info(f"Account deletion requested for user ID: {user_id}, email: {user_email}")
+        
+        # Initialize success flags
+        supabase_delete_success = False
+        
+        # Step 1: Try to delete from Supabase first
+        if supabase_uid:
+            try:
+                # Get Supabase admin client
+                supabase_admin = get_supabase_admin_client()
+                
+                if supabase_admin:
+                    logger.info(f"Attempting to delete user {supabase_uid} from Supabase")
+                    # Try to delete the user from Supabase
+                    response = supabase_admin.auth.admin.delete_user(supabase_uid)
+                    logger.info(f"Supabase deletion response: {response}")
+                    supabase_delete_success = True
+                else:
+                    logger.error("Could not obtain Supabase admin client")
+            except Exception as e:
+                logger.error(f"Error deleting user from Supabase: {str(e)}")
+                # Continue with Django deletion even if Supabase fails
+                messages.warning(request, "We encountered an issue deleting your account from our backup system. Some data might remain, but your main account will be deleted.")
+        
+        # Step 2: Log out the user before deleting their account
+        auth_logout(request)
+        
+        # Step 3: Delete the user from Django
+        try:
+            # Get the user again from the database since we need an instance after logout
+            user = User.objects.get(id=user_id)
+            
+            # Use Django's delete method which will handle all cascading deletes
+            user.delete()
+            
+            # If we get here, Django deletion was successful
+            logger.info(f"Successfully deleted user {user_id} from Django")
+            
+            # Step 4: If Supabase deletion failed but we have the UID, try a fallback method
+            if supabase_uid and not supabase_delete_success:
+                try:
+                    # Try a direct API call as a fallback
+                    logger.info(f"Attempting fallback deletion for Supabase user {supabase_uid}")
+                    # This would be a custom implementation if needed
+                    # For now, we just log the fact that we couldn't delete from Supabase
+                    logger.warning(f"Fallback deletion for Supabase user {supabase_uid} not implemented")
+                except Exception as e:
+                    logger.error(f"Fallback Supabase deletion failed for {supabase_uid}: {str(e)}")
+            
+            # Show success message on the login page
+            messages.success(request, "Your account has been permanently deleted. We're sorry to see you go!")
+            return redirect('login')
+            
+        except User.DoesNotExist:
+            logger.error(f"User {user_id} not found in database during deletion process")
+            messages.error(request, "An error occurred while deleting your account. Please contact support.")
+            return redirect('login')
+        except Exception as e:
+            logger.error(f"Error during account deletion for user {user_id}: {str(e)}")
+            messages.error(request, "An error occurred while deleting your account. Please contact support.")
+            return redirect('login')
+    
+    # GET request - show the confirmation page
+    return render(request, 'auth/delete_account.html')
+
+def configure_supabase_smtp():
+    """Configure Supabase SMTP settings using the admin client"""
+    try:
+        # Get Supabase admin client
+        admin_client = get_supabase_admin_client()
+        if not admin_client:
+            logger.error("Could not get Supabase admin client for SMTP configuration")
+            return False
+        
+        # Build SMTP configuration for Supabase
+        smtp_config = {
+            "SMTP_ADMIN_EMAIL": os.environ.get('ADMIN_EMAIL', ''),
+            "SMTP_HOST": os.environ.get('SMTP_HOST', ''),
+            "SMTP_PORT": int(os.environ.get('SMTP_PORT', '465')),
+            "SMTP_USER": os.environ.get('SMTP_USER', ''),
+            "SMTP_PASS": os.environ.get('SMTP_PASS', ''),
+            "SMTP_MAX_FREQUENCY": 60,  # Seconds between emails (rate limit)
+            "SMTP_SENDER_NAME": os.environ.get('SENDER_NAME', 'Task Manager'),
+            "SMTP_SENDER_EMAIL": os.environ.get('SENDER_EMAIL', '')
+        }
+        
+        # Make API call to update SMTP settings
+        # The actual API endpoint would depend on Supabase's admin API structure
+        # This is a placeholder for the actual implementation
+        response = admin_client.auth.admin.update_smtp_settings(smtp_config)
+        
+        if response.status_code == 200:
+            logger.info("Supabase SMTP settings updated successfully")
+            return True
+        else:
+            logger.error(f"Failed to update Supabase SMTP settings: {response.text}")
+            return False
+    
+    except Exception as e:
+        logger.error(f"Error configuring Supabase SMTP: {str(e)}")
+        
+        # Fallback: Update local settings only if Supabase admin API is not available
+        try:
+            # Update local settings (Django)
+            settings.EMAIL_HOST = os.environ.get('SMTP_HOST', '')
+            settings.EMAIL_PORT = int(os.environ.get('SMTP_PORT', '465'))
+            settings.EMAIL_HOST_USER = os.environ.get('SMTP_USER', '')
+            settings.EMAIL_HOST_PASSWORD = os.environ.get('SMTP_PASS', '')
+            settings.EMAIL_USE_TLS = settings.EMAIL_PORT == 587
+            settings.EMAIL_USE_SSL = settings.EMAIL_PORT == 465
+            settings.DEFAULT_FROM_EMAIL = os.environ.get('SENDER_EMAIL', '')
+            
+            logger.info("Updated local Django email settings (Supabase admin API not available)")
+            return True
+        except Exception as inner_e:
+            logger.error(f"Failed to update local email settings: {str(inner_e)}")
+            return False

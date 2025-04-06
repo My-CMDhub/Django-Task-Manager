@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+
+{% block title %}Account Settings{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="mb-0">Account Settings</h4>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="list-group">
+                            <a href="#profile" class="list-group-item list-group-item-action active" data-bs-toggle="tab">Profile</a>
+                            <a href="#password" class="list-group-item list-group-item-action" data-bs-toggle="tab">Password</a>
+                            <a href="#email" class="list-group-item list-group-item-action" data-bs-toggle="tab">Email</a>
+                            <a href="#sessions" class="list-group-item list-group-item-action" data-bs-toggle="tab">Sessions</a>
+                            <a href="#danger" class="list-group-item list-group-item-action text-danger" data-bs-toggle="tab">Danger Zone</a>
+                            {% if user.is_staff %}
+                            <a href="{% url 'account_sync_status' %}?email={{ user.email }}" class="list-group-item list-group-item-action text-primary">Sync Status</a>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-8">
+                        <div class="tab-content">
+                            <!-- Profile Tab -->
+                            <div class="tab-pane fade show active" id="profile">
+                                <form method="post" action="{% url 'account_settings' %}">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="form_type" value="profile">
+                                    
+                                    <div class="mb-3">
+                                        <label class="form-label">Name</label>
+                                        <input type="text" class="form-control" name="name" value="{{ user.get_full_name }}">
+                                    </div>
+                                    
+                                    <button type="submit" class="btn btn-primary">Update Profile</button>
+                                </form>
+                            </div>
+                            
+                            <!-- Password Tab -->
+                            <div class="tab-pane fade" id="password">
+                                <form method="post" action="{% url 'account_settings' %}">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="form_type" value="password">
+                                    
+                                    <div class="mb-3">
+                                        <label class="form-label">Current Password</label>
+                                        <input type="password" class="form-control" name="current_password" required>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label class="form-label">New Password</label>
+                                        <input type="password" class="form-control" name="new_password1" required>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label class="form-label">Confirm New Password</label>
+                                        <input type="password" class="form-control" name="new_password2" required>
+                                    </div>
+                                    
+                                    <button type="submit" class="btn btn-primary">Change Password</button>
+                                </form>
+                            </div>
+                            
+                            <!-- Email Tab -->
+                            <div class="tab-pane fade" id="email">
+                                <form method="post" action="{% url 'account_settings' %}">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="form_type" value="email">
+                                    
+                                    <div class="mb-3">
+                                        <label class="form-label">Current Email</label>
+                                        <input type="email" class="form-control" value="{{ user.email }}" readonly>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label class="form-label">New Email</label>
+                                        <input type="email" class="form-control" name="new_email" required>
+                                    </div>
+                                    
+                                    <button type="submit" class="btn btn-primary">Update Email</button>
+                                </form>
+                            </div>
+                            
+                            <!-- Sessions Tab -->
+                            <div class="tab-pane fade" id="sessions">
+                                <div class="mb-3">
+                                    <h5>Active Sessions</h5>
+                                    <ul class="list-group">
+                                        {% for session in sessions %}
+                                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                                            {{ session.device }} ({{ session.ip }})
+                                            <span class="badge bg-primary rounded-pill">{{ session.last_activity|timesince }} ago</span>
+                                        </li>
+                                        {% endfor %}
+                                    </ul>
+                                </div>
+                                
+                                <form method="post" action="{% url 'account_settings' %}">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="form_type" value="logout_all">
+                                    <button type="submit" class="btn btn-danger">Logout All Devices</button>
+                                </form>
+                            </div>
+                            
+                            <!-- Danger Zone Tab -->
+                            <div class="tab-pane fade" id="danger">
+                                <div class="card border-danger mb-3">
+                                    <div class="card-header bg-danger text-white">
+                                        <h5 class="mb-0">Delete Account</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <p class="card-text">Warning: Deleting your account will permanently remove all your data and cannot be undone.</p>
+                                        <a href="{% url 'delete_account' %}" class="btn btn-danger">Delete My Account</a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

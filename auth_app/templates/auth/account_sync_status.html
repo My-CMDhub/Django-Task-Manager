@@ -1,0 +1,119 @@
+{% extends 'base.html' %}
+
+{% block title %}Account Synchronization Status - Task Manager{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-10">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="mb-0">Account Synchronization Status</h3>
+                </div>
+                <div class="card-body">
+                    {% if messages %}
+                    <div class="messages mb-4">
+                        {% for message in messages %}
+                        <div class="alert alert-{{ message.tags }}">
+                            {{ message }}
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+
+                    <div class="sync-status-container">
+                        <h4>Real-time Synchronization Status</h4>
+                        
+                        <div class="d-flex justify-content-between mb-4">
+                            <div class="card flex-grow-1 me-2">
+                                <div class="card-header {% if django_user_exists %}bg-success{% else %}bg-secondary{% endif %} text-white">
+                                    Django Status
+                                </div>
+                                <div class="card-body">
+                                    {% if django_user_exists %}
+                                        <p>✅ User found in Django database</p>
+                                        <p><strong>Username:</strong> {{ django_user.username }}</p>
+                                        <p><strong>Email:</strong> {{ django_user.email }}</p>
+                                        <p><strong>Verified:</strong> {% if django_user.email_verified %}Yes{% else %}No{% endif %}</p>
+                                        <p><strong>Created:</strong> {{ django_user.date_joined|date:"F j, Y" }}</p>
+                                    {% else %}
+                                        <p>❌ No user found in Django database</p>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="card flex-grow-1 ms-2">
+                                <div class="card-header {% if supabase_user_exists %}bg-success{% else %}bg-secondary{% endif %} text-white">
+                                    Supabase Status
+                                </div>
+                                <div class="card-body">
+                                    {% if supabase_user_exists %}
+                                        <p>✅ User found in Supabase</p>
+                                        <p><strong>ID:</strong> {{ supabase_user.id }}</p>
+                                        <p><strong>Email:</strong> {{ supabase_user.email }}</p>
+                                        <p><strong>Verified:</strong> {% if supabase_user.email_confirmed_at %}Yes{% else %}No{% endif %}</p>
+                                        <p><strong>Created:</strong> {{ supabase_user.created_at|date:"F j, Y" }}</p>
+                                    {% else %}
+                                        <p>❌ No user found in Supabase</p>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="sync-logs mb-4">
+                            <h5>Synchronization Logs</h5>
+                            <div class="log-container p-3 bg-light border" style="max-height: 300px; overflow-y: auto;">
+                                {% for log in sync_logs %}
+                                <div class="log-entry {% if 'error' in log.level|lower %}text-danger{% elif 'warning' in log.level|lower %}text-warning{% elif 'success' in log.level|lower %}text-success{% endif %}">
+                                    <strong>[{{ log.timestamp }}]</strong> {{ log.message }}
+                                </div>
+                                {% empty %}
+                                <p class="text-muted">No synchronization logs available.</p>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <div class="webhook-status mb-4">
+                            <h5>Webhook Status</h5>
+                            <div class="card">
+                                <div class="card-body">
+                                    <p><strong>Webhook URL:</strong> {{ webhook_url }}</p>
+                                    <p><strong>Webhook Active:</strong> {% if webhook_active %}Yes{% else %}No{% endif %}</p>
+                                    <p><strong>Last Event:</strong> {{ last_webhook_event|default:"None" }}</p>
+                                    <p><strong>ngrok URL:</strong> {{ ngrok_url }}</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="actions mt-4">
+                            <a href="{% url 'home' %}" class="btn btn-secondary">Back to Home</a>
+                            {% if email %}
+                                <a href="{% url 'force_account_reset' %}?email={{ email }}" class="btn btn-warning">Reset Account</a>
+                                <a href="{% url 'register' %}" class="btn btn-primary">Register New Account</a>
+                            {% endif %}
+                            <button id="refresh-status" class="btn btn-success">Refresh Status</button>
+                            <a href="{% url 'test_webhook' %}" class="btn btn-info">Test Webhook</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Auto-refresh the page every 5 seconds to show real-time updates
+    document.addEventListener('DOMContentLoaded', function() {
+        document.getElementById('refresh-status').addEventListener('click', function() {
+            window.location.reload();
+        });
+        
+        // Auto-refresh if autoRefresh parameter is set
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('autoRefresh') === 'true') {
+            setTimeout(function() {
+                window.location.href = window.location.pathname + '?autoRefresh=true&email=' + urlParams.get('email');
+            }, 5000);
+        }
+    });
+</script>
+{% endblock %} 

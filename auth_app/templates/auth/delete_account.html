@@ -1,0 +1,72 @@
+{% extends 'base.html' %}
+
+{% block title %}Delete Account - Task Manager{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <div class="card border-danger">
+                <div class="card-header bg-danger text-white">
+                    <h3 class="mb-0">Delete Your Account</h3>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-warning">
+                        <h4 class="alert-heading">Warning: This action cannot be undone!</h4>
+                        <p>Deleting your account will:</p>
+                        <ul>
+                            <li>Permanently delete all your account information</li>
+                            <li>Remove all your tasks and associated data</li>
+                            <li>Revoke all your access to the Task Manager</li>
+                            <li>Cannot be reversed or recovered</li>
+                        </ul>
+                    </div>
+
+                    {% if messages %}
+                    <div class="messages">
+                        {% for message in messages %}
+                        <div class="alert alert-{{ message.tags }}">
+                            {{ message }}
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+
+                    <form method="post" id="delete-account-form">
+                        {% csrf_token %}
+                        
+                        <div class="mb-3">
+                            <label for="password" class="form-label">Enter your password to confirm</label>
+                            <input type="password" class="form-control" id="password" name="password" required>
+                            <div class="form-text">Please enter your current password to verify your identity.</div>
+                        </div>
+
+                        <div class="mb-4">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="confirm_delete" name="confirm_delete" required>
+                                <label class="form-check-label" for="confirm_delete">
+                                    I understand that this action is permanent and cannot be undone
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'account_settings' %}" class="btn btn-secondary">Cancel</a>
+                            <button type="submit" class="btn btn-danger" id="delete-btn">Delete My Account</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Add a confirmation dialog when the delete button is clicked
+    document.getElementById('delete-account-form').addEventListener('submit', function(event) {
+        if (!window.confirm('Are you absolutely sure you want to delete your account? This action CANNOT be undone.')) {
+            event.preventDefault();
+        }
+    });
+</script>
+{% endblock %} 

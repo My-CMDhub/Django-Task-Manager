@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+
+{% block title %}Task Manager - Home{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8 text-center">
+            <h1 class="display-4">Welcome to Task Manager</h1>
+            <p class="lead mt-3">Your ultimate solution for managing tasks with AI assistance</p>
+            
+            <div class="mt-5">
+                {% if user.is_authenticated %}
+                    <a href="{% url 'dashboard' %}" class="btn btn-primary btn-lg px-4 me-2">Go to Dashboard</a>
+                    <a href="{% url 'account_settings' %}" class="btn btn-outline-secondary btn-lg px-4">Account Settings</a>
+                {% else %}
+                    <a href="{% url 'login' %}" class="btn btn-primary btn-lg px-4 me-2">Login</a>
+                    <a href="{% url 'register' %}" class="btn btn-outline-secondary btn-lg px-4">Register</a>
+                {% endif %}
+            </div>
+            
+            <div class="mt-5">
+                <div class="row">
+                    <div class="col-md-4">
+                        <h3>Task Management</h3>
+                        <p>Create, update, and organize your tasks efficiently</p>
+                    </div>
+                    <div class="col-md-4">
+                        <h3>Collaboration</h3>
+                        <p>Share and assign tasks with your team members</p>
+                    </div>
+                    <div class="col-md-4">
+                        <h3>AI Assistant</h3>
+                        <p>Leverage AI to optimize your workflow</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

@@ -1,0 +1,63 @@
+{% extends 'base.html' %}
+
+{% block title %}Test Webhook - Task Manager{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h3 class="mb-0">Test Supabase Webhook</h3>
+                </div>
+                <div class="card-body">
+                    {% if messages %}
+                    <div class="messages mb-4">
+                        {% for message in messages %}
+                        <div class="alert alert-{{ message.tags }}">
+                            {{ message }}
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+
+                    <div class="webhook-info mb-4">
+                        <h5>Webhook Information</h5>
+                        <div class="alert alert-info">
+                            <p><strong>Current ngrok URL:</strong> {{ ngrok_url }}</p>
+                            <p><strong>Webhook Endpoint:</strong> {{ ngrok_url }}/auth/webhooks/supabase/</p>
+                            <p>This test sends a simulated webhook event to test the webhook handler functionality.</p>
+                        </div>
+                    </div>
+
+                    <form method="post" action="{% url 'test_webhook' %}">
+                        {% csrf_token %}
+                        
+                        <div class="mb-3">
+                            <label for="event_type" class="form-label">Event Type</label>
+                            <select class="form-select" id="event_type" name="event_type">
+                                <option value="user.created">user.created</option>
+                                <option value="user.updated">user.updated</option>
+                                <option value="user.deleted">user.deleted</option>
+                            </select>
+                            <div class="form-text">Select the type of event to simulate</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="email" class="form-label">Email</label>
+                            <input type="email" class="form-control" id="email" name="email" 
+                                   placeholder="test@example.com" required>
+                            <div class="form-text">Email address to use in the test event</div>
+                        </div>
+
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'account_sync_status' %}" class="btn btn-secondary">Back to Sync Status</a>
+                            <button type="submit" class="btn btn-primary">Send Test Webhook</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

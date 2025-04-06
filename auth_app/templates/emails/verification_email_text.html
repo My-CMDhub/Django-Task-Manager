@@ -1,0 +1,23 @@
+Hello {{ user.first_name|default:"there" }},
+
+Thank you for registering with {{ site_name }}. We're excited to have you join our community!
+
+To activate your account and start using our platform, please verify your email address by clicking or copying this link:
+
+{{ verify_url }}
+
+This verification link will expire in {{ expiration_days }} days for security reasons.
+
+WHY VERIFY YOUR EMAIL?
+- Security: Protects your account from unauthorized access
+- Recovery: Allows you to reset your password if needed
+- Updates: Receive important notifications about your account
+
+If you did not create an account on {{ site_name }}, please disregard this email.
+
+Thank you,
+The {{ site_name }} Team
+
+© {{ current_year }} {{ site_name }} - This is an automated email. Please do not reply.
+
+If you'd prefer not to receive these emails, you can unsubscribe here: {{ verify_url }}?unsubscribe=true 

@@ -1,0 +1,40 @@
+{% extends 'base.html' %}
+
+{% block title %}Email Preferences Updated{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="mb-0">Email Preferences Updated</h3>
+                </div>
+                <div class="card-body">
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="alert alert-{{ message.tags }}">
+                                {{ message }}
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                    
+                    <p class="mb-4">Your email preferences have been updated successfully.</p>
+                    
+                    <div class="d-flex justify-content-between align-items-center">
+                        <a href="{% url 'home' %}" class="btn btn-primary">Return to Home</a>
+                        <a href="{% url 'login' %}" class="text-decoration-none">Go to Login</a>
+                    </div>
+                </div>
+                <div class="card-footer bg-light">
+                    <div class="text-center">
+                        <small class="text-muted">
+                            If you want to re-enable email notifications in the future, you can update your preferences in your account settings.
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

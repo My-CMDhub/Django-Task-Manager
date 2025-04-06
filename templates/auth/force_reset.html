@@ -1,0 +1,64 @@
+{% extends 'base.html' %}
+
+{% block title %}Force Account Reset{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row">
+        <div class="col-md-6 offset-md-3">
+            <div class="card">
+                <div class="card-header bg-danger text-white">
+                    <h4 class="mb-0">Force Account Reset</h4>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-warning">
+                        <strong>Warning:</strong> This will completely remove your account from both Django and Supabase systems. 
+                        This is a destructive operation and cannot be undone. Only use this if you're having registration issues.
+                    </div>
+                    
+                    <div class="alert alert-info mb-3">
+                        <h5>When to use this feature:</h5>
+                        <ul>
+                            <li>You're seeing errors like "An account with this email already exists" but can't login</li>
+                            <li>Your email verification links don't work</li>
+                            <li>You keep getting "Email not verified" messages but never receive verification emails</li>
+                            <li>Your account exists in one system but not the other</li>
+                        </ul>
+                        <p class="mb-0">This will clean up any inconsistent account state and let you register fresh.</p>
+                    </div>
+                    
+                    {% if messages %}
+                    <div class="messages">
+                        {% for message in messages %}
+                        <div class="alert alert-{{ message.tags }}">
+                            {{ message }}
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                    
+                    <form method="post" action="{% url 'force_account_reset' %}">
+                        {% csrf_token %}
+                        <div class="form-group mb-3">
+                            <label for="email">Email address</label>
+                            <input type="email" class="form-control" id="email" name="email" placeholder="Enter email" value="{{ email }}" required>
+                        </div>
+                        <div class="form-group mb-3">
+                            <label for="confirm_email">Confirm Email address</label>
+                            <input type="email" class="form-control" id="confirm_email" name="confirm_email" placeholder="Confirm email" required>
+                            <small id="emailHelp" class="form-text text-muted">Enter your email again to confirm.</small>
+                        </div>
+                        <div class="form-check mb-3">
+                            <input type="checkbox" class="form-check-input" id="direct_reg" name="direct_reg">
+                            <label class="form-check-label" for="direct_reg">Automatically proceed to registration after reset (recommended)</label>
+                            <small id="directRegHelp" class="form-text text-muted d-block">This option helps ensure proper account creation by using a special registration flow.</small>
+                        </div>
+                        <button type="submit" class="btn btn-danger">Reset Account</button>
+                        <a href="{% url 'register' %}" class="btn btn-secondary">Cancel</a>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 
