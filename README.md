@@ -130,6 +130,10 @@ The webhook setup will be handled automatically when you run the application. Yo
 ## Running the Application
 
 1. **Start the Application**
+   activate your virtual environment first by running this command:
+   ```
+   source venv/bin/activate (it might be different for Window)
+   ```
    ```bash
    # Make the script executable (macOS/Linux)
    chmod +x run-dev.sh
