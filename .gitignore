@@ -76,19 +76,4 @@ rule/
 
 # Migrations - consider keeping migrations in version control
 # auth_app/migrations/*
-# !auth_app/migrations/__init__.py
-
-# Additional sensitive files
-.env*
-!.env.example
-*.log
-logs/
-test.log
-
-# Database
-db.sqlite3*
-
-# Additional Python
-__pycache__/
-*/__pycache__/
-*/*/__pycache__/ 
+# !auth_app/migrations/__init__.py 

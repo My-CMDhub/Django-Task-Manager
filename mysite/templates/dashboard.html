@@ -1,12 +1,147 @@
 {% extends 'base.html' %}
 
-{% block title %}Task Manager - Dashboard{% endblock %}
+{% block title %}Dashboard - Task Manager{% endblock %}
+
+{% block extra_head %}
+<style>
+    body {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        background-color: #f8f9fa;
+    }
+    .sidebar {
+        background: linear-gradient(180deg, #6366f1 0%, #8b5cf6 100%);
+        color: white;
+        min-height: calc(100vh - 56px);
+        box-shadow: 0 0 15px rgba(0,0,0,0.05);
+    }
+    .sidebar .nav-link {
+        color: rgba(255, 255, 255, 0.8);
+        border-radius: 6px;
+        margin: 6px 10px;
+        transition: all 0.3s ease;
+    }
+    .sidebar .nav-link:hover {
+        color: white;
+        background-color: rgba(255, 255, 255, 0.1);
+    }
+    .sidebar .nav-link.active {
+        color: white;
+        background-color: rgba(255, 255, 255, 0.2);
+        font-weight: 500;
+    }
+    .sidebar .nav-link i {
+        margin-right: 8px;
+    }
+    .card {
+        border: none;
+        border-radius: 10px;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        height: 100%;
+    }
+    .card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+    }
+    .card-header {
+        background: transparent;
+        border-bottom: 1px solid rgba(0,0,0,0.05);
+        padding: 1.2rem 1.5rem;
+        font-weight: 600;
+    }
+    .card-body {
+        padding: 1.5rem;
+    }
+    .btn-primary {
+        background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+        border: none;
+        border-radius: 6px;
+        transition: all 0.3s ease;
+    }
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(99, 102, 241, 0.4);
+        background: linear-gradient(135deg, #5254cc 0%, #7a4edb 100%);
+    }
+    .btn-outline-secondary {
+        border-color: #d1d5db;
+        color: #4b5563;
+    }
+    .btn-outline-secondary:hover {
+        background-color: #f3f4f6;
+        color: #111827;
+    }
+    .list-group-item {
+        border: none;
+        border-bottom: 1px solid rgba(0,0,0,0.05);
+        padding: 0.8rem 0.5rem;
+    }
+    .list-group-item:last-child {
+        border-bottom: none;
+    }
+    .list-group-item-action {
+        transition: all 0.2s ease;
+    }
+    .list-group-item-action:hover {
+        background-color: #f3f4f6;
+        transform: translateX(5px);
+    }
+    main {
+        padding-top: 1.5rem;
+        padding-bottom: 3rem;
+    }
+    .welcome-card {
+        background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+        color: white;
+        border-radius: 10px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+    }
+    .stats-card {
+        text-align: center;
+        padding: 1.5rem;
+    }
+    .stats-icon {
+        font-size: 2rem;
+        margin-bottom: 1rem;
+        color: #6366f1;
+    }
+    .stats-number {
+        font-size: 2rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+        color: #111827;
+    }
+    .stats-label {
+        color: #6b7280;
+        font-size: 0.9rem;
+    }
+    .task-date {
+        font-size: 0.8rem;
+        color: #6b7280;
+    }
+    .fade-in {
+        opacity: 0;
+        transform: translateY(20px);
+        transition: opacity 0.6s ease, transform 0.6s ease;
+    }
+    .fade-in.visible {
+        opacity: 1;
+        transform: translateY(0);
+    }
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="container-fluid mt-3">
+<div class="container-fluid">
     <div class="row">
-        <div class="col-md-3 col-lg-2 d-md-block bg-light sidebar">
-            <div class="position-sticky pt-3">
+        <!-- Sidebar -->
+        <div class="col-md-3 col-lg-2 d-md-block sidebar py-4">
+            <div class="position-sticky">
+                <div class="d-flex align-items-center justify-content-center mb-4">
+                    <i class="bi bi-check2-square fs-4 me-2"></i>
+                    <h5 class="mb-0">Task Manager</h5>
+                </div>
                 <ul class="nav flex-column">
                     <li class="nav-item">
                         <a class="nav-link active" href="#">
@@ -25,67 +160,130 @@
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" href="#">
-                            <i class="bi bi-people"></i> Team
+                            <i class="bi bi-kanban"></i> Projects
                         </a>
                     </li>
                     <li class="nav-item">
+                        <a class="nav-link" href="#">
+                            <i class="bi bi-people"></i> Team
+                        </a>
+                    </li>
+                    <li class="nav-item mt-3">
                         <a class="nav-link" href="{% url 'account_settings' %}">
                             <i class="bi bi-gear"></i> Settings
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'logout' %}">
+                            <i class="bi bi-box-arrow-right"></i> Logout
                         </a>
                     </li>
                 </ul>
             </div>
         </div>
 
+        <!-- Main Content -->
         <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
-            <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-                <h1 class="h2">Dashboard</h1>
-                <div class="btn-toolbar mb-2 mb-md-0">
-                    <div class="btn-group me-2">
-                        <button type="button" class="btn btn-sm btn-outline-secondary">Share</button>
-                        <button type="button" class="btn btn-sm btn-outline-secondary">Export</button>
+            <div class="welcome-card fade-in">
+                <div class="row align-items-center">
+                    <div class="col-lg-8">
+                        <h2 class="fw-bold mb-2">Welcome, {{ user.username }}!</h2>
+                        <p class="mb-0 lead">Here's an overview of your tasks and productivity</p>
                     </div>
-                    <button type="button" class="btn btn-sm btn-primary">
-                        <i class="bi bi-plus"></i> New Task
-                    </button>
+                    <div class="col-lg-4 text-lg-end mt-3 mt-lg-0">
+                        <button type="button" class="btn btn-light">
+                            <i class="bi bi-plus-lg"></i> New Task
+                        </button>
+                    </div>
                 </div>
             </div>
 
-            <h2>Welcome, {{ user.username }}!</h2>
-            <p>This is your dashboard where you can manage all your tasks.</p>
+            <!-- Stats Section -->
+            <div class="row g-4 mb-4">
+                <div class="col-md-3 fade-in">
+                    <div class="card stats-card">
+                        <i class="bi bi-list-check stats-icon"></i>
+                        <div class="stats-number">0</div>
+                        <div class="stats-label">Total Tasks</div>
+                    </div>
+                </div>
+                <div class="col-md-3 fade-in">
+                    <div class="card stats-card">
+                        <i class="bi bi-clock stats-icon"></i>
+                        <div class="stats-number">0</div>
+                        <div class="stats-label">In Progress</div>
+                    </div>
+                </div>
+                <div class="col-md-3 fade-in">
+                    <div class="card stats-card">
+                        <i class="bi bi-check2-all stats-icon"></i>
+                        <div class="stats-number">0</div>
+                        <div class="stats-label">Completed</div>
+                    </div>
+                </div>
+                <div class="col-md-3 fade-in">
+                    <div class="card stats-card">
+                        <i class="bi bi-graph-up stats-icon"></i>
+                        <div class="stats-number">0%</div>
+                        <div class="stats-label">Completion Rate</div>
+                    </div>
+                </div>
+            </div>
 
-            <div class="row mt-4">
-                <div class="col-md-4">
-                    <div class="card mb-4">
-                        <div class="card-header">
+            <!-- Tasks Section -->
+            <div class="row g-4">
+                <div class="col-md-4 fade-in">
+                    <div class="card h-100">
+                        <div class="card-header d-flex justify-content-between align-items-center">
                             <h5 class="mb-0">Tasks Due Today</h5>
+                            <span class="badge bg-primary rounded-pill">0</span>
                         </div>
                         <div class="card-body">
-                            <p class="card-text">You have no tasks due today.</p>
-                            <a href="#" class="btn btn-primary">View All Tasks</a>
+                            <p class="card-text text-muted">You have no tasks due today.</p>
+                            <div class="text-center mt-4">
+                                <a href="#" class="btn btn-primary">
+                                    <i class="bi bi-plus-lg me-1"></i> Add Task
+                                </a>
+                            </div>
                         </div>
                     </div>
                 </div>
-                <div class="col-md-4">
-                    <div class="card mb-4">
-                        <div class="card-header">
+                <div class="col-md-4 fade-in">
+                    <div class="card h-100">
+                        <div class="card-header d-flex justify-content-between align-items-center">
                             <h5 class="mb-0">Recent Activity</h5>
+                            <i class="bi bi-bell text-muted"></i>
                         </div>
                         <div class="card-body">
-                            <p class="card-text">No recent activity.</p>
+                            <p class="text-muted">No recent activity.</p>
+                            <div class="d-grid gap-2 mt-4">
+                                <button class="btn btn-outline-secondary btn-sm">View All Activity</button>
+                            </div>
                         </div>
                     </div>
                 </div>
-                <div class="col-md-4">
-                    <div class="card mb-4">
+                <div class="col-md-4 fade-in">
+                    <div class="card h-100">
                         <div class="card-header">
                             <h5 class="mb-0">Quick Actions</h5>
                         </div>
-                        <div class="card-body">
-                            <div class="list-group">
-                                <a href="#" class="list-group-item list-group-item-action">Create a new task</a>
-                                <a href="#" class="list-group-item list-group-item-action">View completed tasks</a>
-                                <a href="#" class="list-group-item list-group-item-action">Manage projects</a>
+                        <div class="card-body p-0">
+                            <div class="list-group list-group-flush">
+                                <a href="#" class="list-group-item list-group-item-action">
+                                    <i class="bi bi-plus-circle me-2 text-primary"></i> Create a new task
+                                </a>
+                                <a href="#" class="list-group-item list-group-item-action">
+                                    <i class="bi bi-check2-circle me-2 text-success"></i> View completed tasks
+                                </a>
+                                <a href="#" class="list-group-item list-group-item-action">
+                                    <i class="bi bi-kanban me-2 text-info"></i> Manage projects
+                                </a>
+                                <a href="#" class="list-group-item list-group-item-action">
+                                    <i class="bi bi-people me-2 text-warning"></i> Team collaboration
+                                </a>
+                                <a href="#" class="list-group-item list-group-item-action">
+                                    <i class="bi bi-gear me-2 text-secondary"></i> Account settings
+                                </a>
                             </div>
                         </div>
                     </div>
@@ -94,4 +292,25 @@
         </main>
     </div>
 </div>
+
+{% block extra_scripts %}
+<script>
+    // Fade-in animation for elements
+    document.addEventListener('DOMContentLoaded', function() {
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                }
+            });
+        }, {
+            threshold: 0.1
+        });
+        
+        document.querySelectorAll('.fade-in').forEach(el => {
+            observer.observe(el);
+        });
+    });
+</script>
+{% endblock %}
 {% endblock %} 

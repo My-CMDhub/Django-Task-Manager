@@ -1,41 +1,501 @@
 {% extends 'base.html' %}
 
-{% block title %}Task Manager - Home{% endblock %}
+{% block title %}Task Manager - Streamline Your Productivity{% endblock %}
+
+{% block extra_head %}
+<style>
+    /* Custom styles for our landing page */
+    html {
+        scroll-behavior: smooth;
+    }
+    body {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+    .hero {
+        min-height: 85vh;
+        background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+        color: white;
+        display: flex;
+        align-items: center;
+        position: relative;
+    }
+    .hero::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 5rem;
+        background: linear-gradient(to top, rgba(255,255,255,1), rgba(255,255,255,0));
+    }
+    .feature-icon {
+        font-size: 2.5rem;
+        margin-bottom: 1rem;
+        color: #6366f1;
+        transition: transform 0.3s ease;
+    }
+    .feature-card:hover .feature-icon {
+        transform: translateY(-5px);
+    }
+    .feature-card {
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        border-radius: 8px;
+        border: 1px solid rgba(0,0,0,0.1);
+        height: 100%;
+    }
+    .feature-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+    }
+    .section {
+        padding: 6rem 0;
+    }
+    .section-dark {
+        background-color: #f8f9fa;
+    }
+    .workflow-step {
+        position: relative;
+        padding-left: 4rem;
+        margin-bottom: 2rem;
+    }
+    .workflow-step::before {
+        content: attr(data-step);
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 3rem;
+        height: 3rem;
+        background-color: #6366f1;
+        color: white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        font-size: 1.25rem;
+    }
+    .workflow-step::after {
+        content: '';
+        position: absolute;
+        left: 1.5rem;
+        top: 3rem;
+        bottom: -2rem;
+        width: 2px;
+        background-color: #e9ecef;
+    }
+    .workflow-step:last-child::after {
+        display: none;
+    }
+    .cta-section {
+        background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+        color: white;
+        padding: 5rem 0;
+    }
+    .testimonial-card {
+        background-color: white;
+        border-radius: 8px;
+        padding: 2rem;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+        transition: transform 0.3s ease;
+    }
+    .testimonial-card:hover {
+        transform: translateY(-5px);
+    }
+    .avatar {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        object-fit: cover;
+    }
+    .avatar-placeholder {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        background-color: #e9ecef;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #6c757d;
+        font-size: 1.5rem;
+    }
+    .btn-gradient {
+        background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+        color: white;
+        border: none;
+        transition: all 0.3s ease;
+    }
+    .btn-gradient:hover {
+        background: linear-gradient(135deg, #5254cc 0%, #7a4edb 100%);
+        transform: translateY(-2px);
+        color: white;
+        box-shadow: 0 5px 15px rgba(99, 102, 241, 0.4);
+    }
+    .fade-in {
+        opacity: 0;
+        transform: translateY(20px);
+        transition: opacity 0.6s ease, transform 0.6s ease;
+    }
+    .fade-in.visible {
+        opacity: 1;
+        transform: translateY(0);
+    }
+    .phase-badge {
+        display: inline-block;
+        padding: 0.35em 0.65em;
+        font-size: 0.75em;
+        font-weight: 700;
+        line-height: 1;
+        text-align: center;
+        white-space: nowrap;
+        vertical-align: baseline;
+        border-radius: 0.25rem;
+        margin-left: 0.5rem;
+    }
+    .badge-success {
+        background-color: #10b981;
+        color: white;
+    }
+    .badge-upcoming {
+        background-color: #f59e0b;
+        color: white;
+    }
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="container mt-5">
-    <div class="row justify-content-center">
-        <div class="col-md-8 text-center">
-            <h1 class="display-4">Welcome to Task Manager</h1>
-            <p class="lead mt-3">Your ultimate solution for managing tasks with AI assistance</p>
-            
-            <div class="mt-5">
-                {% if user.is_authenticated %}
-                    <a href="{% url 'dashboard' %}" class="btn btn-primary btn-lg px-4 me-2">Go to Dashboard</a>
-                    <a href="{% url 'account_settings' %}" class="btn btn-outline-secondary btn-lg px-4">Account Settings</a>
-                {% else %}
-                    <a href="{% url 'login' %}" class="btn btn-primary btn-lg px-4 me-2">Login</a>
-                    <a href="{% url 'register' %}" class="btn btn-outline-secondary btn-lg px-4">Register</a>
-                {% endif %}
+<!-- Hero Section -->
+<section class="hero">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-lg-6 mb-5 mb-lg-0">
+                <h1 class="display-4 fw-bold mb-4">Task Manager with AI Automation</h1>
+                <p class="lead mb-4">Streamline your workflow with our intelligent task management system. Get more done with less effort using AI-powered automation.</p>
+                <div class="d-flex flex-wrap gap-2">
+                    {% if user.is_authenticated %}
+                        <a href="{% url 'dashboard' %}" class="btn btn-light btn-lg px-4">Go to Dashboard</a>
+                        <a href="#features" class="btn btn-outline-light btn-lg px-4">Explore Features</a>
+                    {% else %}
+                        <a href="{% url 'register' %}" class="btn btn-light btn-lg px-4">Get Started</a>
+                        <a href="{% url 'login' %}" class="btn btn-outline-light btn-lg px-4">Login</a>
+                    {% endif %}
+                </div>
             </div>
-            
-            <div class="mt-5">
-                <div class="row">
-                    <div class="col-md-4">
-                        <h3>Task Management</h3>
-                        <p>Create, update, and organize your tasks efficiently</p>
+            <div class="col-lg-6">
+                <img src="https://cdn.pixabay.com/photo/2019/10/09/07/28/development-4536630_1280.png" alt="Task Management" class="img-fluid rounded-3 shadow">
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Features Section -->
+<section id="features" class="section">
+    <div class="container">
+        <div class="row text-center mb-5">
+            <div class="col-lg-8 mx-auto">
+                <h2 class="fw-bold mb-3">Powerful Features</h2>
+                <p class="lead text-muted">Everything you need to manage your tasks and boost your productivity</p>
+            </div>
+        </div>
+        <div class="row g-4">
+            <div class="col-md-4">
+                <div class="feature-card p-4 h-100">
+                    <div class="feature-icon">
+                        <i class="bi bi-check2-square"></i>
                     </div>
-                    <div class="col-md-4">
-                        <h3>Collaboration</h3>
-                        <p>Share and assign tasks with your team members</p>
+                    <h3>Task Management</h3>
+                    <p class="text-muted">Create, organize, and track your tasks with ease. Set priorities, due dates, and categories to stay organized.</p>
+                    <div class="mt-auto">
+                        <span class="phase-badge badge-upcoming">Coming Soon</span>
                     </div>
-                    <div class="col-md-4">
-                        <h3>AI Assistant</h3>
-                        <p>Leverage AI to optimize your workflow</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="feature-card p-4 h-100">
+                    <div class="feature-icon">
+                        <i class="bi bi-robot"></i>
+                    </div>
+                    <h3>AI Automation</h3>
+                    <p class="text-muted">Let our AI assistant automate repetitive tasks. Create tasks with natural language and get smart suggestions.</p>
+                    <div class="mt-auto">
+                        <span class="phase-badge badge-upcoming">Coming Soon</span>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="feature-card p-4 h-100">
+                    <div class="feature-icon">
+                        <i class="bi bi-people"></i>
+                    </div>
+                    <h3>Collaboration</h3>
+                    <p class="text-muted">Work together with your team. Assign tasks, comment, and track progress in real-time.</p>
+                    <div class="mt-auto">
+                        <span class="phase-badge badge-upcoming">Coming Soon</span>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="feature-card p-4 h-100">
+                    <div class="feature-icon">
+                        <i class="bi bi-shield-check"></i>
+                    </div>
+                    <h3>Secure Authentication</h3>
+                    <p class="text-muted">Your data is protected with our secure authentication system. Email verification and account management.</p>
+                    <div class="mt-auto">
+                        <span class="phase-badge badge-success">Available</span>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="feature-card p-4 h-100">
+                    <div class="feature-icon">
+                        <i class="bi bi-calendar-check"></i>
+                    </div>
+                    <h3>Smart Scheduling</h3>
+                    <p class="text-muted">Organize tasks on your calendar. Set reminders and get notifications to never miss a deadline.</p>
+                    <div class="mt-auto">
+                        <span class="phase-badge badge-upcoming">Coming Soon</span>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="feature-card p-4 h-100">
+                    <div class="feature-icon">
+                        <i class="bi bi-graph-up"></i>
+                    </div>
+                    <h3>Productivity Analytics</h3>
+                    <p class="text-muted">Gain insights into your productivity patterns. Track completed tasks and identify areas for improvement.</p>
+                    <div class="mt-auto">
+                        <span class="phase-badge badge-upcoming">Coming Soon</span>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
+</section>
+
+<!-- How It Works Section -->
+<section class="section section-dark">
+    <div class="container">
+        <div class="row mb-5">
+            <div class="col-lg-8 mx-auto text-center">
+                <h2 class="fw-bold mb-3">How It Works</h2>
+                <p class="lead text-muted">Simple steps to boost your productivity</p>
+            </div>
+        </div>
+        <div class="row align-items-center">
+            <div class="col-md-6 mb-4 mb-md-0">
+                <img src="https://cdn.pixabay.com/photo/2020/05/18/16/17/social-media-5187243_1280.png" alt="How It Works" class="img-fluid rounded-3">
+            </div>
+            <div class="col-md-6">
+                <div class="workflow-step" data-step="1">
+                    <h3>Create an Account</h3>
+                    <p>Sign up with your email, verify your account, and set up your profile.</p>
+                </div>
+                <div class="workflow-step" data-step="2">
+                    <h3>Organize Your Tasks</h3>
+                    <p>Create tasks, set priorities, add due dates, and organize them into projects.</p>
+                </div>
+                <div class="workflow-step" data-step="3">
+                    <h3>Automate with AI</h3>
+                    <p>Use natural language to create tasks and let AI suggest optimizations.</p>
+                </div>
+                <div class="workflow-step" data-step="4">
+                    <h3>Track Progress</h3>
+                    <p>Monitor your productivity, share with team members, and celebrate completions.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Development Roadmap Section -->
+<section class="section">
+    <div class="container">
+        <div class="row mb-5">
+            <div class="col-lg-8 mx-auto text-center">
+                <h2 class="fw-bold mb-3">Development Roadmap</h2>
+                <p class="lead text-muted">Our journey to building the ultimate task management solution</p>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-lg-10 mx-auto">
+                <div class="card mb-4">
+                    <div class="card-body p-4">
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                                <i class="bi bi-shield-lock"></i>
+                            </div>
+                            <h3 class="ms-3 mb-0">Phase 1: Authentication & User Management</h3>
+                            <span class="ms-auto phase-badge badge-success">Completed</span>
+                        </div>
+                        <p>We've successfully implemented a robust authentication system with Supabase integration, including:</p>
+                        <div class="row mt-3">
+                            <div class="col-md-6">
+                                <ul class="list-unstyled">
+                                    <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i> Email/password signup with verification</li>
+                                    <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i> Password strength validation</li>
+                                    <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i> JWT-based authentication</li>
+                                </ul>
+                            </div>
+                            <div class="col-md-6">
+                                <ul class="list-unstyled">
+                                    <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i> Account management & recovery</li>
+                                    <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i> Brute-force protection</li>
+                                    <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i> User session management</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card mb-4">
+                    <div class="card-body p-4">
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="rounded-circle bg-secondary text-white d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                                <i class="bi bi-list-check"></i>
+                            </div>
+                            <h3 class="ms-3 mb-0">Phase 2: Task Management System</h3>
+                            <span class="ms-auto phase-badge badge-upcoming">In Development</span>
+                        </div>
+                        <p>Our next phase focuses on building a comprehensive task management system:</p>
+                        <div class="row mt-3">
+                            <div class="col-md-6">
+                                <ul class="list-unstyled">
+                                    <li class="mb-2"><i class="bi bi-clock text-secondary me-2"></i> Task CRUD operations</li>
+                                    <li class="mb-2"><i class="bi bi-clock text-secondary me-2"></i> Projects and workspaces</li>
+                                    <li class="mb-2"><i class="bi bi-clock text-secondary me-2"></i> Task templates and bulk actions</li>
+                                </ul>
+                            </div>
+                            <div class="col-md-6">
+                                <ul class="list-unstyled">
+                                    <li class="mb-2"><i class="bi bi-clock text-secondary me-2"></i> Tagging and prioritization</li>
+                                    <li class="mb-2"><i class="bi bi-clock text-secondary me-2"></i> File attachments</li>
+                                    <li class="mb-2"><i class="bi bi-clock text-secondary me-2"></i> Task dependencies and history</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card mb-4">
+                    <div class="card-body p-4">
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="rounded-circle bg-secondary text-white d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                                <i class="bi bi-robot"></i>
+                            </div>
+                            <h3 class="ms-3 mb-0">Phase 3: AI Chatbot Integration</h3>
+                            <span class="ms-auto phase-badge badge-upcoming">Planned</span>
+                        </div>
+                        <p>Coming soon: AI-powered assistant to help manage your tasks using natural language.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- CTA Section -->
+<section class="cta-section">
+    <div class="container text-center">
+        <h2 class="display-6 fw-bold mb-4">Ready to Boost Your Productivity?</h2>
+        <p class="lead mb-5">Join our growing community of productive professionals today.</p>
+        <div class="d-flex justify-content-center flex-wrap gap-3">
+            {% if user.is_authenticated %}
+                <a href="{% url 'dashboard' %}" class="btn btn-light btn-lg px-5">Go to Dashboard</a>
+            {% else %}
+                <a href="{% url 'register' %}" class="btn btn-light btn-lg px-5">Get Started for Free</a>
+                <a href="{% url 'login' %}" class="btn btn-outline-light btn-lg px-5">Log In</a>
+            {% endif %}
+        </div>
+    </div>
+</section>
+
+<!-- Footer -->
+<footer class="bg-dark text-light py-5">
+    <div class="container">
+        <div class="row g-4">
+            <div class="col-lg-4">
+                <h5 class="mb-3">Task Manager</h5>
+                <p class="text-muted">Streamline your workflow with our intelligent task management system. Get more done with less effort.</p>
+            </div>
+            <div class="col-lg-2 col-md-3 col-6">
+                <h5 class="mb-3">Links</h5>
+                <ul class="list-unstyled">
+                    <li class="mb-2"><a href="#features" class="text-muted text-decoration-none">Features</a></li>
+                    <li class="mb-2"><a href="#" class="text-muted text-decoration-none">Pricing</a></li>
+                    <li class="mb-2"><a href="#" class="text-muted text-decoration-none">Documentation</a></li>
+                </ul>
+            </div>
+            <div class="col-lg-2 col-md-3 col-6">
+                <h5 class="mb-3">Legal</h5>
+                <ul class="list-unstyled">
+                    <li class="mb-2"><a href="#" class="text-muted text-decoration-none">Privacy Policy</a></li>
+                    <li class="mb-2"><a href="#" class="text-muted text-decoration-none">Terms of Service</a></li>
+                    <li class="mb-2"><a href="#" class="text-muted text-decoration-none">Cookie Policy</a></li>
+                </ul>
+            </div>
+            <div class="col-lg-4 col-md-6">
+                <h5 class="mb-3">Stay Updated</h5>
+                <p class="text-muted">Subscribe to our newsletter for updates on new features and improvements.</p>
+                <div class="d-flex">
+                    <input type="email" class="form-control me-2" placeholder="Your email">
+                    <button class="btn btn-primary">Subscribe</button>
+                </div>
+            </div>
+        </div>
+        <hr class="my-4 text-muted">
+        <div class="row">
+            <div class="col-md-6 text-center text-md-start">
+                <p class="text-muted mb-0">&copy; 2023 Task Manager. All rights reserved.</p>
+            </div>
+            <div class="col-md-6 text-center text-md-end">
+                <div class="d-flex gap-3 justify-content-center justify-content-md-end">
+                    <a href="#" class="text-muted"><i class="bi bi-twitter"></i></a>
+                    <a href="#" class="text-muted"><i class="bi bi-facebook"></i></a>
+                    <a href="#" class="text-muted"><i class="bi bi-linkedin"></i></a>
+                    <a href="#" class="text-muted"><i class="bi bi-github"></i></a>
+                </div>
+            </div>
+        </div>
+    </div>
+</footer>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    // Fade-in animation for elements
+    document.addEventListener('DOMContentLoaded', function() {
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                }
+            });
+        }, {
+            threshold: 0.1
+        });
+        
+        document.querySelectorAll('.feature-card, .workflow-step, .testimonial-card, .card').forEach(el => {
+            el.classList.add('fade-in');
+            observer.observe(el);
+        });
+        
+        // Smooth scrolling for anchor links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function(e) {
+                e.preventDefault();
+                const targetId = this.getAttribute('href');
+                if (targetId === '#') return;
+                
+                const targetElement = document.querySelector(targetId);
+                if (targetElement) {
+                    window.scrollTo({
+                        top: targetElement.offsetTop - 70,
+                        behavior: 'smooth'
+                    });
+                }
+            });
+        });
+    });
+</script>
 {% endblock %} 

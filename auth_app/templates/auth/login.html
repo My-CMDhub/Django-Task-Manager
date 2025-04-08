@@ -1,198 +1,346 @@
 {% extends "base.html" %}
 
-{% block title %}Login{% endblock %}
+{% block title %}Login - Task Manager{% endblock %}
+
+{% block extra_head %}
+<style>
+    body {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        background-color: #f8f9fa;
+    }
+    .login-container {
+        padding: 2rem 0;
+        min-height: calc(100vh - 56px);
+        display: flex;
+        align-items: center;
+    }
+    .card {
+        border: none;
+        border-radius: 10px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+        overflow: hidden;
+    }
+    .card-header {
+        background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+        color: white;
+        border: none;
+        padding: 1.5rem;
+    }
+    .card-body {
+        padding: 2rem;
+    }
+    .form-control {
+        border-radius: 7px;
+        padding: 0.7rem 1rem;
+        border: 1px solid #e0e0e0;
+        transition: all 0.3s ease;
+    }
+    .form-control:focus {
+        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        border-color: #6366f1;
+    }
+    .form-check-input:checked {
+        background-color: #6366f1;
+        border-color: #6366f1;
+    }
+    .btn-primary {
+        background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+        border: none;
+        border-radius: 7px;
+        padding: 0.7rem 1rem;
+        font-weight: 500;
+        transition: all 0.3s ease;
+    }
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(99, 102, 241, 0.4);
+        background: linear-gradient(135deg, #5254cc 0%, #7a4edb 100%);
+    }
+    .btn-outline-primary {
+        color: #6366f1;
+        border-color: #6366f1;
+    }
+    .btn-outline-primary:hover {
+        background-color: #6366f1;
+        color: white;
+    }
+    .alert {
+        border-radius: 7px;
+        border: none;
+    }
+    .alert-success {
+        background-color: #ecfdf5;
+        color: #10b981;
+    }
+    .alert-info {
+        background-color: #eff6ff;
+        color: #3b82f6;
+    }
+    .alert-warning {
+        background-color: #fffbeb;
+        color: #f59e0b;
+    }
+    .alert-danger {
+        background-color: #fef2f2;
+        color: #ef4444;
+    }
+    .divider {
+        display: flex;
+        align-items: center;
+        text-align: center;
+        margin: 1.5rem 0;
+    }
+    .divider::before, .divider::after {
+        content: '';
+        flex: 1;
+        border-bottom: 1px solid #e0e0e0;
+    }
+    .divider span {
+        padding: 0 1rem;
+        color: #6c757d;
+        font-size: 0.9rem;
+    }
+    .footer-links a {
+        color: #6c757d;
+        text-decoration: none;
+        transition: color 0.2s;
+    }
+    .footer-links a:hover {
+        color: #6366f1;
+    }
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="row justify-content-center">
-    <div class="col-md-6">
-        <div class="card">
-            <div class="card-header">
-                <h4 class="mb-0">Login</h4>
-            </div>
-            <div class="card-body">
-                {% if messages %}
-                <div class="mb-3">
-                    {% for message in messages %}
-                        {% if message.tags != 'success' or not just_verified %}
-                        <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show" role="alert">
-                            {{ message|safe }}
-                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+<div class="login-container">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-md-6 col-lg-5">
+                <div class="card">
+                    <div class="card-header text-center">
+                        <h4 class="mb-0 fw-bold">Welcome Back</h4>
+                    </div>
+                    <div class="card-body">
+                        {% if messages %}
+                        <div class="mb-4">
+                            {% for message in messages %}
+                                {% if show_registration_success and message.tags == 'warning' and 'verification email' in message|safe %}
+                                    <!-- Skip warning about verification email when registration was successful -->
+                                {% else %}
+                                    <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show" role="alert">
+                                        {{ message|safe }}
+                                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                                    </div>
+                                {% endif %}
+                            {% endfor %}
                         </div>
                         {% endif %}
-                    {% endfor %}
-                </div>
-                {% endif %}
-                
-                {% if show_register_link %}
-                <div class="alert alert-info mb-3">
-                    <p class="mb-2">No account found with these credentials.</p>
-                    <a href="{% url 'register' %}" class="btn btn-primary btn-sm">Create a New Account</a>
-                </div>
-                {% endif %}
-                
-                {% if just_verified %}
-                <div class="alert alert-success mb-3">
-                    <h5 class="alert-heading">Email Verified Successfully!</h5>
-                    <p>Your email <strong>{{ verified_email }}</strong> has been verified!</p>
-                    <p>Please log in with your username/email and password below to access your account.</p>
-                    <script>
-                        // Auto-fill the email field if verification just happened
-                        document.addEventListener('DOMContentLoaded', function() {
-                            const usernameField = document.getElementById('username');
-                            if (usernameField && !usernameField.value) {
-                                usernameField.value = "{{ verified_email }}";
-                            }
-                        });
-                    </script>
-                </div>
-                {% endif %}
-                
-                {% if verification_outdated %}
-                <div class="alert alert-info mb-3">
-                    <h5 class="alert-heading">Verification Status Updated</h5>
-                    <p>Your verification status has been refreshed.</p>
-                    {% if verified_user %}
-                    <p>Your email is now verified. You can log in with your credentials.</p>
-                    <script>
-                        // Reload the page after a short delay to clear any stale banners
-                        setTimeout(function() {
-                            window.location.reload();
-                        }, 1000);
-                    </script>
-                    {% endif %}
-                </div>
-                {% endif %}
-                
-                {% if just_registered %}
-                <div class="alert alert-info mb-3">
-                    <h5 class="alert-heading">Registration Successful!</h5>
-                    <p><strong>Thank you for registering with us!</strong></p>
-                    <p>We've sent a verification link to <strong>{{ registered_email }}</strong>. Please check your inbox (and spam folder).</p>
-                    <hr>
-                    <p class="mb-0">You need to verify your email before you can log in. Once verified, you'll be able to access your account.</p>
-                    <div class="mt-2">
-                        <a href="#" data-bs-toggle="collapse" data-bs-target="#verifyEmailForm" class="btn btn-outline-primary btn-sm">
-                            Resend Verification Email
-                        </a>
-                    </div>
-                </div>
-                {% endif %}
-                
-                <form method="post" action="{% url 'login' %}">
-                    {% csrf_token %}
-                    <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
-                    
-                    <div class="mb-3">
-                        <label for="username" class="form-label">Username or Email</label>
-                        <input type="text" class="form-control" id="username" name="username" required {% if email %}value="{{ email }}"{% elif verified_email %}value="{{ verified_email }}"{% endif %}>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label for="password" class="form-label">Password</label>
-                        <input type="password" class="form-control" id="password" name="password" required>
-                    </div>
-                    
-                    <div class="mb-3 form-check">
-                        <input type="checkbox" class="form-check-input" id="remember_me" name="remember_me">
-                        <label class="form-check-label" for="remember_me">Remember me</label>
-                    </div>
-                    
-                    {% if next %}
-                    <input type="hidden" name="next" value="{{ next }}">
-                    {% endif %}
-                    
-                    <button type="submit" class="btn btn-primary w-100">Login</button>
-                </form>
-                
-                <div class="mt-3 text-center">
-                    <a href="{% url 'password_reset' %}">Forgot password?</a>
-                    <span class="mx-2">|</span>
-                    <a href="{% url 'register' %}">Create account</a>
-                </div>
-                
-                <hr class="my-3">
-                <div class="text-center mb-2">
-                    <p class="text-muted mb-1">Need to verify your email?</p>
-                    <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-toggle="collapse" data-bs-target="#verifyEmailForm">
-                        Resend Verification Email
-                    </button>
-                    
-                    {% if show_resend or email %}
-                    <div class="mt-2">
-                        <form method="post" action="{% url 'login' %}">
-                            {% csrf_token %}
-                            <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
-                            <input type="hidden" name="email" value="{% if email %}{{ email }}{% endif %}">
-                            <input type="hidden" name="skip_verification" value="true">
-                            <button type="submit" class="btn btn-warning btn-sm">Skip Verification (Returning User)</button>
-                        </form>
-                        <small class="text-muted d-block mt-1">Use this if you've registered before and are having trouble with verification.</small>
-                    </div>
-                    {% endif %}
-                    
-                    {% if show_reset or email %}
-                    <div class="mt-2">
-                        <button type="button" class="btn btn-danger btn-sm" data-bs-toggle="collapse" data-bs-target="#resetAccountForm">
-                            Reset Account Completely
-                        </button>
-                        <small class="text-muted d-block mt-1">Having login problems? Use this option to wipe your account and start fresh.</small>
-                    </div>
-                    
-                    <div class="collapse mt-3" id="resetAccountForm">
-                        <div class="card card-body bg-light">
-                            <p class="text-danger"><strong>Warning:</strong> This will completely delete your account data and allow you to register again with this email.</p>
-                            
-                            <div class="mb-3">
-                                <p><strong>When to use this option:</strong></p>
-                                <ul class="small">
-                                    <li>You can't log in despite using the correct credentials</li>
-                                    <li>You get "email already registered" errors when trying to register</li>
-                                    <li>Your verification emails aren't coming through</li>
-                                    <li>You've deleted your account from Supabase directly</li>
-                                    <li>You're stuck in an authentication loop</li>
-                                </ul>
-                                <p class="small">This will clean up your account in both Django and Supabase systems.</p>
+                        
+                        {% if show_register_link %}
+                        <div class="alert alert-info mb-4">
+                            <p class="mb-2">No account found with these credentials.</p>
+                            <a href="{% url 'register' %}" class="btn btn-primary btn-sm">Create a New Account</a>
+                        </div>
+                        {% endif %}
+                        
+                        {% if just_verified %}
+                        <div class="alert alert-success mb-4">
+                            <h5 class="alert-heading fw-bold">Email Verified Successfully!</h5>
+                            <p>Your email <strong>{{ verified_email }}</strong> has been verified!</p>
+                            <p>Please log in with your username/email and password below to access your account.</p>
+                            <script>
+                                // Auto-fill the email field if verification just happened
+                                document.addEventListener('DOMContentLoaded', function() {
+                                    const usernameField = document.getElementById('username');
+                                    if (usernameField && !usernameField.value) {
+                                        usernameField.value = "{{ verified_email }}";
+                                    }
+                                });
+                            </script>
+                        </div>
+                        {% endif %}
+                        
+                        {% if verification_outdated %}
+                        <div class="alert alert-info mb-4">
+                            <h5 class="alert-heading fw-bold">Verification Status Updated</h5>
+                            <p>Your verification status has been refreshed.</p>
+                            {% if verified_user %}
+                            <p>Your email is now verified. You can log in with your credentials.</p>
+                            <script>
+                                // Reload the page after a short delay to clear any stale banners
+                                setTimeout(function() {
+                                    window.location.reload();
+                                }, 1000);
+                            </script>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                        
+                        {% if just_registered %}
+                        <div class="alert alert-info mb-4">
+                            <h5 class="alert-heading fw-bold">Registration Successful!</h5>
+                            <p><strong>Thank you for registering with us!</strong></p>
+                            <p>We've sent a verification link to <strong>{{ registered_email }}</strong>. Please check your inbox (and spam folder).</p>
+                            <hr>
+                            <p class="mb-0">You need to verify your email before you can log in. Once verified, you'll be able to access your account.</p>
+                            <div class="mt-3">
+                                <a href="#" data-bs-toggle="collapse" data-bs-target="#verifyEmailForm" class="btn btn-outline-primary btn-sm px-3">
+                                    Resend Verification Email
+                                </a>
                             </div>
-                            
+                        </div>
+                        {% endif %}
+                        
+                        {% if just_deleted %}
+                        <div class="alert alert-success mb-4">
+                            <h5 class="alert-heading fw-bold">Account Deleted Successfully!</h5>
+                            <p>Your account has been deleted from our system.</p>
+                            {% if force_clean_email %}
+                            <hr>
+                            <p>If you want to register again with the same email, you may need to clean up any remaining data.</p>
                             <form method="post" action="{% url 'login' %}">
                                 {% csrf_token %}
-                                <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
-                                <input type="hidden" name="email" value="{% if email %}{{ email }}{% endif %}">
+                                <input type="hidden" name="email" value="{{ force_clean_email }}">
+                                <input type="hidden" name="email_confirm" value="{{ force_clean_email }}">
                                 <input type="hidden" name="reset_account" value="true">
-                                <div class="mb-3">
-                                    <label for="email_confirm" class="form-label">Confirm Email</label>
-                                    <input type="email" class="form-control" id="email_confirm" name="email_confirm" required placeholder="Re-enter your email to confirm">
-                                </div>
-                                <button type="submit" class="btn btn-danger w-100" onclick="return confirmReset()">Reset Account</button>
+                                <button type="submit" class="btn btn-warning btn-sm px-3">Clean Up Remaining Data</button>
                             </form>
+                            {% endif %}
                         </div>
-                    </div>
-                    {% endif %}
-                </div>
-                
-                <div class="collapse mt-3" id="verifyEmailForm">
-                    <div class="card card-body bg-light">
-                        <h5 class="card-title">Resend Verification Email</h5>
-                        <p class="small mb-3">We'll send a new verification link to your email address. Check both your inbox and spam folder after submission.</p>
-                        <form method="post" action="{% url 'login' %}">
+                        {% endif %}
+                        
+                        <form method="post" action="{% url 'login' %}" class="needs-validation" novalidate>
                             {% csrf_token %}
                             <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
-                            <input type="hidden" name="verify_only" value="true">
-                            <div class="mb-3">
-                                <label for="verify_email" class="form-label">Your Email Address</label>
-                                <input type="email" class="form-control" id="verify_email" name="email" required {% if email %}value="{{ email }}"{% elif verified_email %}value="{{ verified_email }}"{% endif %}>
+                            
+                            <div class="mb-4">
+                                <label for="username" class="form-label">Username or Email</label>
+                                <input type="text" class="form-control" id="username" name="username" required {% if email %}value="{{ email }}"{% elif verified_email %}value="{{ verified_email }}"{% endif %}>
                             </div>
-                            <button type="submit" class="btn btn-info w-100">Send Verification Link</button>
+                            
+                            <div class="mb-4">
+                                <label for="password" class="form-label">Password</label>
+                                <input type="password" class="form-control" id="password" name="password" required>
+                            </div>
+                            
+                            <div class="mb-4 d-flex justify-content-between align-items-center">
+                                <div class="form-check">
+                                    <input type="checkbox" class="form-check-input" id="remember_me" name="remember_me">
+                                    <label class="form-check-label" for="remember_me">Remember me</label>
+                                </div>
+                                <div>
+                                    <a href="{% url 'password_reset' %}" class="text-decoration-none">Forgot password?</a>
+                                </div>
+                            </div>
+                            
+                            {% if next %}
+                            <input type="hidden" name="next" value="{{ next }}">
+                            {% endif %}
+                            
+                            <button type="submit" class="btn btn-primary w-100 py-2 mb-4">Log In</button>
                         </form>
-                        <div class="alert alert-warning mt-3 mb-0 small">
-                            <strong>Tip:</strong> If you're not receiving verification emails, please:
-                            <ul class="mb-0 mt-1">
-                                <li>Check your spam/junk folder</li>
-                                <li>Add our email to your contacts</li>
-                                <li>Try using a different email provider</li>
-                            </ul>
+                        
+                        <div class="divider">
+                            <span>OR</span>
+                        </div>
+                        
+                        <div class="text-center mb-4">
+                            <p class="mb-2">Don't have an account?</p>
+                            <a href="{% url 'register' %}" class="btn btn-outline-primary px-4">Create Account</a>
+                        </div>
+                        
+                        <div class="text-center mb-3">
+                            <p class="text-muted mb-3">Need help?</p>
+                            <div class="d-grid gap-2">
+                                <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-toggle="collapse" data-bs-target="#verifyEmailForm">
+                                    Resend Verification Email
+                                </button>
+                                
+                                {% if show_resend or email %}
+                                <form method="post" action="{% url 'login' %}" class="mt-2">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+                                    <input type="hidden" name="email" value="{% if email %}{{ email }}{% endif %}">
+                                    <input type="hidden" name="skip_verification" value="true">
+                                    <button type="submit" class="btn btn-warning btn-sm w-100">Skip Verification (Returning User)</button>
+                                    <small class="text-muted d-block mt-1">Use this if you've registered before and are having trouble with verification.</small>
+                                </form>
+                                {% endif %}
+                                
+                                {% if show_reset or email %}
+                                <div class="mt-3">
+                                    <button type="button" class="btn btn-danger btn-sm w-100" data-bs-toggle="collapse" data-bs-target="#resetAccountForm">
+                                        Reset Account Completely
+                                    </button>
+                                    <small class="text-muted d-block mt-1">Having login problems? Use this option to wipe your account and start fresh.</small>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        {% if show_reset or email %}
+                        <div class="collapse mt-4" id="resetAccountForm">
+                            <div class="card card-body bg-light">
+                                <p class="text-danger"><strong>Warning:</strong> This will completely delete your account data and allow you to register again with this email.</p>
+                                
+                                <div class="mb-3">
+                                    <p><strong>When to use this option:</strong></p>
+                                    <ul class="small">
+                                        <li>You can't log in despite using the correct credentials</li>
+                                        <li>You get "email already registered" errors when trying to register</li>
+                                        <li>Your verification emails aren't coming through</li>
+                                        <li>You've deleted your account from Supabase directly</li>
+                                        <li>You're stuck in an authentication loop</li>
+                                    </ul>
+                                    <p class="small">This will clean up your account in both Django and Supabase systems.</p>
+                                </div>
+                                
+                                <form method="post" action="{% url 'login' %}">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+                                    <input type="hidden" name="email" value="{% if email %}{{ email }}{% endif %}">
+                                    <input type="hidden" name="reset_account" value="true">
+                                    <div class="mb-3">
+                                        <label for="email_confirm" class="form-label">Confirm Email</label>
+                                        <input type="email" class="form-control" id="email_confirm" name="email_confirm" required placeholder="Re-enter your email to confirm">
+                                    </div>
+                                    <button type="submit" class="btn btn-danger w-100" onclick="return confirmReset()">Reset Account</button>
+                                </form>
+                            </div>
+                        </div>
+                        {% endif %}
+                        
+                        <div class="collapse mt-4" id="verifyEmailForm">
+                            <div class="card card-body bg-light">
+                                <h5 class="card-title fw-bold">Resend Verification Email</h5>
+                                <p class="small mb-3">We'll send a new verification link to your email address. Check both your inbox and spam folder after submission.</p>
+                                <form method="post" action="{% url 'login' %}">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+                                    <input type="hidden" name="verify_only" value="true">
+                                    <div class="mb-3">
+                                        <label for="verify_email" class="form-label">Your Email Address</label>
+                                        <input type="email" class="form-control" id="verify_email" name="email" required {% if email %}value="{{ email }}"{% elif verified_email %}value="{{ verified_email }}"{% endif %}>
+                                    </div>
+                                    <button type="submit" class="btn btn-primary w-100">Send Verification Link</button>
+                                </form>
+                                <div class="alert alert-warning mt-3 mb-0 small">
+                                    <strong>Tip:</strong> If you're not receiving verification emails, please:
+                                    <ul class="mb-0 mt-1">
+                                        <li>Check your spam/junk folder</li>
+                                        <li>Add our email to your contacts</li>
+                                        <li>Try using a different email provider</li>
+                                    </ul>
+                                </div>
+                            </div>
                         </div>
                     </div>
+                </div>
+                
+                <div class="text-center mt-4 footer-links">
+                    <a href="#" class="mx-2">Terms of Service</a>
+                    <a href="#" class="mx-2">Privacy Policy</a>
+                    <a href="#" class="mx-2">Help Center</a>
                 </div>
             </div>
         </div>
@@ -200,6 +348,26 @@
 </div>
 
 <script>
+// Set variables from Django context
+var justRegistered = "{{ just_registered|yesno:'true,false' }}";
+var registeredEmail = "{{ registered_email|default:'' }}";
+
+// Add an event listener to update the registration notification
+document.addEventListener('DOMContentLoaded', function() {
+  if (justRegistered === "true") {
+    var regSuccess = document.getElementById('registration-success');
+    var regEmail = document.getElementById('registered-email');
+    
+    if (regSuccess) {
+      regSuccess.style.display = 'block';
+    }
+    
+    if (regEmail) {
+      regEmail.textContent = registeredEmail;
+    }
+  }
+});
+
 function confirmReset() {
     const email = document.getElementById('username').value;
     const confirmEmail = document.getElementById('email_confirm').value;
@@ -230,6 +398,29 @@ document.addEventListener('DOMContentLoaded', function() {
     if (usernameField && usernameField.value) {
         document.cookie = "user_email=" + usernameField.value + "; path=/; max-age=86400";
     }
+    
+    // Fix for the registration flow
+    /* {% if just_registered and registered_email %} */
+    if (typeof justRegistered !== 'undefined' && justRegistered && registeredEmail) {
+        // Focus the username field and pre-fill with the email
+        if (usernameField && !usernameField.value) {
+            usernameField.value = registeredEmail;
+            // Focus the password field next
+            setTimeout(() => {
+                const passwordField = document.getElementById('password');
+                if (passwordField) passwordField.focus();
+            }, 100);
+        }
+        
+        // For better user experience, stop displaying the "could not send email" warning if it appears
+        const warningMessages = document.querySelectorAll('.alert-warning');
+        warningMessages.forEach(message => {
+            if (message.textContent.includes("couldn't send the verification email")) {
+                message.style.display = 'none';
+            }
+        });
+    }
+    /* {% endif %} */
     
     // If coming from another page, refresh the CSRF token
     if (document.referrer && document.referrer !== window.location.href) {

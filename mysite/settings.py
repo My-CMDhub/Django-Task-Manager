@@ -63,12 +63,12 @@ ACCOUNT_RATE_LIMITS = {
 
 # Supabase configuration
 from supabase import create_client
-from gotrue import SyncGoTrueClient
 
 SUPABASE_URL = os.environ.get('SUPABASE_URL', 'https://***REMOVED***.supabase.co')
-SUPABASE_ANON_KEY = os.environ.get('SUPABASE_ANON_KEY', '***REMOVED***')
+SUPABASE_KEY = os.environ.get('SUPABASE_KEY', '***REMOVED***')
+SUPABASE_ANON_KEY = os.environ.get('SUPABASE_ANON_KEY', SUPABASE_KEY)  # Use SUPABASE_KEY as fallback
 SUPABASE_SERVICE_KEY = os.environ.get('SUPABASE_SERVICE_KEY', '***REMOVED***')
-SUPABASE_WEBHOOK_SECRET = os.environ.get('SUPABASE_WEBHOOK_SECRET', 'your-webhook-secret-key')
+SUPABASE_WEBHOOK_SECRET = os.environ.get('SUPABASE_WEBHOOK_SECRET', '***REMOVED***')
 SUPABASE_SYNC_ENABLED = os.environ.get('SUPABASE_SYNC_ENABLED', 'True').lower() in ('true', '1', 't', 'yes')
 BYPASS_SUPABASE_RATE_LIMITS = True  # Set to True for development mode, will bypass Supabase registration
 WEBHOOK_MAX_RETRIES = int(os.environ.get('WEBHOOK_MAX_RETRIES', '3'))
@@ -99,25 +99,24 @@ _supabase_client = None
 _supabase_admin_client = None  # For admin operations
 
 def get_supabase_client():
+    """Get or initialize a Supabase client instance"""
     global _supabase_client
     try:
         if _supabase_client is None:
-            if not SUPABASE_URL or not SUPABASE_ANON_KEY:
-                print("Missing Supabase URL or API key")
+            if not SUPABASE_URL:
+                print("Missing Supabase URL")
+                return None
+            
+            # Use SUPABASE_ANON_KEY first, then fall back to SUPABASE_KEY if needed
+            anon_key = SUPABASE_ANON_KEY or SUPABASE_KEY
+            if not anon_key:
+                print("Missing Supabase API key")
                 return None
                 
-            print(f"Creating new Supabase client with URL: {SUPABASE_URL} and key length: {len(SUPABASE_ANON_KEY)}")
-            _supabase_client = create_client(SUPABASE_URL, SUPABASE_ANON_KEY)
+            print(f"Creating new Supabase client with URL: {SUPABASE_URL}")
+            _supabase_client = create_client(SUPABASE_URL, anon_key)
             print("Supabase client created successfully")
             
-            # Set site URL configuration explicitly for email verification
-            # This is done via client-side API call to update project settings
-            try:
-                # This is a simplified approach - in production you would use
-                # the admin API to properly set the site URL
-                pass  # Placeholder for admin API call
-            except Exception as e:
-                print(f"Error updating site URL: {str(e)}")
         return _supabase_client
     except Exception as e:
         print(f"Error initializing Supabase client: {str(e)}")
@@ -125,18 +124,20 @@ def get_supabase_client():
         return None
 
 def get_supabase_admin_client():
-    """
-    Gets a Supabase client with admin privileges if available
-    """
-    admin_key = os.environ.get('SUPABASE_SERVICE_KEY')
-    url = os.environ.get('SUPABASE_URL')
+    """Get or initialize a Supabase client with admin privileges"""
+    global _supabase_admin_client
     
-    if not admin_key or not url:
-        return None
-        
     try:
-        from supabase import create_client
-        return create_client(url, admin_key)
+        if _supabase_admin_client is None:
+            if not SUPABASE_URL or not SUPABASE_SERVICE_KEY:
+                print("Missing Supabase admin credentials")
+                return None
+                
+            print(f"Creating new Supabase admin client with URL: {SUPABASE_URL}")
+            _supabase_admin_client = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
+            print("Supabase admin client created successfully")
+            
+        return _supabase_admin_client
     except Exception as e:
         print(f"Error creating Supabase admin client: {e}")
         return None
@@ -272,7 +273,7 @@ else:
     if os.environ.get('SENDER_NAME'):
         DEFAULT_FROM_EMAIL = f"{os.environ.get('SENDER_NAME')} <{DEFAULT_FROM_EMAIL}>"
     else:
-        DEFAULT_FROM_EMAIL = f"Task Manager <{DEFAULT_FROM_EMAIL}>"
+        DEFAULT_FROM_EMAIL = f"Task Manager <{EMAIL_HOST_USER}>"
     
     # Additional email headers to improve deliverability
     EMAIL_EXTRA_HEADERS = {

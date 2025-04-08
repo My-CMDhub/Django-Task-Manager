@@ -13,6 +13,8 @@ from django.contrib.auth import get_user_model
 from django.conf import settings
 from django.db import transaction
 from django.db.models import Q
+from django.db import connection
+from django.utils import timezone
 
 # Configure logger
 logger = logging.getLogger(__name__)
@@ -127,13 +129,28 @@ def handle_user_deleted(payload):
         if email:
             query |= Q(email=email)
             
-        # Find and delete the user(s) in Django DB
+        # Find the user(s) in Django DB
         users_to_delete = User.objects.filter(query)
         
         if users_to_delete.exists():
             count = users_to_delete.count()
-            users_to_delete.delete()
-            logger.info(f"Deleted {count} Django user(s) for Supabase user {supabase_user_id or email}")
+            
+            # Check for deleted_at column
+            with connection.cursor() as cursor:
+                cursor.execute("PRAGMA table_info(auth_app_user)")
+                columns = [col[1] for col in cursor.fetchall()]
+                
+            # If deleted_at column exists, use soft delete
+            if 'deleted_at' in columns:
+                for user in users_to_delete:
+                    user.deleted_at = timezone.now()
+                    user.save(update_fields=['deleted_at'])
+                logger.info(f"Soft-deleted {count} Django user(s) for Supabase user {supabase_user_id or email}")
+            else:
+                # Otherwise use hard delete
+                users_to_delete.delete()
+                logger.info(f"Hard-deleted {count} Django user(s) for Supabase user {supabase_user_id or email}")
+                
             return JsonResponse({
                 "status": "success", 
                 "message": f"Deleted {count} Django user(s)"
@@ -169,20 +186,30 @@ def handle_user_created(payload):
             existing_user = User.objects.get(Q(supabase_id=supabase_user_id) | Q(email=email))
             logger.info(f"User {email} already exists in Django, updating Supabase ID")
             
+            # Check what fields exist in User model
+            with connection.cursor() as cursor:
+                cursor.execute("PRAGMA table_info(auth_app_user)")
+                columns = [col[1] for col in cursor.fetchall()]
+            
             # Update user with Supabase information
+            updated_fields = []
             if existing_user.email != email:
                 existing_user.email = email
+                updated_fields.append('email')
             
-            if existing_user.supabase_id != supabase_user_id:
+            if 'supabase_id' in columns and existing_user.supabase_id != supabase_user_id:
                 existing_user.supabase_id = supabase_user_id
+                updated_fields.append('supabase_id')
                 
             # Check if email is verified
             is_verified = _check_email_verified(user_record)
-            if is_verified and not existing_user.email_verified:
+            if 'email_verified' in columns and is_verified and not existing_user.email_verified:
                 existing_user.email_verified = True
+                updated_fields.append('email_verified')
                 logger.info(f"Marked user {email} as email verified from Supabase webhook")
                 
-            existing_user.save()
+            if updated_fields:
+                existing_user.save(update_fields=updated_fields)
             
             return JsonResponse({
                 "status": "success", 
@@ -196,8 +223,15 @@ def handle_user_created(payload):
         import random
         from django.utils.crypto import get_random_string
         
-        # Generate a random username if not provided
-        username = get_random_string(10)
+        # Generate a random username if not provided - ensuring uniqueness
+        username_base = email.split('@')[0]
+        username = username_base
+        
+        # Check if username exists and append numbers until we find a unique one
+        suffix = 1
+        while User.objects.filter(username=username).exists():
+            username = f"{username_base}_{suffix}"
+            suffix += 1
         
         # Generate a random password - user will need to reset it
         temp_password = get_random_string(16)
@@ -205,25 +239,80 @@ def handle_user_created(payload):
         # Extract metadata if available
         user_meta = user_record.get('raw_user_meta_data', {})
         if isinstance(user_meta, dict) and 'username' in user_meta:
-            username = user_meta.get('username')
+            suggested_username = user_meta.get('username')
+            # Check if the suggested username is unique
+            if not User.objects.filter(username=suggested_username).exists():
+                username = suggested_username
         
         # Check email verification status
         email_verified = _check_email_verified(user_record)
         
-        # Create the user
-        new_user = User.objects.create_user(
-            username=username,
-            email=email,
-            password=temp_password,
-            supabase_id=supabase_user_id,
-            email_verified=email_verified
-        )
+        # Check what fields are in the User model
+        with connection.cursor() as cursor:
+            cursor.execute("PRAGMA table_info(auth_app_user)")
+            columns = [col[1] for col in cursor.fetchall()]
         
-        logger.info(f"Created new Django user {email} from Supabase webhook")
-        return JsonResponse({
-            "status": "success", 
-            "message": "Created new Django user from Supabase webhook"
-        })
+        # Create the user using only available fields
+        try:
+            # Start with required fields
+            user_kwargs = {
+                'username': username,
+                'email': email,
+                'password': temp_password
+            }
+            
+            # Add optional fields if they exist in the model
+            if 'supabase_id' in columns:
+                user_kwargs['supabase_id'] = supabase_user_id
+                
+            if 'email_verified' in columns:
+                user_kwargs['email_verified'] = email_verified
+                
+            # Create the user
+            new_user = User.objects.create_user(**user_kwargs)
+            
+            logger.info(f"Created new Django user {email} from Supabase webhook")
+            
+            # Create profile if needed and if UserProfile model exists
+            try:
+                # Try accessing profile through related field
+                profile = new_user.profile
+            except Exception:
+                # If UserProfile model exists, try to create one
+                try:
+                    from auth_app.models import UserProfile
+                    # Check if UserProfile exists
+                    try:
+                        # Check what fields exist in UserProfile
+                        with connection.cursor() as cursor:
+                            cursor.execute("PRAGMA table_info(auth_app_userprofile)")
+                            profile_columns = [col[1] for col in cursor.fetchall()]
+                            
+                        # Start with required fields
+                        profile_kwargs = {'user': new_user}
+                        
+                        # Add fields that exist
+                        if 'supabase_uid' in profile_columns:
+                            profile_kwargs['supabase_uid'] = supabase_user_id
+                            
+                        if 'verified' in profile_columns:
+                            profile_kwargs['verified'] = email_verified
+                            
+                        # Create profile
+                        UserProfile.objects.create(**profile_kwargs)
+                    except Exception as e:
+                        logger.warning(f"Error checking UserProfile schema: {str(e)}")
+                except Exception as e:
+                    logger.info(f"UserProfile model not found: {str(e)}")
+            
+            return JsonResponse({
+                "status": "success", 
+                "message": "Created new Django user from Supabase webhook"
+            })
+                
+        except Exception as e:
+            logger.exception(f"Error creating Django user {email}: {str(e)}")
+            return JsonResponse({"status": "error", "message": str(e)}, status=500)
             
     except Exception as e:
         logger.exception(f"Error handling user creation: {str(e)}")

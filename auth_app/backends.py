@@ -65,7 +65,7 @@ class EmailBackend(ModelBackend):
                         user.save(update_fields=['email_verified'])
                     else:
                         logger.warning(f"Attempted login for unverified account: {login}")
-                        return None
+                        # Continue authentication despite not being verified
                 
                 # CRITICAL FIX: Check the password BEFORE trying Supabase
                 # This ensures we don't hit Supabase unnecessarily and avoid rate limits  
@@ -73,15 +73,30 @@ class EmailBackend(ModelBackend):
                     # If we have a valid local user with correct password, we should NOT fail
                     # even if Supabase auth fails - this ensures login works even with Supabase issues
                     try:
-                        # Try Supabase auth for consistency but don't require it to succeed
-                        supabase = create_client(settings.SUPABASE_URL, settings.SUPABASE_KEY)
-                        response = supabase.auth.sign_in_with_password({
-                            "email": login,
-                            "password": password
-                        })
-                        # If successful, store the session token
-                        if hasattr(response, 'session'):
-                            user._supabase_session_token = response.session.access_token
+                        # Only try Supabase auth if keys are available and configured
+                        supabase_url = getattr(settings, 'SUPABASE_URL', None)
+                        supabase_key = getattr(settings, 'SUPABASE_KEY', None) or getattr(settings, 'SUPABASE_ANON_KEY', None)
+                        
+                        if supabase_url and supabase_key:
+                            # Create Supabase client for v1.0.3
+                            supabase = create_client(supabase_url, supabase_key)
+                            
+                            # Attempt to sign in with Supabase (v1.0.3 format)
+                            auth_response = supabase.auth.sign_in_with_password({
+                                "email": login,
+                                "password": password
+                            })
+                            
+                            # If successful, store the session token
+                            if hasattr(auth_response, 'session') and auth_response.session:
+                                user._supabase_session_token = auth_response.session.access_token
+                                
+                            # Optionally update user info from Supabase
+                            if hasattr(auth_response, 'user') and auth_response.user:
+                                supabase_user = auth_response.user
+                                if not user.supabase_id and hasattr(supabase_user, 'id'):
+                                    user.supabase_id = supabase_user.id
+                                    user.save(update_fields=['supabase_id'])
                     except Exception as supabase_error:
                         # Log but don't fail authentication
                         logger.warning(f"Supabase auth failed but local auth succeeded: {str(supabase_error)}")
@@ -92,25 +107,35 @@ class EmailBackend(ModelBackend):
                 logger.info(f"User not found in local database: {login}")
                 
             # If local auth fails, try Supabase auth
-            if settings.SUPABASE_URL and settings.SUPABASE_KEY:
+            supabase_url = getattr(settings, 'SUPABASE_URL', None)
+            supabase_key = getattr(settings, 'SUPABASE_KEY', None) or getattr(settings, 'SUPABASE_ANON_KEY', None)
+                
+            if supabase_url and supabase_key:
                 try:
                     # Attempt to authenticate with Supabase
                     logger.info(f"Attempting Supabase authentication for: {login}")
-                    supabase = create_client(settings.SUPABASE_URL, settings.SUPABASE_KEY)
-                    response = supabase.auth.sign_in_with_password({
+                    supabase = create_client(supabase_url, supabase_key)
+                    
+                    # Sign in using v1.0.3 format
+                    auth_response = supabase.auth.sign_in_with_password({
                         "email": login,
                         "password": password
                     })
                     
-                    if response and response.user:
+                    # Process the response
+                    if auth_response and hasattr(auth_response, 'user') and auth_response.user:
+                        supabase_user = auth_response.user
+                        user_id = getattr(supabase_user, 'id', None)
+                        
                         logger.info(f"Supabase authentication successful for: {login}")
+                        
                         # User exists in Supabase - ensure they exist locally too
                         try:
                             user = User.objects.get(email=login)
                             # Update the verified status if needed
                             if not user.email_verified:
                                 user.email_verified = True
-                                user.supabase_id = response.user.id
+                                user.supabase_id = user_id
                                 user.save()
                                 logger.info(f"Updated local user verification for: {login}")
                         except User.DoesNotExist:
@@ -121,14 +146,16 @@ class EmailBackend(ModelBackend):
                                 email=login,
                                 password=password,  # This will be hashed by Django
                                 email_verified=True,
-                                supabase_id=response.user.id
+                                supabase_id=user_id
                             )
                         
                         # Store Supabase session token for later API calls
-                        if hasattr(response, 'session'):
-                            user._supabase_session_token = response.session.access_token
+                        if hasattr(auth_response, 'session') and auth_response.session:
+                            user._supabase_session_token = auth_response.session.access_token
                             
                         return user
+                    else:
+                        logger.error(f"Supabase authentication format unexpected: {auth_response}")
                 except Exception as e:
                     # Log detailed error for debugging
                     error_msg = str(e).lower()

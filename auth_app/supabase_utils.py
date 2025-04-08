@@ -11,10 +11,17 @@ logger = logging.getLogger(__name__)
 # Initialize the Supabase client from settings
 try:
     from supabase import create_client
-    supabase_client = create_client(
-        settings.SUPABASE_URL,
-        settings.SUPABASE_ANON_KEY
-    )
+    
+    # Determine the key to use (try both env var names for flexibility)
+    supabase_key = getattr(settings, 'SUPABASE_KEY', None) or getattr(settings, 'SUPABASE_ANON_KEY', None)
+    
+    if not supabase_key:
+        logger.error("No Supabase key found in settings (tried SUPABASE_KEY and SUPABASE_ANON_KEY)")
+        supabase_client = None
+    else:
+        logger.info(f"Initializing Supabase client with URL: {settings.SUPABASE_URL}")
+        supabase_client = create_client(settings.SUPABASE_URL, supabase_key)
+        logger.info("Supabase client initialized successfully")
 except Exception as e:
     logger.error(f"Error initializing Supabase client: {str(e)}")
     supabase_client = None
@@ -29,17 +36,7 @@ def get_supabase_user_by_email(email):
         return None
         
     try:
-        # Using raw SQL query with RPC to find user by email
-        response = supabase_client.rpc(
-            'get_user_by_email',
-            {'user_email': email}
-        ).execute()
-        
-        # Check if the response has data
-        if response and hasattr(response, 'data'):
-            return {'data': response.data}
-        
-        # Fallback to admin query if available
+        # Using service role key for admin API access
         if hasattr(settings, 'SUPABASE_SERVICE_KEY') and settings.SUPABASE_SERVICE_KEY:
             headers = {
                 "apikey": settings.SUPABASE_SERVICE_KEY,
@@ -47,8 +44,9 @@ def get_supabase_user_by_email(email):
                 "Content-Type": "application/json"
             }
             
-            endpoint = f"{settings.SUPABASE_URL}/rest/v1/auth/users?email=eq.{email}"
-            response = requests.get(endpoint, headers=headers)
+            endpoint = f"{settings.SUPABASE_URL}/auth/v1/admin/users"
+            params = {"email": email}
+            response = requests.get(endpoint, headers=headers, params=params)
             
             if response.status_code == 200:
                 return {'data': response.json()}
@@ -76,7 +74,7 @@ def get_supabase_user_by_uid(uid):
                 "Content-Type": "application/json"
             }
             
-            endpoint = f"{settings.SUPABASE_URL}/rest/v1/auth/users?id=eq.{uid}"
+            endpoint = f"{settings.SUPABASE_URL}/auth/v1/admin/users/{uid}"
             response = requests.get(endpoint, headers=headers)
             
             if response.status_code == 200:
@@ -105,11 +103,12 @@ def update_supabase_user_verification(uid):
                 "Content-Type": "application/json"
             }
             
-            endpoint = f"{settings.SUPABASE_URL}/rest/v1/auth/users"
+            endpoint = f"{settings.SUPABASE_URL}/auth/v1/admin/users/{uid}"
             payload = {
-                "id": uid,
                 "email_confirmed_at": "now()",
-                "confirmed_at": "now()"
+                "user_metadata": {
+                    "email_verified": True
+                }
             }
             
             response = requests.put(endpoint, headers=headers, json=payload)

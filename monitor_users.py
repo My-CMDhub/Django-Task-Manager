@@ -48,12 +48,28 @@ def get_django_user_count():
         conn = sqlite3.connect('db.sqlite3')
         cursor = conn.cursor()
         
+        # Check if deleted_at column exists
+        cursor.execute("PRAGMA table_info(auth_app_user)")
+        columns = [col[1] for col in cursor.fetchall()]
+        
         # Count users that are not deleted
-        cursor.execute("SELECT COUNT(*) FROM auth_app_user WHERE deleted_at IS NULL")
+        if 'deleted_at' in columns:
+            cursor.execute("SELECT COUNT(*) FROM auth_app_user WHERE deleted_at IS NULL")
+        else:
+            cursor.execute("SELECT COUNT(*) FROM auth_app_user")
         count = cursor.fetchone()[0]
         
-        # Get user details
-        cursor.execute("SELECT email, date_joined, last_login, email_verified FROM auth_app_user WHERE deleted_at IS NULL")
+        # Get user details - adapt query based on available columns
+        if 'email_verified' in columns:
+            if 'deleted_at' in columns:
+                cursor.execute("SELECT email, date_joined, last_login, email_verified FROM auth_app_user WHERE deleted_at IS NULL")
+            else:
+                cursor.execute("SELECT email, date_joined, last_login, email_verified FROM auth_app_user")
+        else:
+            if 'deleted_at' in columns:
+                cursor.execute("SELECT email, date_joined, last_login FROM auth_app_user WHERE deleted_at IS NULL")
+            else:
+                cursor.execute("SELECT email, date_joined, last_login FROM auth_app_user")
         users = cursor.fetchall()
         
         conn.close()
@@ -68,24 +84,62 @@ def get_django_users_detailed():
         conn = sqlite3.connect('db.sqlite3')
         cursor = conn.cursor()
         
-        # Get all non-deleted users with details
-        cursor.execute("""
-            SELECT id, email, username, supabase_id, email_verified, date_joined 
+        # Check schema first
+        cursor.execute("PRAGMA table_info(auth_app_user)")
+        columns = [col[1] for col in cursor.fetchall()]
+        
+        # Build query based on available columns
+        select_fields = ["id", "email", "username"]
+        where_clause = ""
+        
+        if 'supabase_id' in columns:
+            select_fields.append("supabase_id")
+        else:
+            select_fields.append("NULL as supabase_id")
+            
+        if 'email_verified' in columns:
+            select_fields.append("email_verified")
+        else:
+            select_fields.append("0 as email_verified")
+            
+        select_fields.append("date_joined")
+        
+        if 'deleted_at' in columns:
+            where_clause = "WHERE deleted_at IS NULL"
+        
+        # Construct and execute the query
+        query = f"""
+            SELECT {', '.join(select_fields)} 
             FROM auth_app_user 
-            WHERE deleted_at IS NULL
-        """)
+            {where_clause}
+        """
+        
+        cursor.execute(query)
         
         users = {}
         for row in cursor.fetchall():
-            user_id, email, username, supabase_id, email_verified, date_joined = row
-            users[email.lower()] = {
+            row_data = list(row)
+            user_id, email = row_data[0:2]
+            
+            # Create a dictionary dynamically based on the order of select_fields
+            user_dict = {
                 'id': user_id,
                 'email': email,
-                'username': username,
-                'supabase_id': supabase_id,
-                'email_verified': email_verified,
-                'date_joined': date_joined
+                'username': row_data[2]
             }
+            
+            idx = 3
+            if 'supabase_id' in select_fields:
+                user_dict['supabase_id'] = row_data[idx]
+                idx += 1
+                
+            if 'email_verified' in select_fields:
+                user_dict['email_verified'] = row_data[idx]
+                idx += 1
+                
+            user_dict['date_joined'] = row_data[idx]
+            
+            users[email.lower()] = user_dict
         
         conn.close()
         return users
@@ -100,30 +154,26 @@ def delete_django_user(email):
         cursor = conn.cursor()
         
         # First check if user exists
-        cursor.execute("SELECT id FROM auth_app_user WHERE email = ? AND deleted_at IS NULL", (email,))
+        cursor.execute("SELECT id FROM auth_app_user WHERE email = ?", (email,))
         user_id = cursor.fetchone()
         
         if user_id:
             user_id = user_id[0]
-            # Update the deleted_at timestamp instead of hard delete
-            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            cursor.execute(
-                "UPDATE auth_app_user SET deleted_at = ? WHERE id = ?", 
-                (timestamp, user_id)
-            )
-            conn.commit()
-            print(f"{CYAN}✓ Directly soft-deleted Django user: {email}{NC}")
             
-            # Check if user profile exists and update it too
+            # Always perform hard delete to ensure user is actually removed
+            # Delete related user profile first if it exists
             cursor.execute("SELECT id FROM auth_app_userprofile WHERE user_id = ?", (user_id,))
             profile_id = cursor.fetchone()
             if profile_id:
-                cursor.execute(
-                    "UPDATE auth_app_userprofile SET deleted_at = ? WHERE user_id = ?",
-                    (timestamp, user_id)
-                )
+                cursor.execute("DELETE FROM auth_app_userprofile WHERE user_id = ?", (user_id,))
                 conn.commit()
-                
+                print(f"{GREEN}✓ Deleted Django user profile for: {email}{NC}")
+            
+            # Now delete the user
+            cursor.execute("DELETE FROM auth_app_user WHERE id = ?", (user_id,))
+            conn.commit()
+            print(f"{GREEN}✓ Completely deleted Django user: {email}{NC}")
+            
             conn.close()
             return True
         else:
@@ -181,31 +231,78 @@ def create_django_user(email, supabase_id, username=None):
         # Get current time
         now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         
-        # Insert the user
-        cursor.execute("""
-            INSERT INTO auth_app_user 
-            (username, email, password, supabase_id, email_verified, is_active, is_staff, is_superuser, date_joined, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (
-            username, email, password_string, supabase_id, True, True, False, False, now, now
-        ))
+        # Check table schema to determine available columns
+        cursor.execute("PRAGMA table_info(auth_app_user)")
+        columns = [col[1] for col in cursor.fetchall()]
+        
+        # Prepare base fields that should always exist
+        fields = ["username", "email", "password", "is_active", "is_staff", "is_superuser", "date_joined"]
+        values = [username, email, password_string, 1, 0, 0, now]
+        
+        # Add all custom fields that might be required by the User model
+        field_mapping = {
+            'supabase_id': supabase_id,
+            'email_verified': 1,  # Assume verified from Supabase
+            'created_at': now,
+            'first_name': "",     # Default empty string
+            'last_name': "",      # Default empty string
+            'last_password_change': now,
+            'failed_login_attempts': 0,
+            'requires_password_change': 0,
+            'mfa_enabled': 0,
+        }
+        
+        # Add fields from mapping if they exist in schema
+        for field, value in field_mapping.items():
+            if field in columns:
+                fields.append(field)
+                values.append(value)
+                
+        # Build the SQL query dynamically
+        placeholders = ", ".join(["?" for _ in fields])
+        fields_str = ", ".join(fields)
+        
+        query = f"INSERT INTO auth_app_user ({fields_str}) VALUES ({placeholders})"
+        cursor.execute(query, values)
         
         user_id = cursor.lastrowid
-        
-        # Create a UserProfile if that table exists
-        try:
-            cursor.execute("""
-                INSERT INTO auth_app_userprofile
-                (user_id, supabase_uid, verified, created_at)
-                VALUES (?, ?, ?, ?)
-            """, (user_id, supabase_id, True, now))
-        except Exception as profile_error:
-            print(f"{YELLOW}Note: Unable to create UserProfile for {email}: {str(profile_error)}{NC}")
-        
         conn.commit()
-        conn.close()
         
-        print(f"{CYAN}✓ Directly created Django user: {email}{NC}")
+        # Check if UserProfile table exists and create a profile if needed
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='auth_app_userprofile'")
+        if cursor.fetchone():
+            # Check UserProfile schema
+            cursor.execute("PRAGMA table_info(auth_app_userprofile)")
+            profile_columns = [col[1] for col in cursor.fetchall()]
+            
+            # Prepare base fields
+            profile_fields = ["user_id"]
+            profile_values = [user_id]
+            
+            # Add additional fields if they exist
+            profile_field_mapping = {
+                'supabase_uid': supabase_id,
+                'verified': 1,
+                'created_at': now,
+                'last_synced': now,
+            }
+            
+            # Add fields from mapping if they exist in schema
+            for field, value in profile_field_mapping.items():
+                if field in profile_columns:
+                    profile_fields.append(field)
+                    profile_values.append(value)
+                
+            # Build and execute profile insertion query
+            profile_placeholders = ", ".join(["?" for _ in profile_fields])
+            profile_fields_str = ", ".join(profile_fields)
+            
+            profile_query = f"INSERT INTO auth_app_userprofile ({profile_fields_str}) VALUES ({profile_placeholders})"
+            cursor.execute(profile_query, profile_values)
+            conn.commit()
+        
+        conn.close()
+        print(f"{GREEN}✓ Completely created Django user: {email} (Supabase ID: {supabase_id}){NC}")
         return True
     except Exception as e:
         print(f"{RED}Error creating Django user {email}: {str(e)}{NC}")
@@ -450,14 +547,47 @@ def display_user_counts():
     print(f"{GREEN}Found {supabase_count} user(s) in Supabase{NC}")
     print(f"{GREEN}Found {django_count} user(s) in Django{NC}")
     
-    # Check synchronization status
-    is_synced = django_count == supabase_count
+    # Get user emails for detailed comparison
+    django_emails = set()
+    for user in django_users:
+        if isinstance(user, tuple) and len(user) > 0:
+            django_emails.add(user[0].lower())
+    
+    supabase_emails = set()
+    for user in supabase_users:
+        email = user.get('email', '').lower()
+        if email:
+            supabase_emails.add(email)
+    
+    # Check synchronization status - both count and actual users
+    count_synced = django_count == supabase_count
+    users_synced = django_emails == supabase_emails
+    is_synced = count_synced and users_synced
+    
     priority_actions = []
     
     if is_synced:
-        print(f"{GREEN}✓ Systems are synchronized{NC}")
+        print(f"{GREEN}✓ Systems are synchronized (same number of users with matching emails){NC}")
     else:
-        print(f"{YELLOW}⚠ Systems are not synchronized{NC}")
+        if not count_synced:
+            print(f"{YELLOW}⚠ User counts don't match: Django={django_count}, Supabase={supabase_count}{NC}")
+        
+        if not users_synced:
+            print(f"{YELLOW}⚠ User email addresses don't match{NC}")
+            
+            # Show users in Django but not in Supabase
+            django_only = django_emails - supabase_emails
+            if django_only:
+                print(f"{YELLOW}Users in Django but not in Supabase:{NC}")
+                for email in django_only:
+                    print(f"{YELLOW}  - {email}{NC}")
+            
+            # Show users in Supabase but not in Django
+            supabase_only = supabase_emails - django_emails
+            if supabase_only:
+                print(f"{YELLOW}Users in Supabase but not in Django:{NC}")
+                for email in supabase_only:
+                    print(f"{YELLOW}  - {email}{NC}")
         
         # Get more detailed information about discrepancies
         discrepancies, priority_actions = compare_users()
@@ -471,7 +601,7 @@ def display_user_counts():
     
     # Log to monitor file
     with open(MONITOR_LOG_FILE, 'a') as f:
-        f.write(f"[{timestamp}] Supabase: {supabase_count}, Django: {django_count}, Synced: {is_synced}\n")
+        f.write(f"[{timestamp}] Supabase: {supabase_count}, Django: {django_count}, Same Users: {users_synced}, Fully Synced: {is_synced}\n")
     
     # Return True if synchronized and the priority actions
     return is_synced, priority_actions
