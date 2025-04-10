@@ -29,7 +29,7 @@ INSTALLED_APPS = [
     'allauth.socialaccount',
     'auth_app',  # Custom auth app
     'mysite',
-    'contacts',  # New contacts app
+    'tasks',  # New tasks app
     # 'django_ratelimit', # Temporarily disabled due to installation issues
     'rest_framework',
     'rest_framework_simplejwt',
@@ -145,6 +145,7 @@ def get_supabase_admin_client():
 
 # Authentication settings
 AUTHENTICATION_BACKENDS = [
+    'auth_app.admin_backend.AdminBackend',  # Admin-specific backend first (with higher priority)
     'auth_app.backends.EmailBackend',
     'django.contrib.auth.backends.ModelBackend',
     'allauth.account.auth_backends.AuthenticationBackend',

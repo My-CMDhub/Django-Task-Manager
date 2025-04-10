@@ -1,6 +1,7 @@
 from django.urls import path
 from . import views
 from . import webhooks
+from . import basic_auth
 from .views import (
     login, logout, register, verify_email, password_reset, password_reset_confirm,
     account_settings, backup_verify_email, 
@@ -10,6 +11,9 @@ from .views import (
 )
 
 urlpatterns = [
+    # Authentication choice page
+    path('', views.auth_choice, name='auth_choice'),
+    
     path('login/', login, name='login'),
     path('logout/', logout, name='logout'),
     path('register/', register, name='register'),
@@ -61,4 +65,10 @@ urlpatterns = [
     # Add URLs for account synchronization monitoring
     path('sync-status/', account_sync_status, name='account_sync_status'),
     path('test-webhook/', test_webhook, name='test_webhook'),
+    
+    # Basic Authentication Routes (Simple authentication without Supabase)
+    path('basic/login/', basic_auth.basic_login, name='basic_login'),
+    path('basic/register/', basic_auth.basic_register, name='basic_register'),
+    path('basic/logout/', basic_auth.basic_logout, name='basic_logout'),
+    path('basic/delete-account/', basic_auth.basic_delete_account, name='basic_delete_account'),
 ]

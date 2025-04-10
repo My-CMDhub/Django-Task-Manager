@@ -1,0 +1,214 @@
+{% extends "base.html" %}
+
+{% block title %}Simple Login - Task Manager{% endblock %}
+
+{% block extra_head %}
+<style>
+    body {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        background-color: #f8f9fa;
+    }
+    .login-container {
+        padding: 2rem 0;
+        min-height: calc(100vh - 56px);
+        display: flex;
+        align-items: center;
+    }
+    .card {
+        border: none;
+        border-radius: 10px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+        overflow: hidden;
+    }
+    .card-header {
+        background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+        color: white;
+        border: none;
+        padding: 1.5rem;
+    }
+    .card-body {
+        padding: 2rem;
+    }
+    .form-control {
+        border-radius: 7px;
+        padding: 0.7rem 1rem;
+        border: 1px solid #e0e0e0;
+        transition: all 0.3s ease;
+    }
+    .form-control:focus {
+        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        border-color: #6366f1;
+    }
+    .form-check-input:checked {
+        background-color: #6366f1;
+        border-color: #6366f1;
+    }
+    .btn-primary {
+        background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+        border: none;
+        border-radius: 7px;
+        padding: 0.7rem 1rem;
+        font-weight: 500;
+        transition: all 0.3s ease;
+    }
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(99, 102, 241, 0.4);
+        background: linear-gradient(135deg, #5254cc 0%, #7a4edb 100%);
+    }
+    .btn-outline-primary {
+        color: #6366f1;
+        border-color: #6366f1;
+    }
+    .btn-outline-primary:hover {
+        background-color: #6366f1;
+        color: white;
+    }
+    .alert {
+        border-radius: 7px;
+        border: none;
+    }
+    .alert-success {
+        background-color: #ecfdf5;
+        color: #10b981;
+    }
+    .alert-info {
+        background-color: #eff6ff;
+        color: #3b82f6;
+    }
+    .alert-warning {
+        background-color: #fffbeb;
+        color: #f59e0b;
+    }
+    .alert-danger {
+        background-color: #fef2f2;
+        color: #ef4444;
+    }
+    .divider {
+        display: flex;
+        align-items: center;
+        text-align: center;
+        margin: 1.5rem 0;
+    }
+    .divider::before, .divider::after {
+        content: '';
+        flex: 1;
+        border-bottom: 1px solid #e0e0e0;
+    }
+    .divider span {
+        padding: 0 1rem;
+        color: #6c757d;
+        font-size: 0.9rem;
+    }
+    .footer-links a {
+        color: #6c757d;
+        text-decoration: none;
+        transition: color 0.2s;
+    }
+    .footer-links a:hover {
+        color: #6366f1;
+    }
+    .auth-switch {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        background-color: rgba(255,255,255,0.2);
+        padding: 5px 10px;
+        border-radius: 5px;
+        color: white;
+        font-size: 12px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="login-container">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-md-6 col-lg-5">
+                <div class="card">
+                    <div class="card-header text-center">
+                        <a href="{% url 'login' %}" class="auth-switch">Switch to Standard Auth</a>
+                        <h4 class="mb-0 fw-bold">Simple Login</h4>
+                        <small class="text-white">No Supabase, No Verification</small>
+                    </div>
+                    <div class="card-body">
+                        {% if messages %}
+                        <div class="mb-4">
+                            {% for message in messages %}
+                                <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show" role="alert">
+                                    {{ message|safe }}
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                                </div>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                        
+                        {% if new_user_username %}
+                        <div class="alert alert-success mb-4">
+                            <h5 class="alert-heading">Account Created!</h5>
+                            <p>Your account has been created successfully. Please log in with your password to continue.</p>
+                        </div>
+                        {% endif %}
+                        
+                        <form method="post" action="{% url 'basic_login' %}" class="needs-validation" novalidate>
+                            {% csrf_token %}
+                            
+                            <div class="mb-4">
+                                <label for="username" class="form-label">Username or Email</label>
+                                <input type="text" class="form-control" id="username" name="username" required value="{% if new_user_username %}{{ new_user_username }}{% endif %}">
+                            </div>
+                            
+                            <div class="mb-4">
+                                <label for="password" class="form-label">Password</label>
+                                <input type="password" class="form-control" id="password" name="password" required>
+                            </div>
+                            
+                            <div class="mb-4 d-flex justify-content-between align-items-center">
+                                <div class="form-check">
+                                    <input type="checkbox" class="form-check-input" id="remember_me" name="remember_me">
+                                    <label class="form-check-label" for="remember_me">Remember me</label>
+                                </div>
+                            </div>
+                            
+                            {% if next %}
+                            <input type="hidden" name="next" value="{{ next }}">
+                            {% endif %}
+                            
+                            <button type="submit" class="btn btn-primary w-100 py-2 mb-4">Log In</button>
+                        </form>
+                        
+                        <div class="divider">
+                            <span>OR</span>
+                        </div>
+                        
+                        <div class="text-center mb-4">
+                            <p class="mb-2">Don't have an account?</p>
+                            <a href="{% url 'basic_register' %}" class="btn btn-outline-primary px-4">Create Account</a>
+                        </div>
+                        
+                        <div class="alert alert-info mt-4">
+                            <h5 class="alert-heading">Simple Authentication Mode</h5>
+                            <p class="mb-0">This is a simplified login system that doesn't require email verification or external services. It works directly with the local database.</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="text-center mt-4 footer-links">
+                    <a href="{% url 'login' %}" class="mx-2">Standard Login</a>
+                    <a href="{% url 'basic_register' %}" class="mx-2">Simple Register</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // If this is a new user, focus the password field
+    {% if new_user_username %}
+    document.getElementById('password').focus();
+    {% endif %}
+});
+</script>
+{% endblock %} 

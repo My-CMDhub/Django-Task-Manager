@@ -1,0 +1,166 @@
+{% extends "base.html" %}
+
+{% block title %}Choose Authentication Method - Task Manager{% endblock %}
+
+{% block extra_head %}
+<style>
+    body {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        background-color: #f8f9fa;
+    }
+    .auth-container {
+        padding: 2rem 0;
+        min-height: calc(100vh - 56px);
+        display: flex;
+        align-items: center;
+    }
+    .card {
+        border: none;
+        border-radius: 10px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+        overflow: hidden;
+        height: 100%;
+        transition: transform 0.3s ease;
+    }
+    .card:hover {
+        transform: translateY(-5px);
+    }
+    .card-header {
+        background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+        color: white;
+        border: none;
+        padding: 1.5rem;
+    }
+    .card-header.simple {
+        background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    }
+    .card-body {
+        padding: 2rem;
+    }
+    .btn-primary {
+        background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+        border: none;
+        border-radius: 7px;
+        padding: 0.7rem 1rem;
+        font-weight: 500;
+        transition: all 0.3s ease;
+    }
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(99, 102, 241, 0.4);
+        background: linear-gradient(135deg, #5254cc 0%, #7a4edb 100%);
+    }
+    .btn-info {
+        background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+        border: none;
+        color: white;
+        border-radius: 7px;
+        padding: 0.7rem 1rem;
+        font-weight: 500;
+        transition: all 0.3s ease;
+    }
+    .btn-info:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(59, 130, 246, 0.4);
+        background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+        color: white;
+    }
+    .feature-list {
+        padding-left: 1.5rem;
+    }
+    .feature-list li {
+        margin-bottom: 0.5rem;
+    }
+    .feature-tag {
+        display: inline-block;
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        margin-right: 0.5rem;
+    }
+    .feature-tag.recommended {
+        background-color: #10b981;
+        color: white;
+    }
+    .feature-tag.simple {
+        background-color: #3b82f6;
+        color: white;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="auth-container">
+    <div class="container">
+        <div class="text-center mb-5">
+            <h1 class="fw-bold">Task Manager Authentication</h1>
+            <p class="lead">Choose the authentication method that works best for you</p>
+        </div>
+        
+        <div class="row justify-content-center g-4">
+            <div class="col-md-5">
+                <div class="card h-100">
+                    <div class="card-header text-center">
+                        <span class="feature-tag recommended">Recommended</span>
+                        <h3 class="mb-0 fw-bold">Standard Authentication</h3>
+                        <small class="text-white">With Supabase Integration</small>
+                    </div>
+                    <div class="card-body d-flex flex-column">
+                        <p>Our standard authentication system with full features.</p>
+                        
+                        <h5 class="mt-3 mb-2">Features:</h5>
+                        <ul class="feature-list">
+                            <li>Secure email verification</li>
+                            <li>Password reset capabilities</li>
+                            <li>Real-time data synchronization</li>
+                            <li>Multi-device access</li>
+                            <li>Enhanced security protections</li>
+                        </ul>
+                        
+                        <p class="mt-3"><strong>Best for:</strong> Most users who need full functionality and security.</p>
+                        
+                        <div class="mt-auto pt-4">
+                            <div class="d-grid gap-2">
+                                <a href="{% url 'login' %}" class="btn btn-primary">Log In</a>
+                                <a href="{% url 'register' %}" class="btn btn-outline-primary">Create Account</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-5">
+                <div class="card h-100">
+                    <div class="card-header text-center simple">
+                        <span class="feature-tag simple">Simple</span>
+                        <h3 class="mb-0 fw-bold">Simple Authentication</h3>
+                        <small class="text-white">Local Database Only</small>
+                    </div>
+                    <div class="card-body d-flex flex-column">
+                        <p>Simplified authentication that works immediately without external services.</p>
+                        
+                        <h5 class="mt-3 mb-2">Features:</h5>
+                        <ul class="feature-list">
+                            <li>Instant account creation</li>
+                            <li>No email verification required</li>
+                            <li>Works offline and on any machine</li>
+                            <li>No external dependencies</li>
+                            <li>Perfect for testing and development</li>
+                        </ul>
+                        
+                        <p class="mt-3"><strong>Best for:</strong> Quick testing, development, or when having trouble with the standard auth.</p>
+                        
+                        <div class="mt-auto pt-4">
+                            <div class="d-grid gap-2">
+                                <a href="{% url 'basic_login' %}" class="btn btn-info">Simple Log In</a>
+                                <a href="{% url 'basic_register' %}" class="btn btn-outline-info">Create Simple Account</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

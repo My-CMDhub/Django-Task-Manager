@@ -3299,3 +3299,8 @@ def verify_all_users():
         count += 1
         
     return f"Successfully verified {count} users"
+
+# Authentication choice view
+def auth_choice(request):
+    """View to let users choose between standard and simple authentication"""
+    return render(request, 'auth/auth_choice.html')
