@@ -29,6 +29,7 @@ INSTALLED_APPS = [
     'allauth.socialaccount',
     'auth_app',  # Custom auth app
     'mysite',
+    'contacts',  # New contacts app
     # 'django_ratelimit', # Temporarily disabled due to installation issues
     'rest_framework',
     'rest_framework_simplejwt',
