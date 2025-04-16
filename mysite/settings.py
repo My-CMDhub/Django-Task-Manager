@@ -51,7 +51,7 @@ MIDDLEWARE = [
 # Allauth settings
 ACCOUNT_SIGNUP_FIELDS = ['email', 'password1', 'password2']
 ACCOUNT_LOGIN_METHODS = ['email']
-ACCOUNT_EMAIL_VERIFICATION = 'mandatory'
+ACCOUNT_EMAIL_VERIFICATION = 'none'
 ACCOUNT_UNIQUE_EMAIL = True
 ACCOUNT_EMAIL_REQUIRED = True
 ACCOUNT_SESSION_REMEMBER = True
@@ -269,7 +269,7 @@ else:
     EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
     EMAIL_HOST = 'smtp.gmail.com'
     EMAIL_PORT = 587  # Gmail uses TLS on port 587
-    EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '***REMOVED***')  # Default to your email
+    EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')  # Default to your email
     EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')  # You'll need to set this
     EMAIL_USE_TLS = True
     EMAIL_USE_SSL = False

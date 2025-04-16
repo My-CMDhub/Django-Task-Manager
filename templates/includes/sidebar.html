@@ -1,0 +1,36 @@
+<!-- Sidebar -->
+<div class="col-md-3 col-lg-2 d-md-block sidebar py-4">
+    <div class="position-sticky">
+        <div class="d-flex align-items-center justify-content-center mb-4">
+            <i class="bi bi-check2-square fs-4 me-2"></i>
+            <h5 class="mb-0">Task Manager</h5>
+        </div>
+        <ul class="nav flex-column">
+            <li class="nav-item">
+                <a class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" href="{% url 'dashboard' %}">
+                    <i class="bi bi-house-door"></i> Dashboard
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {% if request.resolver_match.url_name == 'task_list' %}active{% endif %}" href="{% url 'tasks:task_list' %}">
+                    <i class="bi bi-list-check"></i> My Tasks
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {% if request.resolver_match.url_name == 'project_list' %}active{% endif %}" href="{% url 'tasks:project_list' %}">
+                    <i class="bi bi-kanban"></i> Projects
+                </a>
+            </li>
+            <li class="nav-item mt-3">
+                <a class="nav-link {% if request.resolver_match.url_name == 'account_settings' %}active{% endif %}" href="{% url 'account_settings' %}">
+                    <i class="bi bi-gear"></i> Settings
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="{% url 'logout' %}">
+                    <i class="bi bi-box-arrow-right"></i> Logout
+                </a>
+            </li>
+        </ul>
+    </div>
+</div> 

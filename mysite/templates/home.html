@@ -459,7 +459,7 @@
         </div>
     </div>
 </footer>
-{% endblock %}
+{% endblock content %}
 
 {% block extra_scripts %}
 <script>
@@ -475,7 +475,7 @@
             threshold: 0.1
         });
         
-        document.querySelectorAll('.feature-card, .workflow-step, .testimonial-card, .card').forEach(el => {
+        document.querySelectorAll('.feature-card').forEach(el => {
             el.classList.add('fade-in');
             observer.observe(el);
         });
@@ -498,4 +498,4 @@
         });
     });
 </script>
-{% endblock %} 
+{% endblock %}
