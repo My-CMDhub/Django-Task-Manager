@@ -156,6 +156,8 @@ SESSION_COOKIE_AGE = 1209600  # 2 weeks
 SESSION_COOKIE_SECURE = not DEBUG
 SESSION_COOKIE_HTTPONLY = True
 SESSION_SAVE_EVERY_REQUEST = True
+SESSION_ENGINE = 'django.contrib.sessions.backends.db'
+SESSION_EXPIRE_AT_BROWSER_CLOSE = False
 
 # CSRF protection
 CSRF_COOKIE_SECURE = not DEBUG
@@ -177,6 +179,9 @@ SIMPLE_JWT = {
 
 # Custom User Model
 AUTH_USER_MODEL = 'auth_app.User'
+
+# Login URL for @login_required decorator
+LOGIN_URL = '/auth/login/'
 
 ROOT_URLCONF = 'mysite.urls'
 

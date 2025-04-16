@@ -7,7 +7,7 @@ from .views import (
     account_settings, backup_verify_email, 
     setup_custom_smtp, force_account_reset,
     test_email_sending, resend_verification_email, unsubscribe, delete_account,
-    account_sync_status, test_webhook
+    account_sync_status, test_webhook, validate_email_domain_ajax
 )
 
 urlpatterns = [
@@ -19,6 +19,9 @@ urlpatterns = [
     path('register/', register, name='register'),
     path('account/', account_settings, name='account_settings'),
     path('password-reset/', password_reset, name='password_reset'),
+    
+    # Email validation AJAX endpoint
+    path('validate-email/', validate_email_domain_ajax, name='validate_email_domain'),
     
     # Email verification callback
     path('verify-email/<str:token>/', verify_email, name='verify_email'),

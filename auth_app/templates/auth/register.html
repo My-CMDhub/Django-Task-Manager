@@ -139,8 +139,9 @@
                             
                             <div class="mb-4">
                                 <label for="email" class="form-label">Email</label>
-                                <input type="email" class="form-control" id="email" name="email" required value="{% if email %}{{ email }}{% endif %}">
+                                <input type="email" class="form-control" id="email" name="email" required value="{% if email %}{{ email }}{% endif %}" onblur="validateEmailDomain(this.value)">
                                 <small class="form-text text-muted">We'll send a verification link to this email</small>
+                                <div id="emailFeedback" class="invalid-feedback" style="display: none;"></div>
                             </div>
                             
                             <div class="mb-4">
@@ -243,11 +244,70 @@ document.addEventListener('DOMContentLoaded', function() {
             // But only refresh if the page still has the user's attention
             if (document.visibilityState === 'visible') {
                 // Reload the page but only if not from a form submission
-                if (!document.referrer.includes('register')) {
-                    window.location.reload();
-                }
+                // REMOVED automatic page reload that was causing issues when typing
+                // window.location.reload();
             }
         }, 5000);
+    }
+});
+
+// Email domain validation
+let emailValidationTimeout;
+
+function validateEmailDomain(email) {
+    // Clear any existing timeout
+    if (emailValidationTimeout) {
+        clearTimeout(emailValidationTimeout);
+    }
+    
+    const emailField = document.getElementById('email');
+    const emailFeedback = document.getElementById('emailFeedback');
+    
+    // Don't validate empty emails
+    if (!email || email.trim() === '' || email.indexOf('@') === -1) {
+        emailFeedback.style.display = 'none';
+        emailField.classList.remove('is-invalid');
+        return;
+    }
+    
+    // Set a timeout to avoid making requests on every keystroke
+    emailValidationTimeout = setTimeout(() => {
+        // Show loading indication
+        emailFeedback.textContent = "Checking email domain...";
+        emailFeedback.style.display = 'block';
+        emailFeedback.style.color = '#6c757d';
+        
+        // Make AJAX request to validate email domain
+        fetch(`/auth/validate-email/?email=${encodeURIComponent(email)}`)
+            .then(response => response.json())
+            .then(data => {
+                if (!data.is_valid) {
+                    // Invalid domain
+                    emailField.classList.add('is-invalid');
+                    emailFeedback.textContent = data.message;
+                    emailFeedback.style.display = 'block';
+                    emailFeedback.style.color = '#dc3545';
+                } else {
+                    // Valid domain
+                    emailField.classList.remove('is-invalid');
+                    emailField.classList.add('is-valid');
+                    emailFeedback.style.display = 'none';
+                }
+            })
+            .catch(error => {
+                console.error('Error validating email domain:', error);
+                emailFeedback.style.display = 'none';
+            });
+    }, 500); // 500ms delay
+}
+
+// Add event listener to email input
+document.addEventListener('DOMContentLoaded', function() {
+    const emailField = document.getElementById('email');
+    if (emailField) {
+        emailField.addEventListener('input', function() {
+            validateEmailDomain(this.value);
+        });
     }
 });
 

@@ -4,10 +4,20 @@ from django.contrib import messages
 from .models import User, Session, UserSyncSchedule
 
 class CustomUserAdmin(UserAdmin):
-    list_display = ('username', 'email', 'is_active', 'email_verified', 'date_joined', 'last_login_at')
-    list_filter = ('is_active', 'email_verified', 'is_staff')
-    search_fields = ('username', 'email')
-    readonly_fields = ('date_joined', 'last_login_at', 'supabase_id')
+    list_display = ('username', 'email', 'is_active', 'email_verified', 'is_staff', 'is_superuser', 'supabase_id', 'date_joined', 'last_login')
+    list_filter = ('is_active', 'email_verified', 'is_staff', 'is_superuser', 'deleted_at')
+    search_fields = ('username', 'email', 'supabase_id')
+    ordering = ('-date_joined',)  # Most recent users first
+    
+    # Include deleted users in the queryset
+    def get_queryset(self, request):
+        # Get all users, including soft-deleted ones
+        queryset = self.model.objects.all()
+        return queryset
+    
+    def last_login_at(self, obj):
+        return obj.last_login
+    last_login_at.short_description = 'Last Login'
     
     fieldsets = (
         (None, {'fields': ('username', 'email', 'password')}),
@@ -16,7 +26,7 @@ class CustomUserAdmin(UserAdmin):
         ('Security', {'fields': ('failed_login_attempts', 'account_locked_until', 'requires_password_change', 'mfa_enabled')}),
         ('Supabase', {'fields': ('supabase_id',)}),
         ('Permissions', {'fields': ('is_staff', 'is_superuser', 'groups', 'user_permissions')}),
-        ('Important dates', {'fields': ('last_login', 'last_login_at', 'last_password_change', 'date_joined')}),
+        ('Important dates', {'fields': ('last_login', 'last_password_change', 'date_joined')}),
     )
 
 class SessionAdmin(admin.ModelAdmin):

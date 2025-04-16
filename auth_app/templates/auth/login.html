@@ -428,10 +428,10 @@ document.addEventListener('DOMContentLoaded', function() {
         setTimeout(function() {
             // But only refresh if the page still has the user's attention
             if (document.visibilityState === 'visible') {
-                // Reload the page but only if not from verification link
-                if (!window.location.href.includes('verify-email') && !window.location.href.includes('verification_token')) {
-                    window.location.reload();
-                }
+                // Removed auto reload that was causing issues when typing
+                // if (!window.location.href.includes('verify-email') && !window.location.href.includes('verification_token')) {
+                //     window.location.reload();
+                // }
             }
         }, 5000);
     }

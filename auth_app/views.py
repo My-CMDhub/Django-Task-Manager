@@ -1,4 +1,4 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.sites.shortcuts import get_current_site
 from django.contrib.auth import login as auth_login, logout as auth_logout, authenticate
 from django.contrib.auth.decorators import login_required
@@ -30,7 +30,7 @@ import requests
 from django.db import transaction
 import re
 from datetime import datetime, timedelta
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from base64 import urlsafe_b64encode, urlsafe_b64decode
 import socket
@@ -47,6 +47,7 @@ import hmac
 import hashlib
 import time
 import random
+from django.middleware.csrf import get_token
 
 logger = logging.getLogger(__name__)
 
@@ -1007,10 +1008,9 @@ def register(request):
         
         # Check if email is from a valid domain if configured
         if hasattr(settings, 'ALLOWED_EMAIL_DOMAINS') and settings.ALLOWED_EMAIL_DOMAINS:
-            if not is_valid_email_domain(email):
-                messages.error(request, 
-                    "Registration with this email domain is not allowed. Please use your organization email."
-                )
+            is_valid_domain, domain_error = is_valid_email_domain(email)
+            if not is_valid_domain:
+                messages.error(request, domain_error)
                 return render(request, 'auth/register.html', {
                     'email': email, 
                     'username': username,
@@ -3304,3 +3304,27 @@ def verify_all_users():
 def auth_choice(request):
     """View to let users choose between standard and simple authentication"""
     return render(request, 'auth/auth_choice.html')
+
+@require_http_methods(["GET"])
+def validate_email_domain_ajax(request):
+    """
+    AJAX endpoint to validate if an email domain is allowed
+    Returns JSON response with validation result
+    """
+    email = request.GET.get('email', '').strip()
+    if not email or '@' not in email:
+        return JsonResponse({'is_valid': False, 'message': 'Please enter a valid email address'})
+    
+    is_valid, error_message = is_valid_email_domain(email)
+    return JsonResponse({
+        'is_valid': is_valid,
+        'message': error_message if not is_valid else ''
+    })
+
+def get_new_csrf_token(request):
+    """
+    Generate a new CSRF token and return it as JSON response.
+    This can be called via AJAX when a token expires to refresh it without page reload.
+    """
+    token = get_token(request)
+    return JsonResponse({'csrfToken': token})
