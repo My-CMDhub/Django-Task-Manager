@@ -1,0 +1,827 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ task.title }} | Task Details{% endblock %}
+
+{% block extra_head %}
+<style>
+    /* Main container */
+    .task-detail-container {
+        background-color: #f8f9fa;
+        border-radius: 12px;
+        padding: 30px;
+        margin-top: 2rem;
+        margin-bottom: 2rem;
+    }
+    
+    /* Task header */
+    .task-header {
+        border-bottom: 1px solid #e9ecef;
+        padding-bottom: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .task-title {
+        font-size: 2rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+        color: #212529;
+    }
+    
+    /* Badge styling */
+    .badge {
+        font-weight: 500;
+        font-size: 0.85rem;
+        padding: 0.5em 0.8em;
+        border-radius: 6px;
+        margin-right: 0.5rem;
+    }
+    
+    .badge-todo { background-color: #e9ecef; color: #495057; }
+    .badge-in_progress { background-color: #cfe2ff; color: #0d6efd; }
+    .badge-completed { background-color: #d1e7dd; color: #0f5132; }
+    .badge-archived { background-color: #e9ecef; color: #495057; }
+    
+    .badge-low { background-color: #d1e7dd; color: #0f5132; }
+    .badge-medium { background-color: #fff3cd; color: #664d03; }
+    .badge-high { background-color: #ffe5d0; color: #fd7e14; }
+    .badge-urgent { background-color: #f8d7da; color: #842029; }
+    
+    .badge.tag-badge {
+        margin-right: 0.25rem;
+        color: #fff;
+        background-color: var(--tag-color, #6c757d);
+    }
+    
+    /* Card styling */
+    .detail-card {
+        border-radius: 12px;
+        overflow: hidden;
+        border: none;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        margin-bottom: 1.5rem;
+    }
+    
+    .detail-card .card-header {
+        background: linear-gradient(135deg, #f5f7fa 0%, #e4e7eb 100%);
+        border-bottom: 1px solid #e9ecef;
+        padding: 1.25rem 1.5rem;
+    }
+    
+    .detail-card .card-body {
+        padding: 1.5rem;
+    }
+    
+    /* Task description */
+    .task-description {
+        background-color: #f8f9fa;
+        border-radius: 8px;
+        padding: 1.25rem;
+        margin-top: 0.5rem;
+    }
+    
+    /* Attachments */
+    .attachment-item {
+        display: flex;
+        align-items: center;
+        padding: 0.75rem 1rem;
+        border-radius: 8px;
+        background-color: #f8f9fa;
+        margin-bottom: 0.5rem;
+        transition: all 0.2s ease;
+    }
+    
+    .attachment-item:hover {
+        background-color: #e9ecef;
+    }
+    
+    .attachment-icon {
+        font-size: 1.5rem;
+        margin-right: 0.75rem;
+        color: #6c757d;
+    }
+    
+    .attachment-info {
+        flex-grow: 1;
+    }
+    
+    .attachment-name {
+        font-weight: 500;
+        margin-bottom: 0.25rem;
+    }
+    
+    .attachment-meta {
+        font-size: 0.75rem;
+        color: #6c757d;
+    }
+    
+    /* Activity timeline */
+    .activity-timeline {
+        position: relative;
+        padding-left: 2rem;
+    }
+    
+    .activity-timeline:before {
+        content: '';
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        left: 8px;
+        width: 2px;
+        background-color: #e9ecef;
+    }
+    
+    .activity-item {
+        position: relative;
+        padding-bottom: 1.5rem;
+    }
+    
+    .activity-item:last-child {
+        padding-bottom: 0;
+    }
+    
+    .activity-icon {
+        position: absolute;
+        left: -2rem;
+        width: 18px;
+        height: 18px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-color: white;
+        border-radius: 50%;
+        z-index: 1;
+    }
+    
+    .activity-icon i {
+        font-size: 1rem;
+    }
+    
+    .activity-content {
+        padding: 0.75rem 1rem;
+        background-color: #f8f9fa;
+        border-radius: 8px;
+    }
+    
+    /* Comments section */
+    .comment-item {
+        margin-bottom: 1.5rem;
+    }
+    
+    .comment-avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 20px;
+        background-color: #e9ecef;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+    }
+    
+    .comment-content {
+        background-color: #f8f9fa;
+        border-radius: 12px;
+        padding: 1rem;
+        position: relative;
+    }
+    
+    .comment-content:before {
+        content: '';
+        position: absolute;
+        top: 15px;
+        left: -8px;
+        width: 0;
+        height: 0;
+        border-top: 8px solid transparent;
+        border-bottom: 8px solid transparent;
+        border-right: 8px solid #f8f9fa;
+    }
+    
+    .comment-user {
+        font-weight: 600;
+    }
+    
+    .comment-text {
+        margin-top: 0.5rem;
+    }
+    
+    /* Info list */
+    .info-list dt {
+        font-weight: 600;
+        color: #495057;
+    }
+    
+    .info-list dd {
+        margin-bottom: 0.75rem;
+    }
+    
+    /* Action buttons */
+    .task-actions .btn {
+        border-radius: 8px;
+        padding: 0.5rem 1rem;
+        font-weight: 500;
+    }
+    
+    .task-actions .dropdown-menu {
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        padding: 0.5rem;
+        border: none;
+    }
+    
+    .task-actions .dropdown-item {
+        border-radius: 4px;
+        padding: 0.5rem 1rem;
+    }
+    
+    /* Upload zone */
+    .upload-zone {
+        border: 2px dashed #dee2e6;
+        border-radius: 8px;
+        padding: 1.5rem;
+        text-align: center;
+        background-color: #f8f9fa;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+    
+    .upload-zone:hover {
+        border-color: #6c757d;
+        background-color: #e9ecef;
+    }
+    
+    .upload-icon {
+        font-size: 2rem;
+        color: #6c757d;
+        margin-bottom: 0.5rem;
+    }
+    
+    /* Comment form */
+    .comment-form textarea {
+        border-radius: 8px;
+        padding: 1rem;
+        min-height: 120px;
+    }
+    
+    .btn-comment {
+        background: linear-gradient(135deg, #4c66eb 0%, #6f86ff 100%);
+        border: none;
+        color: white;
+        border-radius: 8px;
+        padding: 0.5rem 1.25rem;
+        font-weight: 500;
+        transition: all 0.2s ease;
+    }
+    
+    .btn-comment:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(76, 102, 235, 0.2);
+    }
+    
+    /* Progress indicator */
+    .progress-slim {
+        height: 6px;
+        margin-top: 1rem;
+        border-radius: 3px;
+        background-color: #e9ecef;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid task-detail-container">
+    <!-- Task Header -->
+    <div class="task-header">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <div class="d-flex align-items-center mb-2">
+                    {% if task.project %}
+                    <a href="{% url 'tasks:project_detail' task.project.id %}" class="text-decoration-none text-muted me-2">
+                        <small><i class="bi bi-folder"></i> {{ task.project.name }}</small>
+                    </a>
+                    <span class="text-muted mx-2">•</span>
+                    {% endif %}
+                    <small class="text-muted">Task #{{ task.id }}</small>
+                </div>
+                <h1 class="task-title">{{ task.title }}</h1>
+                <div class="mb-3">
+                    <span class="badge badge-{{ task.status }}">{{ task.get_status_display }}</span>
+                    <span class="badge badge-{{ task.priority }}">{{ task.get_priority_display }}</span>
+                    {% if task.is_overdue %}
+                        <span class="badge bg-danger">Overdue</span>
+                    {% endif %}
+                    {% for tag in task.tags.all %}
+                        <span class="badge tag-badge" style="background-color: {{ tag.color|default:'#6c757d' }}">{{ tag.name }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+            <div class="col-md-4 text-md-end task-actions">
+                <div class="btn-group">
+                    {% if task.status != 'completed' %}
+                    <form action="{% url 'tasks:task_mark_complete' task.id %}" method="POST" class="d-inline">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-success me-2">
+                            <i class="bi bi-check-lg"></i> Complete
+                        </button>
+                    </form>
+                    {% endif %}
+                    <a href="{% url 'tasks:task_update' task.id %}" class="btn btn-primary me-2">
+                        <i class="bi bi-pencil"></i> Edit
+                    </a>
+                    <div class="dropdown d-inline-block">
+                        <button class="btn btn-light dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                            <i class="bi bi-three-dots"></i>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            {% if task.status == 'completed' %}
+                                <li>
+                                    <form action="{% url 'tasks:task_mark_in_progress' task.id %}" method="POST" class="d-inline">
+                                        {% csrf_token %}
+                                        <button type="submit" class="dropdown-item text-primary">
+                                            <i class="bi bi-arrow-clockwise"></i> Return to In Progress
+                                        </button>
+                                    </form>
+                                </li>
+                            {% endif %}
+                            <li>
+                                <a href="#attachments" class="dropdown-item">
+                                    <i class="bi bi-paperclip"></i> Add Attachment
+                                </a>
+                            </li>
+                            <li>
+                                <a href="#comments" class="dropdown-item">
+                                    <i class="bi bi-chat-dots"></i> Add Comment
+                                </a>
+                            </li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <a href="{% url 'tasks:task_delete' task.id %}" class="dropdown-item text-danger">
+                                    <i class="bi bi-trash"></i> Delete
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {% if task.status == 'in_progress' and task.due_date %}
+        <div class="progress progress-slim mt-3">
+            {% with time_progress=task.get_time_progress %}
+                <div class="progress-bar {% if time_progress > 75 %}bg-danger{% elif time_progress > 50 %}bg-warning{% else %}bg-success{% endif %}" 
+                     role="progressbar" style="width: {{ time_progress }}%"></div>
+            {% endwith %}
+        </div>
+        <div class="d-flex justify-content-between mt-2">
+            <small class="text-muted">Started: {{ task.created_at|date:"M d" }}</small>
+            <small class="text-muted">Due: {{ task.due_date|date:"M d" }}</small>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Task Content -->
+    <div class="row">
+        <!-- Main Task Info -->
+        <div class="col-lg-8">
+            <!-- Task Description -->
+            <div class="detail-card" id="description">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Description</h5>
+                </div>
+                <div class="card-body">
+                    {% if task.description %}
+                        <div class="task-description">
+                            {{ task.description|linebreaks }}
+                        </div>
+                    {% else %}
+                        <p class="text-muted fst-italic">No description provided.</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- File Attachments -->
+            <div class="detail-card" id="attachments">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Attachments</h5>
+                    <span class="badge bg-secondary">{{ attachments|length|default:'0' }}</span>
+                </div>
+                <div class="card-body">
+                    {% if attachments %}
+                        <div class="mb-4">
+                            {% for attachment in attachments %}
+                                <div class="attachment-item">
+                                    <div class="attachment-icon">
+                                        <i class="bi bi-file-earmark"></i>
+                                    </div>
+                                    <div class="attachment-info">
+                                        <div class="attachment-name">
+                                            <a href="{{ attachment.file.url }}" target="_blank" class="text-decoration-none text-reset">
+                                                {{ attachment.file_name }}
+                                            </a>
+                                        </div>
+                                        <div class="attachment-meta">
+                                            {{ attachment.file_size|filesizeformat }} • Uploaded {{ attachment.created_at|date:"M d, Y" }}
+                                        </div>
+                                    </div>
+                                    <a href="{{ attachment.file.url }}" download class="btn btn-sm btn-light">
+                                        <i class="bi bi-download"></i>
+                                    </a>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-muted fst-italic mb-4">No attachments have been added to this task.</p>
+                    {% endif %}
+
+                    <!-- Add File Attachment -->
+                    <form action="{% url 'tasks:add_attachment' task.id %}" method="post" enctype="multipart/form-data" id="attachment-form">
+                        {% csrf_token %}
+                        <label for="file-upload" class="upload-zone mb-0" id="upload-zone">
+                            <div class="upload-icon">
+                                <i class="bi bi-cloud-arrow-up"></i>
+                            </div>
+                            <h6 id="upload-title">Upload Attachment</h6>
+                            <p class="text-muted mb-0" id="upload-message">Click to browse or drag and drop files here</p>
+                            <input id="file-upload" type="file" class="d-none" name="file" required>
+                        </label>
+                        <button class="btn btn-primary w-100 mt-3" type="submit" id="upload-button">Upload File</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Activity Log -->
+            <div class="detail-card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Activity Timeline</h5>
+                    <span class="badge bg-secondary">{{ activities|length|default:'0' }}</span>
+                </div>
+                <div class="card-body">
+                    <div class="activity-timeline">
+                        {% if activities %}
+                            {% for activity in activities %}
+                                <div class="activity-item">
+                                    <div class="activity-icon">
+                                        {% if activity.activity_type == 'create' %}
+                                            <i class="bi bi-plus-circle text-success"></i>
+                                        {% elif activity.activity_type == 'update' %}
+                                            <i class="bi bi-pencil text-primary"></i>
+                                        {% elif activity.activity_type == 'status_change' %}
+                                            <i class="bi bi-arrow-repeat text-info"></i>
+                                        {% elif activity.activity_type == 'comment_add' %}
+                                            <i class="bi bi-chat-dots text-warning"></i>
+                                        {% elif activity.activity_type == 'attachment_add' %}
+                                            <i class="bi bi-paperclip text-secondary"></i>
+                                        {% else %}
+                                            <i class="bi bi-activity text-muted"></i>
+                                        {% endif %}
+                                    </div>
+                                    <div class="activity-content">
+                                        <div>{{ activity.description }}</div>
+                                        <small class="text-muted">{{ activity.created_at|date:"M d, Y H:i" }}</small>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <p class="text-muted fst-italic">No activity recorded.</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Comments Section -->
+            <div class="detail-card" id="comments">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Comments</h5>
+                    <span class="badge bg-secondary">{{ comments|length|default:'0' }}</span>
+                </div>
+                <div class="card-body">
+                    <!-- Existing Comments -->
+                    <div class="comment-list mb-4">
+                        {% if comments %}
+                            {% for comment in comments %}
+                                <div class="comment-item">
+                                    <div class="d-flex">
+                                        <div class="comment-avatar me-3">
+                                            <span>{{ comment.user.username|slice:":1"|upper }}</span>
+                                        </div>
+                                        <div class="comment-content flex-grow-1">
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <span class="comment-user">{{ comment.user.username }}</span>
+                                                <small class="text-muted">{{ comment.created_at|date:"M d, Y H:i" }}</small>
+                                            </div>
+                                            <div class="comment-text">
+                                                {{ comment.content|linebreaks }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="text-center py-4">
+                                <i class="bi bi-chat-square-text text-muted fs-3 mb-2 d-block"></i>
+                                <p class="text-muted">No comments yet. Start the conversation!</p>
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Add Comment Form -->
+                    <div class="add-comment">
+                        <h6 class="fw-bold mb-3">Add Comment</h6>
+                        <form action="{% url 'tasks:add_comment' task.id %}" method="post" class="comment-form">
+                            {% csrf_token %}
+                            <div class="mb-3">
+                                {{ comment_form.content }}
+                            </div>
+                            <div class="text-end">
+                                <button type="submit" class="btn btn-comment">
+                                    <i class="bi bi-send"></i> Post Comment
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar Info -->
+        <div class="col-lg-4">
+            <!-- Task Information Card -->
+            <div class="detail-card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Details</h5>
+                </div>
+                <div class="card-body">
+                    <dl class="row mb-0 info-list">
+                        <dt class="col-sm-5">Owner:</dt>
+                        <dd class="col-sm-7">{{ task.owner.username }}</dd>
+
+                        <dt class="col-sm-5">Status:</dt>
+                        <dd class="col-sm-7">
+                            <span class="badge badge-{{ task.status }}">{{ task.get_status_display }}</span>
+                        </dd>
+
+                        <dt class="col-sm-5">Priority:</dt>
+                        <dd class="col-sm-7">
+                            <span class="badge badge-{{ task.priority }}">{{ task.get_priority_display }}</span>
+                        </dd>
+
+                        {% if task.project %}
+                            <dt class="col-sm-5">Project:</dt>
+                            <dd class="col-sm-7">
+                                <a href="{% url 'tasks:project_detail' task.project.id %}" class="text-decoration-none">
+                                    {{ task.project.name }}
+                                </a>
+                            </dd>
+                        {% endif %}
+
+                        {% if task.due_date %}
+                            <dt class="col-sm-5">Due Date:</dt>
+                            <dd class="col-sm-7">
+                                {{ task.due_date|date:"M d, Y H:i" }}
+                                {% if task.is_overdue %}
+                                    <span class="badge bg-danger ms-1">Overdue</span>
+                                {% elif task.is_due_soon %}
+                                    <span class="badge bg-warning ms-1">Soon</span>
+                                {% endif %}
+                            </dd>
+                        {% endif %}
+
+                        {% if task.completed_at %}
+                            <dt class="col-sm-5">Completed:</dt>
+                            <dd class="col-sm-7">{{ task.completed_at|date:"M d, Y H:i" }}</dd>
+                        {% endif %}
+
+                        <dt class="col-sm-5">Created:</dt>
+                        <dd class="col-sm-7">{{ task.created_at|date:"M d, Y H:i" }}</dd>
+
+                        <dt class="col-sm-5">Last Updated:</dt>
+                        <dd class="col-sm-7">{{ task.updated_at|date:"M d, Y H:i" }}</dd>
+                    </dl>
+                </div>
+            </div>
+
+            <!-- Assignees Card -->
+            <div class="detail-card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Assignees</h5>
+                    <span class="badge bg-secondary">{{ task.assignees.count }}</span>
+                </div>
+                <div class="card-body">
+                    {% if task.assignees.exists %}
+                        <div class="list-group list-group-flush">
+                            {% for assignee in task.assignees.all %}
+                                <div class="list-group-item d-flex align-items-center px-0 py-2 border-0">
+                                    <div class="me-3" style="width: 40px; height: 40px; border-radius: 50%; background-color: #e9ecef; display: flex; align-items: center; justify-content: center; font-weight: bold;">
+                                        {{ assignee.username|slice:":1"|upper }}
+                                    </div>
+                                    <div>
+                                        <div class="fw-bold">{{ assignee.username }}</div>
+                                        <div class="small text-muted">{{ assignee.email }}</div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-muted fst-italic">No assignees for this task.</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Related Tasks Card (if applicable) -->
+            {% if related_tasks %}
+            <div class="detail-card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Related Tasks</h5>
+                    <span class="badge bg-secondary">{{ related_tasks|length }}</span>
+                </div>
+                <div class="card-body">
+                    <div class="list-group list-group-flush">
+                        {% for related in related_tasks %}
+                            <a href="{% url 'tasks:task_detail' related.id %}" class="list-group-item list-group-item-action px-0 py-2 border-0">
+                                <div class="d-flex w-100 justify-content-between align-items-center">
+                                    <div>
+                                        <span class="priority-indicator priority-{{ related.priority }}" style="width: 8px; height: 8px; display: inline-block; border-radius: 50%; margin-right: 5px;"></span>
+                                        <span>{{ related.title }}</span>
+                                    </div>
+                                    <span class="badge badge-{{ related.status }}">{{ related.get_status_display }}</span>
+                                </div>
+                            </a>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- Quick Links Card -->
+            <div class="detail-card">
+                <div class="card-header">
+                    <h5 class="mb-0">Quick Links</h5>
+                </div>
+                <div class="card-body">
+                    <div class="list-group list-group-flush">
+                        <a href="{% url 'tasks:task_list' %}" class="list-group-item list-group-item-action px-0 py-2 border-0">
+                            <i class="bi bi-list-task me-2"></i> All Tasks
+                        </a>
+                        {% if task.project %}
+                        <a href="{% url 'tasks:project_detail' task.project.id %}" class="list-group-item list-group-item-action px-0 py-2 border-0">
+                            <i class="bi bi-folder me-2"></i> Project: {{ task.project.name }}
+                        </a>
+                        {% endif %}
+                        <a href="#attachments" class="list-group-item list-group-item-action px-0 py-2 border-0">
+                            <i class="bi bi-paperclip me-2"></i> Attachments
+                        </a>
+                        <a href="#comments" class="list-group-item list-group-item-action px-0 py-2 border-0">
+                            <i class="bi bi-chat-dots me-2"></i> Comments
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // File upload functionality
+        const fileUpload = document.getElementById('file-upload');
+        const uploadZone = document.getElementById('upload-zone');
+        const uploadTitle = document.getElementById('upload-title');
+        const uploadMessage = document.getElementById('upload-message');
+        const uploadButton = document.getElementById('upload-button');
+        const attachmentForm = document.getElementById('attachment-form');
+        
+        // Update upload zone when file is selected
+        fileUpload.addEventListener('change', function() {
+            if (this.files.length > 0) {
+                const file = this.files[0];
+                uploadTitle.textContent = 'File Selected';
+                uploadMessage.textContent = `${file.name} (${formatFileSize(file.size)})`;
+                uploadZone.classList.add('border-primary');
+                uploadZone.classList.remove('border-danger');
+            }
+        });
+        
+        // Drag and drop functionality
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            uploadZone.addEventListener(eventName, preventDefaults, false);
+        });
+        
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+        
+        ['dragenter', 'dragover'].forEach(eventName => {
+            uploadZone.addEventListener(eventName, highlight, false);
+        });
+        
+        ['dragleave', 'drop'].forEach(eventName => {
+            uploadZone.addEventListener(eventName, unhighlight, false);
+        });
+        
+        function highlight() {
+            uploadZone.classList.add('bg-light');
+            uploadZone.style.borderColor = '#0d6efd';
+        }
+        
+        function unhighlight() {
+            uploadZone.classList.remove('bg-light');
+            uploadZone.style.borderColor = '';
+        }
+        
+        uploadZone.addEventListener('drop', handleDrop, false);
+        
+        function handleDrop(e) {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            
+            if (files.length > 0) {
+                fileUpload.files = files;
+                const file = files[0];
+                uploadTitle.textContent = 'File Selected';
+                uploadMessage.textContent = `${file.name} (${formatFileSize(file.size)})`;
+                uploadZone.classList.add('border-primary');
+            }
+        }
+        
+        // Handle form submission
+        attachmentForm.addEventListener('submit', function() {
+            uploadButton.disabled = true;
+            uploadButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Uploading...';
+        });
+        
+        // File size formatter
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+        
+        // File type validator
+        function validateFileType(file) {
+            const allowedTypes = [
+                'image/jpeg', 'image/png', 'image/gif', 'application/pdf', 
+                'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                'application/vnd.ms-powerpoint', 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+                'text/plain', 'application/zip', 'application/x-rar-compressed'
+            ];
+            
+            if (!allowedTypes.includes(file.type)) {
+                uploadTitle.textContent = 'Invalid File Type';
+                uploadMessage.textContent = 'Please select a valid document, image, or archive file';
+                uploadZone.classList.add('border-danger');
+                uploadZone.classList.remove('border-primary');
+                return false;
+            }
+            
+            return true;
+        }
+        
+        // Maximum file size (10MB)
+        const maxFileSize = 10 * 1024 * 1024;
+        
+        // Validate file size
+        fileUpload.addEventListener('change', function() {
+            if (this.files.length > 0) {
+                const file = this.files[0];
+                
+                if (file.size > maxFileSize) {
+                    uploadTitle.textContent = 'File Too Large';
+                    uploadMessage.textContent = 'Maximum file size is 10MB';
+                    uploadZone.classList.add('border-danger');
+                    uploadZone.classList.remove('border-primary');
+                    uploadButton.disabled = true;
+                } else if (!validateFileType(file)) {
+                    uploadButton.disabled = true;
+                } else {
+                    uploadButton.disabled = false;
+                }
+            }
+        });
+        
+        // Set tag colors
+        document.querySelectorAll('.tag-badge').forEach(tag => {
+            const color = tag.getAttribute('data-color');
+            if (color) {
+                tag.style.backgroundColor = color;
+            }
+        });
+        
+        // Smooth scrolling for anchor links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                
+                document.querySelector(this.getAttribute('href')).scrollIntoView({
+                    behavior: 'smooth'
+                });
+            });
+        });
+    });
+</script>
+{% endblock %}

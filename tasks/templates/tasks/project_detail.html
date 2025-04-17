@@ -1,0 +1,488 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ project.name }} | Project Details{% endblock %}
+
+{% block extra_head %}
+<style>
+    /* Project header */
+    .project-header {
+        padding: 2rem 0;
+        background-color: #f8f9fa;
+        border-radius: 12px;
+        margin-bottom: 2rem;
+    }
+    
+    .project-title {
+        font-size: 2.25rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+    }
+    
+    .project-description {
+        color: #6c757d;
+        font-size: 1.1rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    /* Stats cards */
+    .stat-card {
+        background-color: #fff;
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        padding: 1.5rem;
+        text-align: center;
+        margin-bottom: 1.5rem;
+        transition: all 0.3s ease;
+    }
+    
+    .stat-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+    }
+    
+    .stat-number {
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin: 0.5rem 0;
+    }
+    
+    .stat-label {
+        color: #6c757d;
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+    
+    /* Status columns */
+    .status-column {
+        background-color: #f8f9fa;
+        border-radius: 12px;
+        padding: 1.5rem;
+        height: 100%;
+    }
+    
+    .status-column-header {
+        margin-bottom: 1.5rem;
+        padding-bottom: 0.75rem;
+        border-bottom: 2px solid #dee2e6;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .status-title {
+        font-weight: 600;
+        font-size: 1.1rem;
+        margin-bottom: 0;
+    }
+    
+    /* Task cards */
+    .task-card {
+        background-color: #fff;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        padding: 1rem;
+        margin-bottom: 1rem;
+        transition: all 0.2s ease;
+    }
+    
+    .task-card:hover {
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        transform: translateY(-2px);
+    }
+    
+    .task-card-title {
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+    }
+    
+    .task-card-meta {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 1rem;
+        font-size: 0.85rem;
+    }
+    
+    /* Team members */
+    .team-card {
+        background-color: #fff;
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .team-card-header {
+        margin-bottom: 1.5rem;
+        padding-bottom: 0.75rem;
+        border-bottom: 1px solid #dee2e6;
+    }
+    
+    .member-item {
+        display: flex;
+        align-items: center;
+        padding: 0.75rem 0;
+        border-bottom: 1px solid #f1f1f1;
+    }
+    
+    .member-item:last-child {
+        border-bottom: none;
+    }
+    
+    .member-avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background-color: #e9ecef;
+        color: #495057;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+        margin-right: 1rem;
+    }
+    
+    .member-info {
+        flex-grow: 1;
+    }
+    
+    .member-name {
+        font-weight: 600;
+        margin-bottom: 0.25rem;
+    }
+    
+    .member-role {
+        color: #6c757d;
+        font-size: 0.85rem;
+    }
+    
+    /* Progress bar */
+    .progress {
+        height: 10px;
+        border-radius: 5px;
+        margin-top: 1rem;
+    }
+    
+    /* Status badges */
+    .badge-todo {
+        background-color: #e9ecef;
+        color: #495057;
+    }
+    
+    .badge-in-progress {
+        background-color: #cfe2ff;
+        color: #0d6efd;
+    }
+    
+    .badge-completed {
+        background-color: #d1e7dd;
+        color: #0f5132;
+    }
+    
+    /* Priority indicators */
+    .priority-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        display: inline-block;
+        margin-right: 5px;
+    }
+    
+    .priority-low {
+        background-color: #d1e7dd;
+    }
+    
+    .priority-medium {
+        background-color: #fff3cd;
+    }
+    
+    .priority-high {
+        background-color: #f8d7da;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <!-- Project Header -->
+    <div class="project-header px-4">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <a href="{% url 'tasks:project_list' %}" class="text-decoration-none text-muted mb-3 d-inline-block">
+                    <i class="bi bi-arrow-left"></i> Back to Projects
+                </a>
+                <h1 class="project-title">{{ project.name }}</h1>
+                <p class="project-description">
+                    {% if project.description %}
+                        {{ project.description }}
+                    {% else %}
+                        No description provided
+                    {% endif %}
+                </p>
+                <div class="d-flex align-items-center">
+                    <span class="badge bg-{% if project.is_archived %}secondary{% else %}success{% endif %} me-2">
+                        {% if project.is_archived %}Archived{% else %}Active{% endif %}
+                    </span>
+                    <span class="text-muted">Created: {{ project.created_at|date:"M d, Y" }}</span>
+                    <span class="mx-2">•</span>
+                    <span class="text-muted">By: {{ project.owner.username }}</span>
+                </div>
+            </div>
+            <div class="col-md-4 text-md-end">
+                <div class="btn-group">
+                    {% if is_owner %}
+                        <a href="{% url 'tasks:project_update' project.id %}" class="btn btn-primary">
+                            <i class="bi bi-pencil"></i> Edit
+                        </a>
+                        <a href="{% url 'tasks:task_create' %}?project={{ project.id }}" class="btn btn-success">
+                            <i class="bi bi-plus"></i> Add Task
+                        </a>
+                        <div class="dropdown">
+                            <button class="btn btn-light dropdown-toggle" type="button" id="projectActions" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="bi bi-three-dots"></i>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="projectActions">
+                                {% if project.is_archived %}
+                                    <li>
+                                        <form action="{% url 'tasks:project_unarchive' project.id %}" method="post">
+                                            {% csrf_token %}
+                                            <button type="submit" class="dropdown-item">
+                                                <i class="bi bi-archive-fill"></i> Unarchive
+                                            </button>
+                                        </form>
+                                    </li>
+                                {% else %}
+                                    <li>
+                                        <a class="dropdown-item" href="{% url 'tasks:project_archive' project.id %}">
+                                            <i class="bi bi-archive"></i> Archive
+                                        </a>
+                                    </li>
+                                {% endif %}
+                            </ul>
+                        </div>
+                    {% else %}
+                        <a href="{% url 'tasks:task_create' %}?project={{ project.id }}" class="btn btn-success">
+                            <i class="bi bi-plus"></i> Add Task
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Project Stats -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="stat-card">
+                <div class="stat-label">Total Tasks</div>
+                <div class="stat-number">{{ total_tasks }}</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card">
+                <div class="stat-label">To Do</div>
+                <div class="stat-number">{{ todo_tasks.count }}</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card">
+                <div class="stat-label">In Progress</div>
+                <div class="stat-number">{{ in_progress_tasks.count }}</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card">
+                <div class="stat-label">Completed</div>
+                <div class="stat-number">{{ completed_tasks.count }}</div>
+                <div class="progress">
+                    <div class="progress-bar bg-success" role="progressbar" style="width: {{ completion_rate }}%" aria-valuenow="{{ completion_rate }}" aria-valuemin="0" aria-valuemax="100"></div>
+                </div>
+                <small class="text-muted">{{ completion_rate }}% Complete</small>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Tasks Kanban Board -->
+    <div class="row mb-5">
+        <div class="col-12 mb-3">
+            <h4 class="mb-0">Tasks</h4>
+        </div>
+        
+        <!-- To Do Column -->
+        <div class="col-md-4 mb-4">
+            <div class="status-column">
+                <div class="status-column-header">
+                    <h5 class="status-title">To Do</h5>
+                    <span class="badge bg-secondary">{{ todo_tasks.count }}</span>
+                </div>
+                
+                {% if todo_tasks %}
+                    {% for task in todo_tasks %}
+                        <div class="task-card">
+                            <h6 class="task-card-title">
+                                <a href="{% url 'tasks:task_detail' task.id %}" class="text-decoration-none text-reset">
+                                    {{ task.title }}
+                                </a>
+                            </h6>
+                            <div class="text-muted small">{{ task.description|truncatechars:100 }}</div>
+                            <div class="task-card-meta">
+                                <div>
+                                    <span class="priority-dot priority-{{ task.priority }}"></span>
+                                    <span class="badge badge-{{ task.priority }}">{{ task.get_priority_display }}</span>
+                                </div>
+                                {% if task.due_date %}
+                                    <div class="text-muted">
+                                        <i class="bi bi-calendar"></i> {{ task.due_date|date:"M d" }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="text-center text-muted py-5">
+                        <i class="bi bi-clipboard fs-1 mb-3"></i>
+                        <p>No tasks in this status</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- In Progress Column -->
+        <div class="col-md-4 mb-4">
+            <div class="status-column">
+                <div class="status-column-header">
+                    <h5 class="status-title">In Progress</h5>
+                    <span class="badge bg-primary">{{ in_progress_tasks.count }}</span>
+                </div>
+                
+                {% if in_progress_tasks %}
+                    {% for task in in_progress_tasks %}
+                        <div class="task-card">
+                            <h6 class="task-card-title">
+                                <a href="{% url 'tasks:task_detail' task.id %}" class="text-decoration-none text-reset">
+                                    {{ task.title }}
+                                </a>
+                            </h6>
+                            <div class="text-muted small">{{ task.description|truncatechars:100 }}</div>
+                            <div class="task-card-meta">
+                                <div>
+                                    <span class="priority-dot priority-{{ task.priority }}"></span>
+                                    <span class="badge badge-{{ task.priority }}">{{ task.get_priority_display }}</span>
+                                </div>
+                                {% if task.due_date %}
+                                    <div class="text-muted">
+                                        <i class="bi bi-calendar"></i> {{ task.due_date|date:"M d" }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="text-center text-muted py-5">
+                        <i class="bi bi-clipboard-check fs-1 mb-3"></i>
+                        <p>No tasks in this status</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Completed Column -->
+        <div class="col-md-4 mb-4">
+            <div class="status-column">
+                <div class="status-column-header">
+                    <h5 class="status-title">Completed</h5>
+                    <span class="badge bg-success">{{ completed_tasks.count }}</span>
+                </div>
+                
+                {% if completed_tasks %}
+                    {% for task in completed_tasks %}
+                        <div class="task-card">
+                            <h6 class="task-card-title">
+                                <a href="{% url 'tasks:task_detail' task.id %}" class="text-decoration-none text-reset">
+                                    {{ task.title }}
+                                </a>
+                            </h6>
+                            <div class="text-muted small">{{ task.description|truncatechars:100 }}</div>
+                            <div class="task-card-meta">
+                                <div>
+                                    <span class="priority-dot priority-{{ task.priority }}"></span>
+                                    <span class="badge badge-{{ task.priority }}">{{ task.get_priority_display }}</span>
+                                </div>
+                                {% if task.completed_at %}
+                                    <div class="text-muted">
+                                        <i class="bi bi-check-circle"></i> {{ task.completed_at|date:"M d" }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="text-center text-muted py-5">
+                        <i class="bi bi-clipboard-check fs-1 mb-3"></i>
+                        <p>No tasks in this status</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Team Members Section -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="team-card">
+                <div class="team-card-header">
+                    <h4 class="mb-0">Project Team</h4>
+                </div>
+                <div class="member-item">
+                    <div class="member-avatar">
+                        {{ project.owner.username|slice:":1"|upper }}
+                    </div>
+                    <div class="member-info">
+                        <div class="member-name">{{ project.owner.username }}</div>
+                        <div class="member-role">Project Owner</div>
+                    </div>
+                </div>
+                
+                {% if members %}
+                    {% for member in members %}
+                        {% if member != project.owner %}
+                            <div class="member-item">
+                                <div class="member-avatar">
+                                    {{ member.username|slice:":1"|upper }}
+                                </div>
+                                <div class="member-info">
+                                    <div class="member-name">{{ member.username }}</div>
+                                    <div class="member-role">Team Member</div>
+                                </div>
+                            </div>
+                        {% endif %}
+                    {% endfor %}
+                {% endif %}
+                
+                {% if is_owner and members.count == 0 %}
+                    <div class="text-center text-muted py-3">
+                        <p>No team members added yet</p>
+                        <a href="{% url 'tasks:project_update' project.id %}" class="btn btn-sm btn-outline-primary">
+                            <i class="bi bi-person-plus"></i> Add Team Members
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="team-card">
+                <div class="team-card-header">
+                    <h4 class="mb-0">Project Activity</h4>
+                </div>
+                
+                <div class="text-center text-muted py-5">
+                    <i class="bi bi-activity fs-1 mb-3"></i>
+                    <p>Project activity is coming soon!</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

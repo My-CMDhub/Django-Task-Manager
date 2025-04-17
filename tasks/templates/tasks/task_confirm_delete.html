@@ -1,0 +1,230 @@
+{% extends 'base.html' %}
+
+{% block title %}Confirm Delete{% endblock %}
+
+{% block extra_head %}
+<style>
+    .delete-container {
+        margin-top: 3rem;
+        margin-bottom: 3rem;
+    }
+    
+    .delete-card {
+        border-radius: 12px;
+        overflow: hidden;
+        border: none;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    }
+    
+    .delete-header {
+        background: linear-gradient(135deg, #FF5252 0%, #FF1744 100%);
+        color: white;
+        padding: 1.5rem;
+        position: relative;
+    }
+    
+    .warning-icon {
+        position: absolute;
+        top: -15px;
+        right: 20px;
+        background-color: white;
+        color: #FF1744;
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    
+    .delete-body {
+        padding: 2rem;
+    }
+    
+    .task-info-box {
+        background-color: #f8f9fa;
+        border-radius: 8px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .info-item {
+        margin-bottom: 0.75rem;
+        display: flex;
+    }
+    
+    .info-item:last-child {
+        margin-bottom: 0;
+    }
+    
+    .info-label {
+        font-weight: 600;
+        width: 120px;
+        color: #495057;
+    }
+    
+    .info-value {
+        flex: 1;
+    }
+    
+    .warning-text {
+        color: #dc3545;
+        border-left: 4px solid #dc3545;
+        padding: 1rem;
+        background-color: rgba(220, 53, 69, 0.1);
+        border-radius: 0 4px 4px 0;
+        margin-bottom: 1.5rem;
+    }
+    
+    .btn-danger {
+        background: linear-gradient(135deg, #FF5252 0%, #FF1744 100%);
+        border: none;
+        padding: 0.75rem 1.5rem;
+        font-weight: 500;
+        border-radius: 8px;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-danger:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(255, 23, 68, 0.3);
+    }
+    
+    .btn-light {
+        background-color: #f8f9fa;
+        border: 1px solid #dee2e6;
+        color: #495057;
+        padding: 0.75rem 1.5rem;
+        font-weight: 500;
+        border-radius: 8px;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-light:hover {
+        background-color: #e9ecef;
+    }
+    
+    .badge {
+        padding: 0.5em 0.75em;
+        border-radius: 6px;
+        font-weight: 500;
+    }
+    
+    .badge-todo { background-color: #e9ecef; color: #495057; }
+    .badge-in_progress { background-color: #cfe2ff; color: #0d6efd; }
+    .badge-completed { background-color: #d1e7dd; color: #0f5132; }
+    .badge-archived { background-color: #e9ecef; color: #495057; }
+    
+    .badge-low { background-color: #d1e7dd; color: #0f5132; }
+    .badge-medium { background-color: #fff3cd; color: #664d03; }
+    .badge-high { background-color: #ffe5d0; color: #fd7e14; }
+    .badge-urgent { background-color: #f8d7da; color: #842029; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container delete-container">
+    <div class="row">
+        <div class="col-lg-8 col-md-10 mx-auto">
+            <div class="card delete-card">
+                <div class="delete-header">
+                    <div class="warning-icon">
+                        <i class="bi bi-exclamation-triangle-fill"></i>
+                    </div>
+                    <h2 class="mb-2">Delete Task</h2>
+                    <p class="mb-0 text-white-50">This action cannot be undone</p>
+                </div>
+                <div class="delete-body">
+                    <div class="alert alert-danger mb-4">
+                        <div class="d-flex align-items-center">
+                            <i class="bi bi-exclamation-circle-fill fs-4 me-3"></i>
+                            <div>
+                                <h5 class="alert-heading mb-1">Warning: Permanent Deletion</h5>
+                                <p class="mb-0">You are about to permanently delete the task "<strong>{{ task.title }}</strong>". This will remove all associated data including comments, attachments, and activity history.</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <h5 class="mb-3">Task Information</h5>
+                    <div class="task-info-box">
+                        <div class="info-item">
+                            <div class="info-label">Title:</div>
+                            <div class="info-value">{{ task.title }}</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">Status:</div>
+                            <div class="info-value">
+                                <span class="badge badge-{{ task.status }}">{{ task.get_status_display }}</span>
+                            </div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">Priority:</div>
+                            <div class="info-value">
+                                <span class="badge badge-{{ task.priority }}">{{ task.get_priority_display }}</span>
+                            </div>
+                        </div>
+                        {% if task.project %}
+                        <div class="info-item">
+                            <div class="info-label">Project:</div>
+                            <div class="info-value">{{ task.project.name }}</div>
+                        </div>
+                        {% endif %}
+                        {% if task.due_date %}
+                        <div class="info-item">
+                            <div class="info-label">Due Date:</div>
+                            <div class="info-value">{{ task.due_date|date:"M d, Y" }}</div>
+                        </div>
+                        {% endif %}
+                        <div class="info-item">
+                            <div class="info-label">Created:</div>
+                            <div class="info-value">{{ task.created_at|date:"M d, Y" }}</div>
+                        </div>
+                        {% if task.comments.count > 0 %}
+                        <div class="info-item">
+                            <div class="info-label">Comments:</div>
+                            <div class="info-value">
+                                <span class="badge bg-secondary">{{ task.comments.count }}</span>
+                            </div>
+                        </div>
+                        {% endif %}
+                        {% if task.attachments.count > 0 %}
+                        <div class="info-item">
+                            <div class="info-label">Attachments:</div>
+                            <div class="info-value">
+                                <span class="badge bg-secondary">{{ task.attachments.count }}</span>
+                            </div>
+                        </div>
+                        {% endif %}
+                        {% if task.assignees.count > 0 %}
+                        <div class="info-item">
+                            <div class="info-label">Assignees:</div>
+                            <div class="info-value">
+                                <span class="badge bg-secondary">{{ task.assignees.count }}</span>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="warning-text">
+                        <p class="mb-0"><strong>Note:</strong> This action is irreversible. All task data will be permanently removed from the system.</p>
+                    </div>
+                    
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="d-flex justify-content-between align-items-center">
+                            <a href="{% url 'tasks:task_detail' task.id %}" class="btn btn-light">
+                                <i class="bi bi-arrow-left"></i> Cancel
+                            </a>
+                            <button type="submit" class="btn btn-danger">
+                                <i class="bi bi-trash"></i> Delete Permanently
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

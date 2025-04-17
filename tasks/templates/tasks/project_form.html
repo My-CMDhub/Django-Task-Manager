@@ -1,0 +1,231 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block extra_head %}
+<style>
+    .project-form-card {
+        border-radius: 12px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        border: none;
+        overflow: hidden;
+    }
+    
+    .card-header {
+        background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+        color: white;
+        padding: 2rem 1.5rem 1.5rem;
+        border-bottom: none;
+    }
+    
+    .header-subtitle {
+        font-size: 1.1rem;
+        opacity: 0.9;
+        margin-top: 0.25rem;
+        font-weight: 400;
+    }
+    
+    .form-label {
+        font-weight: 500;
+        margin-bottom: 0.5rem;
+        color: #495057;
+    }
+    
+    .form-control, .form-select {
+        border-radius: 8px;
+        padding: 0.75rem 1rem;
+        border: 1px solid #dee2e6;
+        font-size: 0.95rem;
+    }
+    
+    .form-control:focus, .form-select:focus {
+        border-color: #86b7fe;
+        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+    }
+    
+    /* Form sections */
+    .form-section {
+        margin-bottom: 2rem;
+        padding-bottom: 1.5rem;
+        border-bottom: 1px solid #e9ecef;
+    }
+    
+    .form-section:last-child {
+        border-bottom: none;
+        margin-bottom: 0;
+        padding-bottom: 0;
+    }
+    
+    .form-section-title {
+        font-size: 1.25rem;
+        margin-bottom: 1.5rem;
+        color: #343a40;
+        font-weight: 600;
+    }
+    
+    /* Help text styling */
+    .form-text {
+        font-size: 0.85rem;
+        color: #6c757d;
+        margin-top: 0.3rem;
+    }
+    
+    /* Submit button */
+    .btn-submit {
+        background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+        border: none;
+        color: white;
+        border-radius: 8px;
+        padding: 0.75rem 1.5rem;
+        font-weight: 500;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-submit:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(13, 110, 253, 0.4);
+    }
+    
+    /* Cancel button */
+    .btn-cancel {
+        background-color: #f8f9fa;
+        border: 1px solid #dee2e6;
+        color: #495057;
+        border-radius: 8px;
+        padding: 0.75rem 1.5rem;
+        font-weight: 500;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-cancel:hover {
+        background-color: #e9ecef;
+    }
+    
+    /* Select2 customization */
+    .select2-container--bootstrap4 .select2-selection--multiple {
+        border-radius: 8px;
+        padding: 0.5rem 0.75rem;
+        border: 1px solid #dee2e6;
+    }
+    
+    .select2-container--bootstrap4 .select2-selection--multiple .select2-selection__choice {
+        background-color: #e9effd;
+        border: 1px solid #0d6efd;
+        border-radius: 30px;
+        padding: 0.25rem 0.6rem;
+        color: #0d6efd;
+    }
+    
+    .select2-container--bootstrap4 .select2-selection--multiple .select2-selection__choice__remove {
+        color: #0d6efd;
+        margin-right: 0.4rem;
+    }
+    
+    .select2-container--bootstrap4.select2-container--focus .select2-selection {
+        border-color: #86b7fe;
+        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+    }
+    
+    /* Required field indicator */
+    .required-field::after {
+        content: "*";
+        color: #dc3545;
+        margin-left: 0.25rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4 mb-5">
+    <div class="project-form-card">
+        <div class="card-header">
+            <h2 class="mb-0">{{ title }}</h2>
+            <p class="header-subtitle">Define your project details</p>
+        </div>
+        <div class="card-body p-4">
+            <form method="post" novalidate>
+                {% csrf_token %}
+                
+                {% if form.non_field_errors %}
+                <div class="alert alert-danger">
+                    {% for error in form.non_field_errors %}
+                    {{ error }}
+                    {% endfor %}
+                </div>
+                {% endif %}
+                
+                <div class="form-section">
+                    <h3 class="form-section-title">Basic Information</h3>
+                    
+                    <div class="mb-4">
+                        <label for="{{ form.name.id_for_label }}" class="form-label required-field">Project Name</label>
+                        {{ form.name }}
+                        {% if form.name.errors %}
+                        <div class="text-danger mt-1">
+                            {% for error in form.name.errors %}
+                            {{ error }}
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label for="{{ form.description.id_for_label }}" class="form-label">Description</label>
+                        {{ form.description }}
+                        {% if form.description.errors %}
+                        <div class="text-danger mt-1">
+                            {% for error in form.description.errors %}
+                            {{ error }}
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                        <div class="form-text">Describe the purpose and scope of this project.</div>
+                    </div>
+                </div>
+                
+                <div class="form-section">
+                    <h3 class="form-section-title">Team Members</h3>
+                    
+                    <div class="mb-4">
+                        <label for="{{ form.members.id_for_label }}" class="form-label">Team Members</label>
+                        {{ form.members }}
+                        {% if form.members.errors %}
+                        <div class="text-danger mt-1">
+                            {% for error in form.members.errors %}
+                            {{ error }}
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                        <div class="form-text">Select team members who will have access to this project.</div>
+                    </div>
+                </div>
+                
+                <div class="d-flex justify-content-end gap-3 mt-4">
+                    <a href="{% url 'tasks:project_list' %}" class="btn btn-cancel">Cancel</a>
+                    <button type="submit" class="btn btn-submit">
+                        {% if project %}Update Project{% else %}Create Project{% endif %}
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(document).ready(function() {
+        // Initialize select2 for multi-select fields
+        $('.select2').select2({
+            theme: 'bootstrap4',
+            placeholder: 'Select team members',
+            allowClear: true
+        });
+        
+        // Add Bootstrap form classes if not already added
+        $('input[type="text"], input[type="email"], textarea').addClass('form-control');
+        $('select').addClass('form-select');
+        $('.select2-container').css('width', '100%');
+    });
+</script>
+{% endblock %}

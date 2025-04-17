@@ -1,0 +1,819 @@
+{% extends 'base.html' %}
+
+{% block title %}My Tasks{% endblock %}
+
+{% block extra_head %}
+<style>
+    /* Task card styles */
+    .task-card {
+        border-radius: 10px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        margin-bottom: 1rem;
+        border-left: 4px solid #ddd;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .task-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    
+    /* Status color coding */
+    .task-card.todo { border-left-color: #6c757d; }
+    .task-card.in_progress { border-left-color: #007bff; }
+    .task-card.completed { border-left-color: #28a745; }
+    .task-card.archived { border-left-color: #6c757d; opacity: 0.7; }
+    
+    /* Priority indicators */
+    .priority-indicator {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        display: inline-block;
+        margin-right: 5px;
+    }
+    .priority-low { background-color: #28a745; }
+    .priority-medium { background-color: #ffc107; }
+    .priority-high { background-color: #fd7e14; }
+    .priority-urgent { background-color: #dc3545; }
+    
+    /* Badge styling */
+    .badge {
+        font-weight: 500;
+        padding: 0.4em 0.6em;
+        margin-right: 0.25rem;
+        border-radius: 6px;
+    }
+    .badge-todo { background-color: #e9ecef; color: #495057; }
+    .badge-in_progress { background-color: #cfe2ff; color: #0d6efd; }
+    .badge-completed { background-color: #d1e7dd; color: #0f5132; }
+    .badge-archived { background-color: #e9ecef; color: #495057; }
+    
+    .badge-low { background-color: #d1e7dd; color: #0f5132; }
+    .badge-medium { background-color: #fff3cd; color: #664d03; }
+    .badge-high { background-color: #ffe5d0; color: #fd7e14; }
+    .badge-urgent { background-color: #f8d7da; color: #842029; }
+    
+    /* Due date indicators */
+    .due-soon { color: #fd7e14; }
+    .overdue { color: #dc3545; }
+    
+    /* View toggle buttons */
+    .view-toggle .btn {
+        border-radius: 6px;
+        padding: 0.375rem 0.75rem;
+    }
+    .view-toggle .btn.active {
+        background-color: #0d6efd;
+        color: white;
+    }
+    
+    /* Filter card */
+    .filter-card {
+        border-radius: 10px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        margin-bottom: 1.5rem;
+    }
+    .filter-card .card-header {
+        background-color: #f8f9fa;
+        border-bottom: 1px solid #e9ecef;
+        padding: 1rem;
+    }
+    
+    /* Kanban board */
+    .kanban-column {
+        min-height: 400px;
+        background-color: #f8f9fa;
+        border-radius: 10px;
+        padding: 1rem;
+    }
+    .kanban-column-header {
+        margin-bottom: 1rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 2px solid #dee2e6;
+    }
+    
+    /* Assignee avatars */
+    .assignee-avatar {
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        background-color: #dee2e6;
+        color: #495057;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        font-size: 12px;
+        margin-right: -10px;
+        border: 2px solid white;
+    }
+    
+    /* Action buttons */
+    .task-actions .btn {
+        padding: 0.25rem 0.5rem;
+        margin-left: 0.25rem;
+        border-radius: 6px;
+    }
+    
+    /* Progress indicator */
+    .progress {
+        height: 10px;
+        margin-top: 5px;
+    }
+    
+    .progress .progress-bar {
+        transition: width 0.2s ease-in-out;
+    }
+    
+    /* Task stats counter */
+    .task-stats {
+        background-color: #f8f9fa;
+        border-radius: 10px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    .task-stat-item {
+        text-align: center;
+    }
+    .task-stat-number {
+        font-size: 1.75rem;
+        font-weight: 700;
+    }
+    .task-stat-label {
+        color: #6c757d;
+        font-size: 0.875rem;
+    }
+    
+    /* Custom action button group */
+    .action-button-group {
+        display: inline-flex;
+        border-radius: 10px;
+        overflow: hidden;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        margin-bottom: 1.5rem;
+        border: 1px solid #dee2e6;
+    }
+    
+    .action-button {
+        padding: 12px 20px;
+        background-color: white;
+        border: none;
+        position: relative;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        font-weight: 500;
+        color: #495057;
+    }
+    
+    .action-button:not(:last-child) {
+        border-right: 1px solid #dee2e6;
+    }
+    
+    .action-button:hover {
+        background-color: #f8f9fa;
+    }
+    
+    .action-button i {
+        margin-right: 8px;
+        font-size: 1.1rem;
+    }
+    
+    .action-button.complete-btn {
+        color: #198754;
+    }
+    
+    .action-button.complete-btn:hover {
+        background-color: rgba(25, 135, 84, 0.1);
+    }
+    
+    .action-button.archive-btn {
+        color: #6c757d;
+    }
+    
+    .action-button.archive-btn:hover {
+        background-color: rgba(108, 117, 125, 0.1);
+    }
+    
+    .action-button.delete-btn {
+        color: #dc3545;
+    }
+    
+    .action-button.delete-btn:hover {
+        background-color: rgba(220, 53, 69, 0.1);
+    }
+    
+    .action-button:disabled {
+        color: #adb5bd !important;
+        background-color: #f8f9fa !important;
+        cursor: not-allowed;
+    }
+    
+    .action-button .badge-counter {
+        position: absolute;
+        top: -8px;
+        right: -8px;
+        background-color: #0d6efd;
+        color: white;
+        border-radius: 50%;
+        width: 18px;
+        height: 18px;
+        font-size: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        opacity: 0;
+        transform: scale(0);
+        transition: all 0.3s;
+    }
+    
+    .action-button .badge-counter.show {
+        opacity: 1;
+        transform: scale(1);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <!-- CSRF Token for JavaScript -->
+    {% csrf_token %}
+    
+    <!-- Hidden form for bulk actions -->
+    <form id="bulk-action-form" method="post" style="display: none;">
+        {% csrf_token %}
+        <input type="hidden" name="task_ids" id="bulk-task-ids">
+        <input type="hidden" name="action" id="bulk-action-type">
+    </form>
+    
+    <!-- Header and Actions -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <h1 class="h3 mb-0">My Tasks</h1>
+            <p class="text-muted">Manage and track your tasks</p>
+        </div>
+        <div class="col-md-6 d-flex justify-content-end align-items-center">
+            <div class="view-toggle btn-group me-3">
+                <button type="button" class="btn btn-outline-primary active" id="list-view-btn">
+                    <i class="bi bi-list"></i> List
+                </button>
+                <button type="button" class="btn btn-outline-primary" id="kanban-view-btn">
+                    <i class="bi bi-kanban"></i> Kanban
+                </button>
+            </div>
+            <a href="{% url 'tasks:task_create' %}" class="btn btn-primary">
+                <i class="bi bi-plus-lg"></i> Create Task
+            </a>
+        </div>
+    </div>
+
+    <!-- Task Actions Button Group (New) -->
+    <div class="row mb-3">
+        <div class="col-12">
+            <div class="action-button-group">
+                <button type="button" class="action-button complete-btn bulk-action" data-action="complete" disabled>
+                    <i class="bi bi-check-circle"></i> Mark Complete
+                    <span class="badge-counter" id="complete-counter">0</span>
+                </button>
+                <button type="button" class="action-button archive-btn bulk-action" data-action="archive" disabled>
+                    <i class="bi bi-archive"></i> Archive
+                    <span class="badge-counter" id="archive-counter">0</span>
+                </button>
+                <button type="button" class="action-button delete-btn bulk-action" data-action="delete" disabled>
+                    <i class="bi bi-trash"></i> Delete
+                    <span class="badge-counter" id="delete-counter">0</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Task Statistics -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="task-stats">
+                <div class="row">
+                    <div class="col-md-3 task-stat-item">
+                        <div class="task-stat-number">{{ total_tasks|default:"0" }}</div>
+                        <div class="task-stat-label">Total Tasks</div>
+                    </div>
+                    <div class="col-md-3 task-stat-item">
+                        <div class="task-stat-number text-primary">{{ in_progress_count|default:"0" }}</div>
+                        <div class="task-stat-label">In Progress</div>
+                    </div>
+                    <div class="col-md-3 task-stat-item">
+                        <div class="task-stat-number text-success">{{ completed_count|default:"0" }}</div>
+                        <div class="task-stat-label">Completed</div>
+                    </div>
+                    <div class="col-md-3 task-stat-item">
+                        <div class="task-stat-number text-danger">{{ overdue_count|default:"0" }}</div>
+                        <div class="task-stat-label">Overdue</div>
+                    </div>
+                </div>
+                {% if total_tasks > 0 %}
+                <div class="progress mt-3">
+                    <div class="progress-bar bg-success" role="progressbar" style="width: {{ completion_percentage|default:'0' }}%"></div>
+                </div>
+                <div class="text-center mt-2">
+                    <small class="text-muted">{{ completion_percentage|default:'0' }}% of tasks completed</small>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="row mb-4">
+        <div class="col">
+            <div class="card filter-card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">Filter Tasks</h5>
+                    <button class="btn btn-sm btn-link" type="button" data-bs-toggle="collapse" data-bs-target="#filterCollapse">
+                        <i class="bi bi-chevron-down"></i>
+                    </button>
+                </div>
+                <div class="collapse show" id="filterCollapse">
+                    <div class="card-body">
+                        <form method="get" class="row g-3">
+                            <div class="col-md-3">
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="bi bi-search"></i></span>
+                                    <input type="text" name="search" class="form-control" placeholder="Search tasks..." value="{{ request.GET.search }}">
+                                </div>
+                            </div>
+                            <div class="col-md-2">
+                                <select name="status" class="form-select">
+                                    <option value="">All Statuses</option>
+                                    {% for status in status_choices %}
+                                    <option value="{{ status.0 }}" {% if request.GET.status == status.0 %}selected{% endif %}>{{ status.1 }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <select name="priority" class="form-select">
+                                    <option value="">All Priorities</option>
+                                    {% for priority in priority_choices %}
+                                    <option value="{{ priority.0 }}" {% if request.GET.priority == priority.0 %}selected{% endif %}>{{ priority.1 }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <select name="due" class="form-select">
+                                    <option value="">All Due Dates</option>
+                                    <option value="today" {% if request.GET.due == 'today' %}selected{% endif %}>Due Today</option>
+                                    <option value="week" {% if request.GET.due == 'week' %}selected{% endif %}>Due This Week</option>
+                                    <option value="overdue" {% if request.GET.due == 'overdue' %}selected{% endif %}>Overdue</option>
+                                    <option value="no_date" {% if request.GET.due == 'no_date' %}selected{% endif %}>No Due Date</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <select name="project" class="form-select">
+                                    <option value="">All Projects</option>
+                                    {% for project in projects %}
+                                    <option value="{{ project.id }}" {% if request.GET.project == project.id|stringformat:"s" %}selected{% endif %}>{{ project.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-1">
+                                <button type="submit" class="btn btn-primary w-100">Filter</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- List View -->
+    <div id="list-view" class="mb-4">
+        {% if tasks %}
+        <div class="row">
+            <div class="col">
+                {% for task in tasks %}
+                <div class="card task-card {{ task.status }}">
+                    <div class="card-body p-3">
+                        <div class="row align-items-center">
+                            <div class="col-md-1">
+                                <div class="form-check">
+                                    <input type="checkbox" class="form-check-input task-checkbox" value="{{ task.id }}" id="task_{{ task.id }}">
+                                    <label class="form-check-label" for="task_{{ task.id }}"></label>
+                                </div>
+                            </div>
+                            <div class="col-md-7">
+                                <h5 class="mb-1">
+                                    <span class="priority-indicator priority-{{ task.priority }}"></span>
+                                    <a href="{% url 'tasks:task_detail' task.id %}" class="text-decoration-none text-reset">{{ task.title }}</a>
+                                </h5>
+                                <div class="mb-2">
+                                    <span class="badge badge-{{ task.status }}">{{ task.get_status_display }}</span>
+                                    <span class="badge badge-{{ task.priority }}">{{ task.get_priority_display }}</span>
+                                    {% if task.project %}
+                                    <span class="badge bg-info text-white">{{ task.project.name }}</span>
+                                    {% endif %}
+                                </div>
+                                <p class="mb-1 text-muted small">{{ task.description|truncatewords:20 }}</p>
+                            </div>
+                            <div class="col-md-2">
+                                {% if task.due_date %}
+                                <div class="small {% if task.is_overdue %}overdue{% elif task.is_due_soon %}due-soon{% endif %}">
+                                    <i class="bi bi-calendar-event"></i>
+                                    Due: {{ task.due_date|date:"M d, Y" }}
+                                </div>
+                                {% endif %}
+                                
+                                {% if task.assignees.all %}
+                                <div class="mt-2">
+                                    {% for assignee in task.assignees.all|slice:":3" %}
+                                    <span class="assignee-avatar" title="{{ assignee.username }}">
+                                        {{ assignee.username|slice:":1"|upper }}
+                                    </span>
+                                    {% endfor %}
+                                    {% if task.assignees.count > 3 %}
+                                    <span class="assignee-avatar" title="And {{ task.assignees.count|add:"-3" }} more">
+                                        +{{ task.assignees.count|add:"-3" }}
+                                    </span>
+                                    {% endif %}
+                                </div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-2 text-end task-actions">
+                                <div class="btn-group">
+                                    <a href="{% url 'tasks:task_detail' task.id %}" class="btn btn-sm btn-outline-secondary">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    <a href="{% url 'tasks:task_update' task.id %}" class="btn btn-sm btn-outline-primary">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    <button type="button" class="btn btn-sm btn-outline-success mark-complete" data-task-id="{{ task.id }}" {% if task.status == 'completed' %}disabled{% endif %}>
+                                        <i class="bi bi-check-lg"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% else %}
+        <div class="row">
+            <div class="col text-center py-5">
+                <div class="alert alert-info mx-auto" style="max-width: 500px;">
+                    <i class="bi bi-info-circle fs-4 mb-3 d-block"></i>
+                    <h4 class="alert-heading">No tasks found</h4>
+                    <p>
+                        {% if request.GET.search or request.GET.status or request.GET.priority or request.GET.due or request.GET.project %}
+                        Try adjusting your filter settings or <a href="{% url 'tasks:task_list' %}" class="alert-link">view all tasks</a>.
+                        {% else %}
+                        You haven't created any tasks yet. <a href="{% url 'tasks:task_create' %}" class="alert-link">Create your first task</a>!
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Kanban View (hidden by default) -->
+    <div id="kanban-view" class="d-none">
+        <div class="row">
+            <!-- To Do Column -->
+            <div class="col-md-4 mb-4">
+                <div class="kanban-column">
+                    <div class="kanban-column-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">To Do</h5>
+                        <span class="badge bg-secondary">{{ todo_tasks.count }}</span>
+                    </div>
+                    
+                    {% if todo_tasks %}
+                        {% for task in todo_tasks %}
+                        <div class="card task-card todo mb-2">
+                            <div class="card-body p-3">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <h6 class="card-title mb-1">
+                                        <span class="priority-indicator priority-{{ task.priority }}"></span>
+                                        <a href="{% url 'tasks:task_detail' task.id %}" class="text-decoration-none text-reset">{{ task.title }}</a>
+                                    </h6>
+                                    <div class="task-actions">
+                                        <button type="button" class="btn btn-sm btn-outline-success mark-complete" data-task-id="{{ task.id }}">
+                                            <i class="bi bi-check-lg"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                {% if task.due_date %}
+                                <div class="small mb-2 {% if task.is_overdue %}overdue{% elif task.is_due_soon %}due-soon{% endif %}">
+                                    <i class="bi bi-calendar-event"></i> {{ task.due_date|date:"M d" }}
+                                </div>
+                                {% endif %}
+                                
+                                <div class="d-flex justify-content-between align-items-center mt-2">
+                                    <div>
+                                        <span class="badge badge-{{ task.priority }}">{{ task.get_priority_display }}</span>
+                                    </div>
+                                    <div>
+                                        {% if task.assignees.all %}
+                                            {% for assignee in task.assignees.all|slice:":2" %}
+                                            <span class="assignee-avatar" title="{{ assignee.username }}">
+                                                {{ assignee.username|slice:":1"|upper }}
+                                            </span>
+                                            {% endfor %}
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="text-center py-4 text-muted">
+                            <i class="bi bi-inbox fs-3"></i>
+                            <p class="mt-2 mb-0">No to-do tasks</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- In Progress Column -->
+            <div class="col-md-4 mb-4">
+                <div class="kanban-column">
+                    <div class="kanban-column-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">In Progress</h5>
+                        <span class="badge bg-primary">{{ in_progress_tasks.count }}</span>
+                    </div>
+                    
+                    {% if in_progress_tasks %}
+                        {% for task in in_progress_tasks %}
+                        <div class="card task-card in_progress mb-2">
+                            <div class="card-body p-3">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <h6 class="card-title mb-1">
+                                        <span class="priority-indicator priority-{{ task.priority }}"></span>
+                                        <a href="{% url 'tasks:task_detail' task.id %}" class="text-decoration-none text-reset">{{ task.title }}</a>
+                                    </h6>
+                                    <div class="task-actions">
+                                        <button type="button" class="btn btn-sm btn-outline-success mark-complete" data-task-id="{{ task.id }}">
+                                            <i class="bi bi-check-lg"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                {% if task.due_date %}
+                                <div class="small mb-2 {% if task.is_overdue %}overdue{% elif task.is_due_soon %}due-soon{% endif %}">
+                                    <i class="bi bi-calendar-event"></i> {{ task.due_date|date:"M d" }}
+                                </div>
+                                {% endif %}
+                                
+                                <div class="d-flex justify-content-between align-items-center mt-2">
+                                    <div>
+                                        <span class="badge badge-{{ task.priority }}">{{ task.get_priority_display }}</span>
+                                    </div>
+                                    <div>
+                                        {% if task.assignees.all %}
+                                            {% for assignee in task.assignees.all|slice:":2" %}
+                                            <span class="assignee-avatar" title="{{ assignee.username }}">
+                                                {{ assignee.username|slice:":1"|upper }}
+                                            </span>
+                                            {% endfor %}
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="text-center py-4 text-muted">
+                            <i class="bi bi-hourglass-split fs-3"></i>
+                            <p class="mt-2 mb-0">No in-progress tasks</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Completed Column -->
+            <div class="col-md-4 mb-4">
+                <div class="kanban-column">
+                    <div class="kanban-column-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Completed</h5>
+                        <span class="badge bg-success">{{ completed_tasks.count }}</span>
+                    </div>
+                    
+                    {% if completed_tasks %}
+                        {% for task in completed_tasks %}
+                        <div class="card task-card completed mb-2">
+                            <div class="card-body p-3">
+                                <h6 class="card-title mb-1">
+                                    <span class="priority-indicator priority-{{ task.priority }}"></span>
+                                    <a href="{% url 'tasks:task_detail' task.id %}" class="text-decoration-none text-reset">{{ task.title }}</a>
+                                </h6>
+                                {% if task.completed_at %}
+                                <div class="small mb-2 text-success">
+                                    <i class="bi bi-check-circle"></i> {{ task.completed_at|date:"M d" }}
+                                </div>
+                                {% endif %}
+                                
+                                <div class="d-flex justify-content-between align-items-center mt-2">
+                                    <div>
+                                        <span class="badge badge-{{ task.priority }}">{{ task.get_priority_display }}</span>
+                                    </div>
+                                    <div>
+                                        {% if task.assignees.all %}
+                                            {% for assignee in task.assignees.all|slice:":2" %}
+                                            <span class="assignee-avatar" title="{{ assignee.username }}">
+                                                {{ assignee.username|slice:":1"|upper }}
+                                            </span>
+                                            {% endfor %}
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="text-center py-4 text-muted">
+                            <i class="bi bi-check2-all fs-3"></i>
+                            <p class="mt-2 mb-0">No completed tasks</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pagination -->
+    {% if is_paginated %}
+    <div class="row mt-4">
+        <div class="col">
+            <nav aria-label="Page navigation">
+                <ul class="pagination justify-content-center">
+                    {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" aria-label="Previous">
+                            <span aria-hidden="true">&laquo;</span>
+                        </a>
+                    </li>
+                    {% endif %}
+
+                    {% for num in page_obj.paginator.page_range %}
+                        {% if page_obj.number == num %}
+                        <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+                        {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ num }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">{{ num }}</a>
+                        </li>
+                        {% endif %}
+                    {% endfor %}
+
+                    {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.next_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" aria-label="Next">
+                            <span aria-hidden="true">&raquo;</span>
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // View toggle functionality
+        const listViewBtn = document.getElementById('list-view-btn');
+        const kanbanViewBtn = document.getElementById('kanban-view-btn');
+        const listView = document.getElementById('list-view');
+        const kanbanView = document.getElementById('kanban-view');
+        
+        listViewBtn.addEventListener('click', function() {
+            listView.classList.remove('d-none');
+            kanbanView.classList.add('d-none');
+            listViewBtn.classList.add('active');
+            kanbanViewBtn.classList.remove('active');
+            localStorage.setItem('taskViewPreference', 'list');
+        });
+        
+        kanbanViewBtn.addEventListener('click', function() {
+            listView.classList.add('d-none');
+            kanbanView.classList.remove('d-none');
+            listViewBtn.classList.remove('active');
+            kanbanViewBtn.classList.add('active');
+            localStorage.setItem('taskViewPreference', 'kanban');
+        });
+        
+        // Load user preference if available
+        const savedView = localStorage.getItem('taskViewPreference');
+        if (savedView === 'kanban') {
+            kanbanViewBtn.click();
+        }
+        
+        // Bulk actions functionality
+        const checkboxes = document.querySelectorAll('.task-checkbox');
+        const bulkActions = document.querySelectorAll('.bulk-action');
+        const selectedCount = document.querySelector('.selected-count');
+        const completeCounter = document.getElementById('complete-counter');
+        const archiveCounter = document.getElementById('archive-counter');
+        const deleteCounter = document.getElementById('delete-counter');
+        let selectedTasks = 0;
+
+        function updateBulkActions() {
+            const isDisabled = selectedTasks === 0;
+            bulkActions.forEach(button => button.disabled = isDisabled);
+            selectedCount.textContent = selectedTasks > 0 ? `${selectedTasks} task(s) selected` : '';
+            
+            // Update counters
+            completeCounter.textContent = selectedTasks;
+            archiveCounter.textContent = selectedTasks;
+            deleteCounter.textContent = selectedTasks;
+            
+            // Toggle counter visibility
+            if (selectedTasks > 0) {
+                completeCounter.classList.add('show');
+                archiveCounter.classList.add('show');
+                deleteCounter.classList.add('show');
+            } else {
+                completeCounter.classList.remove('show');
+                archiveCounter.classList.remove('show');
+                deleteCounter.classList.remove('show');
+            }
+        }
+
+        checkboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
+                selectedTasks = document.querySelectorAll('.task-checkbox:checked').length;
+                updateBulkActions();
+            });
+        });
+
+        // Get CSRF token
+        const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+        
+        // Implement bulk actions with form submission
+        bulkActions.forEach(button => {
+            button.addEventListener('click', function() {
+                const action = this.getAttribute('data-action');
+                const selectedIds = Array.from(document.querySelectorAll('.task-checkbox:checked')).map(cb => cb.value);
+                
+                if (selectedIds.length === 0) return;
+                
+                let confirmMessage = '';
+                if (action === 'complete') {
+                    confirmMessage = 'Mark selected tasks as complete?';
+                } else if (action === 'archive') {
+                    confirmMessage = 'Archive selected tasks?';
+                } else if (action === 'delete') {
+                    confirmMessage = 'Delete selected tasks? This action cannot be undone.';
+                }
+                
+                if (confirm(confirmMessage)) {
+                    // Show loading indicator
+                    const originalContent = button.innerHTML;
+                    button.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Processing...';
+                    button.disabled = true;
+                    
+                    // Use the form submission method for better CSRF handling
+                    const form = document.getElementById('bulk-action-form');
+                    const taskIdsInput = document.getElementById('bulk-task-ids');
+                    const actionInput = document.getElementById('bulk-action-type');
+                    
+                    // Set the form data
+                    taskIdsInput.value = JSON.stringify(selectedIds);
+                    actionInput.value = action;
+                    
+                    // Set the form action
+                    form.action = `/tasks/bulk/${action}/`;
+                    
+                    // Submit the form
+                    form.submit();
+                }
+            });
+        });
+        
+        // Mark complete buttons with form submission
+        const markCompleteButtons = document.querySelectorAll('.mark-complete');
+        markCompleteButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                const taskId = this.getAttribute('data-task-id');
+                
+                // Create a temporary form for the mark complete action
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.style.display = 'none';
+                form.action = `/tasks/${taskId}/complete/`;
+                
+                // Add CSRF token
+                const csrfField = document.createElement('input');
+                csrfField.type = 'hidden';
+                csrfField.name = 'csrfmiddlewaretoken';
+                csrfField.value = csrftoken;
+                form.appendChild(csrfField);
+                
+                // Add form to document and submit
+                document.body.appendChild(form);
+                form.submit();
+            });
+        });
+    });
+</script>
+{% endblock %}

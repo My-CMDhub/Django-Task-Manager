@@ -1,0 +1,620 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block extra_head %}
+<style>
+    .task-form-card {
+        border-radius: 12px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        border: none;
+        overflow: hidden;
+    }
+    
+    .card-header {
+        background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+        color: white;
+        padding: 1.5rem;
+        border-bottom: none;
+    }
+    
+    .form-label {
+        font-weight: 500;
+        margin-bottom: 0.5rem;
+        color: #495057;
+    }
+    
+    .form-control, .form-select {
+        border-radius: 8px;
+        padding: 0.75rem 1rem;
+        border: 1px solid #dee2e6;
+        font-size: 0.95rem;
+    }
+    
+    .form-control:focus, .form-select:focus {
+        border-color: #a5b4fc;
+        box-shadow: 0 0 0 0.25rem rgba(99, 102, 241, 0.25);
+    }
+    
+    /* Custom styling for the file drop zone */
+    .file-drop-area {
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        max-width: 100%;
+        padding: 2rem;
+        border: 2px dashed #dee2e6;
+        border-radius: 8px;
+        transition: 0.2s;
+        background-color: #f8f9fa;
+        cursor: pointer;
+    }
+    
+    .file-drop-area.is-active {
+        background-color: rgba(99, 102, 241, 0.1);
+        border-color: #6366f1;
+    }
+    
+    .file-msg {
+        text-align: center;
+        font-size: 1rem;
+        color: #6c757d;
+    }
+    
+    .file-input {
+        position: absolute;
+        left: 0;
+        top: 0;
+        height: 100%;
+        width: 100%;
+        cursor: pointer;
+        opacity: 0;
+    }
+    
+    .file-list {
+        margin-top: 1rem;
+    }
+    
+    .file-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0.5rem 0.75rem;
+        background-color: #f8f9fa;
+        border-radius: 6px;
+        margin-bottom: 0.5rem;
+    }
+    
+    .file-item .file-name {
+        flex-grow: 1;
+        margin-left: 0.5rem;
+        font-size: 0.9rem;
+    }
+    
+    .file-item .file-remove {
+        cursor: pointer;
+        color: #dc3545;
+        font-size: 1rem;
+        margin-left: 0.5rem;
+    }
+    
+    /* Priority selector styling */
+    .priority-selector {
+        display: flex;
+        margin-bottom: 1rem;
+    }
+    
+    .priority-option {
+        flex: 1;
+        text-align: center;
+        padding: 0.75rem;
+        margin: 0 0.25rem;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        border: 2px solid transparent;
+    }
+    
+    .priority-option:first-child {
+        margin-left: 0;
+    }
+    
+    .priority-option:last-child {
+        margin-right: 0;
+    }
+    
+    .priority-option.low {
+        background-color: #d1e7dd;
+        color: #0f5132;
+    }
+    
+    .priority-option.medium {
+        background-color: #fff3cd;
+        color: #664d03;
+    }
+    
+    .priority-option.high {
+        background-color: #ffe5d0;
+        color: #fd7e14;
+    }
+    
+    .priority-option.urgent {
+        background-color: #f8d7da;
+        color: #842029;
+    }
+    
+    .priority-option.selected {
+        border-color: #212529;
+        font-weight: bold;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    }
+    
+    /* Date picker styling */
+    .date-time-input {
+        position: relative;
+    }
+    
+    .date-time-input .calendar-icon {
+        position: absolute;
+        right: 10px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #6c757d;
+        z-index: 10;
+        pointer-events: none;
+    }
+    
+    /* Assignee chips */
+    .assignee-chip {
+        display: inline-flex;
+        align-items: center;
+        background-color: #e9ecef;
+        border-radius: 30px;
+        padding: 0.3rem 0.7rem;
+        margin-right: 0.5rem;
+        margin-bottom: 0.5rem;
+        font-size: 0.85rem;
+    }
+    
+    .assignee-chip .remove-assignee {
+        margin-left: 0.4rem;
+        font-size: 0.85rem;
+        cursor: pointer;
+        color: #6c757d;
+    }
+    
+    .assignee-chip .remove-assignee:hover {
+        color: #dc3545;
+    }
+    
+    /* Form sections */
+    .form-section {
+        margin-bottom: 2rem;
+        padding-bottom: 1.5rem;
+        border-bottom: 1px solid #e9ecef;
+    }
+    
+    .form-section:last-child {
+        border-bottom: none;
+        margin-bottom: 0;
+        padding-bottom: 0;
+    }
+    
+    .form-section-title {
+        font-size: 1.25rem;
+        margin-bottom: 1.5rem;
+        color: #343a40;
+    }
+    
+    /* Help text styling */
+    .form-text {
+        font-size: 0.85rem;
+        color: #6c757d;
+        margin-top: 0.3rem;
+    }
+    
+    /* Submit button */
+    .btn-submit {
+        background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+        border: none;
+        color: white;
+        border-radius: 8px;
+        padding: 0.75rem 1.5rem;
+        font-weight: 500;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-submit:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(99, 102, 241, 0.4);
+    }
+    
+    /* Cancel button */
+    .btn-cancel {
+        background-color: #f8f9fa;
+        border: 1px solid #dee2e6;
+        color: #495057;
+        border-radius: 8px;
+        padding: 0.75rem 1.5rem;
+        font-weight: 500;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-cancel:hover {
+        background-color: #e9ecef;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-5 mb-5">
+    <div class="row">
+        <div class="col-lg-10 mx-auto">
+            <div class="card task-form-card">
+                <div class="card-header">
+                    <h2 class="my-2">{{ title }}</h2>
+                    <p class="mb-0 text-white-50">{% if form.instance.id %}Update task details{% else %}Create a new task{% endif %}</p>
+                </div>
+                <div class="card-body p-4">
+                    <form method="post" id="taskForm">
+                        {% csrf_token %}
+                        
+                        <div class="form-section">
+                            <h3 class="form-section-title">Basic Information</h3>
+                            
+                            <!-- Title -->
+                            <div class="mb-4">
+                                <label for="{{ form.title.id_for_label }}" class="form-label">{{ form.title.label }} <span class="text-danger">*</span></label>
+                                {{ form.title }}
+                                {% if form.title.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.title.errors }}
+                                    </div>
+                                {% endif %}
+                                {% if form.title.help_text %}
+                                    <small class="form-text">{{ form.title.help_text }}</small>
+                                {% endif %}
+                            </div>
+                            
+                            <!-- Description -->
+                            <div class="mb-4">
+                                <label for="{{ form.description.id_for_label }}" class="form-label">{{ form.description.label }}</label>
+                                {{ form.description }}
+                                {% if form.description.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.description.errors }}
+                                    </div>
+                                {% endif %}
+                                {% if form.description.help_text %}
+                                    <small class="form-text">{{ form.description.help_text }}</small>
+                                {% endif %}
+                                <div class="form-text">Tip: You can use markdown formatting for better readability</div>
+                            </div>
+                            
+                            <!-- Project -->
+                            {% if form.project %}
+                            <div class="mb-4">
+                                <label for="{{ form.project.id_for_label }}" class="form-label">{{ form.project.label }}</label>
+                                {{ form.project }}
+                                {% if form.project.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.project.errors }}
+                                    </div>
+                                {% endif %}
+                                {% if form.project.help_text %}
+                                    <small class="form-text">{{ form.project.help_text }}</small>
+                                {% endif %}
+                            </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="form-section">
+                            <h3 class="form-section-title">Task Details</h3>
+                            
+                            <!-- Priority -->
+                            <div class="mb-4">
+                                <label class="form-label d-block">Priority <span class="text-danger">*</span></label>
+                                <div class="priority-selector">
+                                    <div class="priority-option low" data-value="low">
+                                        <i class="bi bi-arrow-down-circle"></i>
+                                        <div>Low</div>
+                                    </div>
+                                    <div class="priority-option medium" data-value="medium">
+                                        <i class="bi bi-dash-circle"></i>
+                                        <div>Medium</div>
+                                    </div>
+                                    <div class="priority-option high" data-value="high">
+                                        <i class="bi bi-arrow-up-circle"></i>
+                                        <div>High</div>
+                                    </div>
+                                    <div class="priority-option urgent" data-value="urgent">
+                                        <i class="bi bi-exclamation-circle"></i>
+                                        <div>Urgent</div>
+                                    </div>
+                                </div>
+                                {{ form.priority }}
+                                {% if form.priority.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.priority.errors }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="row">
+                                <!-- Status -->
+                                <div class="col-md-6 mb-4">
+                                    <label for="{{ form.status.id_for_label }}" class="form-label">{{ form.status.label }} <span class="text-danger">*</span></label>
+                                    {{ form.status }}
+                                    {% if form.status.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {{ form.status.errors }}
+                                        </div>
+                                    {% endif %}
+                                    {% if form.status.help_text %}
+                                        <small class="form-text">{{ form.status.help_text }}</small>
+                                    {% endif %}
+                                </div>
+                                
+                                <!-- Due Date -->
+                                <div class="col-md-6 mb-4">
+                                    <label for="{{ form.due_date.id_for_label }}" class="form-label">{{ form.due_date.label }}</label>
+                                    <div class="date-time-input">
+                                        {{ form.due_date }}
+                                        <span class="calendar-icon">
+                                            <i class="bi bi-calendar"></i>
+                                        </span>
+                                    </div>
+                                    {% if form.due_date.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {{ form.due_date.errors }}
+                                        </div>
+                                    {% endif %}
+                                    {% if form.due_date.help_text %}
+                                        <small class="form-text">{{ form.due_date.help_text }}</small>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="form-section">
+                            <h3 class="form-section-title">Assignment & Tags</h3>
+                            
+                            <!-- Assignees -->
+                            <div class="mb-4">
+                                <label for="{{ form.assignees.id_for_label }}" class="form-label">{{ form.assignees.label }}</label>
+                                {{ form.assignees }}
+                                {% if form.assignees.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.assignees.errors }}
+                                    </div>
+                                {% endif %}
+                                {% if form.assignees.help_text %}
+                                    <small class="form-text">{{ form.assignees.help_text }}</small>
+                                {% endif %}
+                                <div id="assigneeDisplay" class="mt-2"></div>
+                            </div>
+                            
+                            <!-- Tags -->
+                            <div class="mb-4">
+                                <label for="{{ form.tags.id_for_label }}" class="form-label">{{ form.tags.label }}</label>
+                                {{ form.tags }}
+                                {% if form.tags.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.tags.errors }}
+                                    </div>
+                                {% endif %}
+                                {% if form.tags.help_text %}
+                                    <small class="form-text">{{ form.tags.help_text }}</small>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <!-- Attachments -->
+                        <div class="form-section">
+                            <h3 class="form-section-title">Attachments</h3>
+                            <div class="file-drop-area">
+                                <span class="file-msg">
+                                    <i class="bi bi-upload fs-3 d-block mb-2"></i>
+                                    Drag and drop files here or click to browse
+                                </span>
+                                <input class="file-input" type="file" multiple>
+                            </div>
+                            <div class="file-list"></div>
+                            <small class="form-text">Attachments can be added after saving the task</small>
+                        </div>
+                        
+                        <div class="d-flex justify-content-end mt-4">
+                            <a href="{% url 'tasks:task_list' %}" class="btn btn-cancel me-2">Cancel</a>
+                            <button type="submit" class="btn btn-submit">
+                                {% if form.instance.id %}
+                                    Update Task
+                                {% else %}
+                                    Create Task
+                                {% endif %}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Priority selector
+        const priorityOptions = document.querySelectorAll('.priority-option');
+        const prioritySelect = document.getElementById('{{ form.priority.id_for_label }}');
+        
+        // Set initial selected priority
+        const currentPriority = prioritySelect.value;
+        priorityOptions.forEach(option => {
+            if (option.dataset.value === currentPriority) {
+                option.classList.add('selected');
+            }
+            
+            option.addEventListener('click', function() {
+                // Remove selected class from all options
+                priorityOptions.forEach(opt => opt.classList.remove('selected'));
+                
+                // Add selected class to clicked option
+                this.classList.add('selected');
+                
+                // Update the hidden select field
+                prioritySelect.value = this.dataset.value;
+            });
+        });
+        
+        // File drop area functionality
+        const fileDropArea = document.querySelector('.file-drop-area');
+        const fileInput = document.querySelector('.file-input');
+        const fileList = document.querySelector('.file-list');
+        
+        // Prevent default drag behaviors
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            fileDropArea.addEventListener(eventName, preventDefaults, false);
+            document.body.addEventListener(eventName, preventDefaults, false);
+        });
+        
+        // Highlight drop area when file is dragged over
+        ['dragenter', 'dragover'].forEach(eventName => {
+            fileDropArea.addEventListener(eventName, highlight, false);
+        });
+        
+        // Unhighlight drop area when file is dragged out
+        ['dragleave', 'drop'].forEach(eventName => {
+            fileDropArea.addEventListener(eventName, unhighlight, false);
+        });
+        
+        // Handle dropped files
+        fileDropArea.addEventListener('drop', handleDrop, false);
+        
+        // Handle files from input
+        fileInput.addEventListener('change', function() {
+            handleFiles(this.files);
+        });
+        
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+        
+        function highlight() {
+            fileDropArea.classList.add('is-active');
+        }
+        
+        function unhighlight() {
+            fileDropArea.classList.remove('is-active');
+        }
+        
+        function handleDrop(e) {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            handleFiles(files);
+        }
+        
+        // Process the file upload (this is just a preview, actual upload will occur when form is submitted)
+        function handleFiles(files) {
+            files = [...files];
+            files.forEach(displayFile);
+        }
+        
+        function displayFile(file) {
+            const fileItem = document.createElement('div');
+            fileItem.className = 'file-item';
+            
+            const fileIcon = document.createElement('i');
+            fileIcon.className = getFileIcon(file.name);
+            
+            const fileName = document.createElement('span');
+            fileName.className = 'file-name';
+            fileName.textContent = file.name;
+            
+            const fileRemove = document.createElement('i');
+            fileRemove.className = 'bi bi-x-circle file-remove';
+            fileRemove.addEventListener('click', function() {
+                fileItem.remove();
+            });
+            
+            fileItem.appendChild(fileIcon);
+            fileItem.appendChild(fileName);
+            fileItem.appendChild(fileRemove);
+            
+            fileList.appendChild(fileItem);
+        }
+        
+        function getFileIcon(filename) {
+            const ext = filename.split('.').pop().toLowerCase();
+            let iconClass = 'bi ';
+            
+            if (['jpg', 'jpeg', 'png', 'gif', 'bmp', 'svg'].includes(ext)) {
+                iconClass += 'bi-file-image';
+            } else if (['doc', 'docx'].includes(ext)) {
+                iconClass += 'bi-file-word';
+            } else if (['xls', 'xlsx'].includes(ext)) {
+                iconClass += 'bi-file-excel';
+            } else if (['pdf'].includes(ext)) {
+                iconClass += 'bi-file-pdf';
+            } else if (['zip', 'rar', '7z'].includes(ext)) {
+                iconClass += 'bi-file-zip';
+            } else {
+                iconClass += 'bi-file-earmark';
+            }
+            
+            return iconClass;
+        }
+        
+        // Display selected assignees as chips
+        const assigneeSelect = document.getElementById('{{ form.assignees.id_for_label }}');
+        const assigneeDisplay = document.getElementById('assigneeDisplay');
+        
+        // Initialize with current selections
+        updateAssigneeChips();
+        
+        assigneeSelect.addEventListener('change', updateAssigneeChips);
+        
+        function updateAssigneeChips() {
+            assigneeDisplay.innerHTML = '';
+            
+            for (const option of assigneeSelect.selectedOptions) {
+                const chip = document.createElement('span');
+                chip.className = 'assignee-chip';
+                
+                const chipText = document.createTextNode(option.text);
+                chip.appendChild(chipText);
+                
+                const removeBtn = document.createElement('span');
+                removeBtn.className = 'remove-assignee';
+                removeBtn.innerHTML = '<i class="bi bi-x"></i>';
+                removeBtn.dataset.value = option.value;
+                
+                removeBtn.addEventListener('click', function() {
+                    option.selected = false;
+                    updateAssigneeChips();
+                    
+                    // Trigger change event for Select2 if it's used
+                    if (typeof $ !== 'undefined' && $.fn.select2) {
+                        $(assigneeSelect).trigger('change');
+                    }
+                });
+                
+                chip.appendChild(removeBtn);
+                assigneeDisplay.appendChild(chip);
+            }
+        }
+        
+        // Initialize Select2 for multiple select fields if available
+        if (typeof $ !== 'undefined' && $.fn.select2) {
+            $('.select2').select2({
+                theme: 'bootstrap4',
+                placeholder: 'Select options'
+            });
+        }
+    });
+</script>
+{% endblock %}
