@@ -71,11 +71,11 @@ Supabase provides a default SMTP server for testing, but you should set up your 
    - **SMTP Host**: e.g., `smtp.gmail.com`
    - **SMTP Port**: e.g., `465` (SSL) or `587` (TLS)
    - **SMTP Username**: your email address or username
-   - **SMTP Password**: your app password (for Gmail, you must [enable 2FA and create an app password](https://support.google.com/accounts/answer/185833))
+   - **SMTP Password**: your app password (for Gmail, you must [enable 2FA and create an app password](https://accounts.google.com/v3/signin/identifier?continue=https%3A%2F%2Fmyaccount.google.com%2Fapppasswords&followup=https%3A%2F%2Fmyaccount.google.com%2Fapppasswords&ifkv=AXH0vVs4QlUwyAbyz98uv8VlDx2T6cAySFkK9pabZ3dpMmEx-tVvappMpwH-iASaVMqXPfnd7emo&osid=1&passive=1209600&rart=ANgoxcesXBfq6yKZsv4wfUpvQ1fIcGP1Ek_koEb9lkVAnQ-bw2bbIVqsdIDRmmJPRLOFHqPcyzLYopGTNIilNKFNCXi2zPyxVXyLG8-0Cjt5xzB91UVy2p8&service=accountsettings&flowName=GlifWebSignIn&flowEntry=ServiceLogin&dsh=S1244528707%3A1744899405053759))
 4. Click **Save**.
 5. Test by inviting a user from the **Users** tab or using the app's registration flow.
 
-**Tip:** For Gmail, use `smtp.gmail.com` with port 465 (SSL) or 587 (TLS). You must use an [App Password](https://support.google.com/accounts/answer/185833) if 2FA is enabled.
+**Tip:** For Gmail, use `smtp.gmail.com` with port 465 (SSL) or 587 (TLS). You must use an [App Password](https://accounts.google.com/v3/signin/identifier?continue=https%3A%2F%2Fmyaccount.google.com%2Fapppasswords&followup=https%3A%2F%2Fmyaccount.google.com%2Fapppasswords&ifkv=AXH0vVs4QlUwyAbyz98uv8VlDx2T6cAySFkK9pabZ3dpMmEx-tVvappMpwH-iASaVMqXPfnd7emo&osid=1&passive=1209600&rart=ANgoxcesXBfq6yKZsv4wfUpvQ1fIcGP1Ek_koEb9lkVAnQ-bw2bbIVqsdIDRmmJPRLOFHqPcyzLYopGTNIilNKFNCXi2zPyxVXyLG8-0Cjt5xzB91UVy2p8&service=accountsettings&flowName=GlifWebSignIn&flowEntry=ServiceLogin&dsh=S1244528707%3A1744899405053759) if 2FA is enabled.
 
 **Troubleshooting:**
 - If emails are not delivered, check your SMTP credentials, port, and that your sender email matches your SMTP account.
