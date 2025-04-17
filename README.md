@@ -216,8 +216,8 @@ When you run `./run-dev.sh`, the terminal will display a webhook URL (using your
 1. In Supabase, go to **Project Settings > API > Webhooks**.
 2. Click **Add Webhook**.
 3. Enter:
-   - **Name:** `django-sync`
-   - **URL:** (copy from terminal, e.g., `https://xxxx.ngrok-free.app/auth/webhooks/supabase/`)
+   - **Name:** `sync`
+   - **URL:** Forwarding which you should get when you run this ``` ngrok http 8000``` command in terminal. (copy from terminal, e.g., `https://xxxx.ngrok-free.app/auth/webhooks/supabase/`)
    - **Events:** Select `user.created`, `user.updated`, `user.deleted`
    - **Secret:** Use the value from your `.env` (`SUPABASE_WEBHOOK_SECRET`)
 4. Save the webhook.
@@ -234,6 +234,7 @@ When you run `./run-dev.sh`, the terminal will display a webhook URL (using your
 - Double-check your SMTP settings in both Supabase and your `.env` file.
 - For Gmail, ensure you are using an App Password and have 2FA enabled.
 - Try sending a test email from Supabase's **Users** tab.
+- SMTP password must be your google App password while setting up in Supabase.
 
 ### Webhook Not Working
 - Make sure ngrok is running and the URL matches the one in Supabase.
