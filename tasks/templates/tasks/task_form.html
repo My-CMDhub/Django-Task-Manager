@@ -256,7 +256,7 @@
             <div class="card task-form-card">
                 <div class="card-header">
                     <h2 class="my-2">{{ title }}</h2>
-                    <p class="mb-0 text-white-50">{% if form.instance.id %}Update task details{% else %}Create a new task{% endif %}</p>
+                    <p class="mb-0 text-white-50">{% if is_new|default:False %}Create a new task{% else %}Update task details{% endif %}</p>
                 </div>
                 <div class="card-body p-4">
                     <form method="post" id="taskForm">
@@ -429,10 +429,10 @@
                         <div class="d-flex justify-content-end mt-4">
                             <a href="{% url 'tasks:task_list' %}" class="btn btn-cancel me-2">Cancel</a>
                             <button type="submit" class="btn btn-submit">
-                                {% if form.instance.id %}
-                                    Update Task
-                                {% else %}
+                                {% if is_new|default:False %}
                                     Create Task
+                                {% else %}
+                                    Update Task
                                 {% endif %}
                             </button>
                         </div>

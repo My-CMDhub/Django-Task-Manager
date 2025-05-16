@@ -54,14 +54,14 @@ def clear_all_users():
             logger.info("No users found in Supabase.")
         else:
             logger.info(f"Found {len(supabase_user_list)} users in Supabase. Proceeding with deletion...")
-            
+    
             # Ask for confirmation before Supabase deletion
             confirm = input(f"\nAre you sure you want to delete ALL {len(supabase_user_list)} users from Supabase? This cannot be undone. (yes/no): ")
-            if confirm.lower() != 'yes':
+    if confirm.lower() != 'yes':
                 logger.info("Supabase deletion cancelled by user.")
-                print("Operation cancelled.")
-                return
-
+        print("Operation cancelled.")
+        return
+    
             for user in supabase_user_list:
                 user_id = user.get('id')
                 user_email = user.get('email', 'N/A')
@@ -120,13 +120,13 @@ def clear_all_users():
             print(f"Deleted {deleted_count} users from Django.")
     else:
         print("No users found in Django to delete.")
-
+    
     print("\nCleanup process finished.")
     if supabase_deletion_failed != 0 or django_user_count > 0 and confirm_django.lower() != 'yes':
          print("Please review logs and statuses above. Some cleanup steps may have been skipped or failed.")
     else:
         print("All users should now be removed from the system.")
-        print("You can now register fresh accounts.")
+    print("You can now register fresh accounts.")
 
 if __name__ == "__main__":
     clear_all_users() 

@@ -1,0 +1,56 @@
+@csrf_exempt
+@login_required
+def process_message(request):
+    """Process a user message and return a bot response."""
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            user_message = data.get('message', '').strip()
+            
+            if not user_message:
+                return JsonResponse({'error': 'Message is required'}, status=400)
+            
+            # Log the incoming message
+            logger.info(f"Processing message from user {request.user.id}: '{user_message}'")
+            
+            # Get or create a conversation for this user
+            conversation, created = Conversation.objects.get_or_create(
+                user=request.user,
+                defaults={'last_updated': timezone.now()}
+            )
+            
+            if created:
+                logger.info(f"Created new conversation {conversation.id} for user {request.user.id}")
+            else:
+                logger.info(f"Using existing conversation {conversation.id} for user {request.user.id}")
+                conversation.last_updated = timezone.now()
+                conversation.save()
+            
+            # Save the user message
+            Message.objects.create(
+                conversation=conversation,
+                content=user_message,
+                is_user=True
+            )
+            
+            # Generate bot response
+            bot_response = generate_bot_response(request.user, conversation, user_message)
+            logger.info(f"Generated response: '{bot_response}'")
+            
+            # Save the bot response
+            Message.objects.create(
+                conversation=conversation,
+                content=bot_response,
+                is_user=False
+            )
+            
+            return JsonResponse({'response': bot_response})
+            
+        except json.JSONDecodeError:
+            logger.error("Invalid JSON in request body")
+            return JsonResponse({'error': 'Invalid JSON'}, status=400)
+        except Exception as e:
+            logger.error(f"Error in process_message: {str(e)}")
+            return JsonResponse({'error': f'An error occurred: {str(e)}'}, status=500)
+    
+    return JsonResponse({'error': 'Invalid request method'}, status=405) 
