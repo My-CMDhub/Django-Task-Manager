@@ -131,8 +131,6 @@ def test_email_direct():
             settings.DEFAULT_FROM_EMAIL,
             [recipient],
             html_message=html_message,
-            headers=headers,
-            connection=connection,
             fail_silently=False
         )
         

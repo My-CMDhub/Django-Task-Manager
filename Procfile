@@ -1,2 +1,2 @@
 release: python fix_db_path.py && python manage.py migrate --settings=mysite.production_settings
-web: gunicorn mysite.wsgi:application --env DJANGO_SETTINGS_MODULE=mysite.production_settings --workers=2 --threads=2 --timeout=60 --max-requests=250 --max-requests-jitter=50
+web: gunicorn mysite.wsgi:application --env DJANGO_SETTINGS_MODULE=mysite.production_settings --workers=1 --threads=4 --timeout=120 --max-requests=100 --max-requests-jitter=50 --preload

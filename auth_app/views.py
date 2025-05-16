@@ -403,11 +403,11 @@ def login(request):
                 response = redirect(verification_url)
                 
                 # Store email in session for convenience
-                request.session['pending_verification_email'] = email
+                request.session['pending_verification_email'] = user.email
                 
                 # Set cookie flags
                 response.set_cookie('email_verification_status', 'pending', max_age=86400)
-                response.set_cookie('user_email', email, max_age=86400)
+                response.set_cookie('user_email', user.email, max_age=86400)
                 
                 return response
             
