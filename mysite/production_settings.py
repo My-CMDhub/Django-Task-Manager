@@ -35,8 +35,8 @@ BYPASS_SUPABASE_RATE_LIMITS = True
 # Email verification settings 
 AUTO_VERIFY_USERS = os.environ.get('AUTO_VERIFY_USERS', 'False').lower() in ('true', '1', 't', 'yes')
 
-# OpenAI API key for production
-OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY', '')
+# Mistral AI API key for production
+MISTRAL_API_KEY = os.environ.get('MISTRAL_API_KEY', '')
 
 # Nullify Supabase credentials if bypassed to prevent accidental use
 # The client functions in settings.py will already return None if BYPASS_SUPABASE is True

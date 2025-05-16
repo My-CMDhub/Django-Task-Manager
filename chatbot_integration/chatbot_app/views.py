@@ -1,6 +1,7 @@
 import os
 import json
 import re
+import httpx
 from .utils import get_user_tasks, format_task_list
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
@@ -13,7 +14,6 @@ from rest_framework import status
 from django.utils import timezone
 from django.db import models
 import datetime
-import openai
 from django.conf import settings
 from django.shortcuts import render
 from .models import ChatbotConversation, ChatMessage, Conversation, Message
@@ -25,6 +25,8 @@ from .task_automation import (
     check_general_statistics_request,
     get_user_statistics,
 )
+from dotenv import load_dotenv
+import time
 
 logger = logging.getLogger(__name__)
 
@@ -43,29 +45,8 @@ except ImportError:
         StorageContext = None
         load_index_from_storage = None
 
-from dotenv import load_dotenv
-import time
-
 # Load environment variables
 load_dotenv()
-
-# Set OpenAI API key if available
-if os.getenv('OPENAI_API_KEY'):
-    os.environ["OPENAI_API_KEY"] = os.getenv('OPENAI_API_KEY')
-
-# Configure OpenAI API
-try:
-    openai.api_key = settings.OPENAI_API_KEY
-    if not openai.api_key:
-        # Fall back to environment if not in settings
-        openai.api_key = os.environ.get("OPENAI_API_KEY", "")
-        if not openai.api_key:
-            print("Warning: No OpenAI API key found in settings or environment variables.")
-except AttributeError:
-    # If OPENAI_API_KEY is not in settings, use environment variable
-    openai.api_key = os.environ.get("OPENAI_API_KEY", "")
-    if not openai.api_key:
-        print("Warning: No OpenAI API key found in settings or environment variables.")
 
 # Modified function to safely load the index
 def load_index_from_disk():
@@ -722,19 +703,50 @@ Importantly:
             # Complete conversation history with system message
             complete_messages = [system_message] + conversation_history
             
-            # Call OpenAI API
-            response = openai.ChatCompletion.create(
-                model="gpt-3.5-turbo",  # or gpt-4 if available
-                messages=complete_messages,
-                max_tokens=300,  # Shorter to make response more concise
-                temperature=0.5,  # Lower temperature for more deterministic responses
-            )
+            # Call Mistral AI API
+            mistral_api_key = getattr(settings, 'MISTRAL_API_KEY', os.environ.get("MISTRAL_API_KEY"))
+            if not mistral_api_key:
+                logger.error("MISTRAL_API_KEY not configured.")
+                return "I'm currently having trouble connecting to my knowledge base due to a configuration issue. Please contact an administrator."
+
+            headers = {
+                "Authorization": f"Bearer {mistral_api_key}",
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+            }
+            payload = {
+                "model": "mistral-small-latest",  # Or other preferred Mistral model
+                "messages": complete_messages,
+                "max_tokens": 300,
+                "temperature": 0.5,
+            }
             
-            # Extract response content
-            bot_response = response.choices[0].message.content.strip()
-            return bot_response
+            try:
+                with httpx.Client(timeout=30.0) as client: # Added timeout
+                    api_response = client.post("https://api.mistral.ai/v1/chat/completions", headers=headers, json=payload)
+                
+                api_response.raise_for_status() # Will raise an exception for 4XX/5XX_STATUS_CODES status codes
+                
+                response_data = api_response.json()
+                bot_response = response_data.get('choices', [{}])[0].get('message', {}).get('content', '').strip()
+                
+                if not bot_response:
+                    logger.error(f"Mistral API returned empty content. Response: {response_data}")
+                    return "I received an empty response from the AI. Please try again."
+                return bot_response
+            
+            except httpx.HTTPStatusError as e:
+                logger.error(f"Mistral API HTTPStatusError: {e.response.status_code} - {e.response.text}")
+                return "I'm currently having trouble connecting to my knowledge base (API error). Please try again later."
+            except httpx.RequestError as e:
+                logger.error(f"Mistral API RequestError: {str(e)}")
+                return "I'm currently having trouble connecting to my knowledge base (network error). Please try again later."
+            except Exception as e: # Catch other potential errors like JSONDecodeError
+                logger.error(f"Error processing Mistral API response: {str(e)}")
+                return "I encountered an unexpected issue with the AI service. Please try again."
+
         except Exception as e:
-            logger.error(f"Error with OpenAI: {str(e)}")
+            logger.error(f"Error with Mistral AI: {str(e)}")
             return "I'm currently having trouble connecting to my knowledge base. Please try asking about your tasks or projects in a different way."
     except Exception as e:
         logger.error(f"Error generating response: {str(e)}")

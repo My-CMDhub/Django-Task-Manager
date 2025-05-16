@@ -369,9 +369,9 @@ LOGGING = {
 # Ensure log directory exists
 os.makedirs(os.path.join(BASE_DIR, 'logs'), exist_ok=True)
 
-# OpenAI API key for chatbot
+# Mistral AI API key for chatbot
 CHATBOT_SETTINGS = {
-    'OPENAI_API_KEY': os.environ.get('OPENAI_API_KEY'),
+    'MISTRAL_API_KEY': os.environ.get('MISTRAL_API_KEY'), # Changed from OPENAI_API_KEY
     'VECTOR_DB_PATH': os.path.join(BASE_DIR, 'PKL_file'),
     'TRAINING_DATA_PATH': os.path.join(BASE_DIR, 'data'),
 }

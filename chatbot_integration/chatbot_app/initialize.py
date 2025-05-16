@@ -1,6 +1,7 @@
 import os
 import nltk
-from llama_index.llms.openai import OpenAI
+from llama_index.llms.mistralai import MistralAI
+from llama_index.embeddings.mistralai import MistralAIEmbedding
 from llama_index.core import Settings, VectorStoreIndex
 from llama_index.core import SimpleDirectoryReader
 from llama_index.core import StorageContext
@@ -18,26 +19,27 @@ except LookupError:
     nltk.download(['punkt', 'averaged_perceptron_tagger', 'popular'])
     nltk.download('averaged_perceptron_tagger_eng')
 
-def init_index_from_url(urls, openai_api_key=None):
+def init_index_from_url(urls, mistral_api_key=None):
     """
     Initialize the vector index from website URLs.
     
     Args:
         urls (list): List of URLs to scrape for data
-        openai_api_key (str, optional): OpenAI API key. If None, tries to use from environment.
+        mistral_api_key (str, optional): Mistral API key. If None, tries to use from environment.
         
     Returns:
         VectorStoreIndex: The created index, or None if there was an error
     """
     try:
         # Set API key from parameter or environment
-        if openai_api_key:
-            os.environ["OPENAI_API_KEY"] = openai_api_key
+        if mistral_api_key:
+            # Ensure LlamaIndex components can see it if they don't take it directly
+            os.environ["MISTRAL_API_KEY"] = mistral_api_key
         else:
-            openai_api_key = os.getenv('OPENAI_API_KEY')
+            mistral_api_key = os.getenv('MISTRAL_API_KEY')
             
-        if not openai_api_key:
-            print("⚠️ No OpenAI API key provided. Please set OPENAI_API_KEY.")
+        if not mistral_api_key:
+            print("⚠️ No Mistral API key provided. Please set MISTRAL_API_KEY.")
             return None
         
         print(f"🔄 Starting to scrape {len(urls)} URLs...")
@@ -58,7 +60,9 @@ def init_index_from_url(urls, openai_api_key=None):
         print("✓ Raw data saved to data/data.txt")
 
         # Step 3: Create embeddings and index
-        Settings.llm = OpenAI(temperature=0.7, model="gpt-3.5-turbo", max_tokens=512)
+        Settings.llm = MistralAI(api_key=mistral_api_key, model="mistral-small-latest", max_tokens=512, temperature=0.7)
+        Settings.embed_model = MistralAIEmbedding(api_key=mistral_api_key, model_name="mistral-embed")
+        
         documents = SimpleDirectoryReader(input_dir).load_data()
         index = VectorStoreIndex.from_documents(documents, show_progress=True)
         print("✓ Index created successfully")
