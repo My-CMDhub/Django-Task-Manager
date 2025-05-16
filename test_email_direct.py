@@ -1,93 +1,49 @@
-#!/usr/bin/env python
-import os
-import sys
-import django
-from django.utils import timezone
-from email.utils import make_msgid, formatdate
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 
-# Set Django settings module
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "mysite.settings")
-django.setup()
-
-# Import settings after Django is set up
-from django.conf import settings
-from django.core.mail import send_mail
-from django.template.loader import render_to_string
-from django.utils.html import strip_tags
-
-def test_send_verification_email():
-    """Send a test verification email with production-like settings"""
-    print("\n=== TESTING EMAIL CONFIGURATION ===")
+def send_test_email():
+    # Your Gmail credentials
+    sender_email = "***REMOVED***"
+    password = "***REMOVED***" # App password
+    receiver_email = "***REMOVED***"
     
-    # Use command line argument for recipient email or default
-    recipient_email = sys.argv[1] if len(sys.argv) > 1 else "***REMOVED***"
+    # Create the email
+    message = MIMEMultipart()
+    message["From"] = f"Task Manager <{sender_email}>"
+    message["To"] = receiver_email
+    message["Subject"] = "SMTP Test Email"
     
-    # Override settings with production values for testing
-    settings.SITE_DOMAIN = "taskmanager-mztm.onrender.com"
-    settings.SITE_PROTOCOL = "https"
-    settings.SITE_URL = f"{settings.SITE_PROTOCOL}://{settings.SITE_DOMAIN}"
+    # Add body to email
+    body = """
+    This is a test email to verify SMTP settings are working.
     
-    # Set sender information
-    settings.SENDER_NAME = "Task Manager"
-    settings.SENDER_EMAIL = "***REMOVED***"
-    settings.DEFAULT_FROM_EMAIL = f"{settings.SENDER_NAME} <{settings.SENDER_EMAIL}>"
+    If you received this, your SMTP settings are correct!
+    """
+    message.attach(MIMEText(body, "plain"))
     
-    # Print current settings
-    print(f"SITE_DOMAIN: {settings.SITE_DOMAIN}")
-    print(f"SITE_URL: {settings.SITE_URL}")
-    print(f"FROM_EMAIL: {settings.DEFAULT_FROM_EMAIL}")
-    print(f"RECIPIENT: {recipient_email}")
-    
-    # Create a fake verification URL
-    sample_token = "sample-verification-token-123456"
-    verify_url = f"{settings.SITE_URL}/auth/verify-email/{sample_token}/"
-    
-    # Print the URL
-    print(f"\nVerification URL will be: {verify_url}")
-    
-    # Prepare email context
-    context = {
-        'user': {'username': 'TestUser', 'email': recipient_email},
-        'verify_url': verify_url,
-        'site_name': 'Task Manager',
-        'domain': settings.SITE_DOMAIN,
-        'protocol': settings.SITE_PROTOCOL,
-        'current_year': timezone.now().year,
-    }
-    
-    # Render email
     try:
-        html_email = render_to_string('emails/verification_email.html', context)
-        text_email = strip_tags(html_email)
+        # Connect to Gmail SMTP server with SSL
+        print("Connecting to SMTP server...")
+        server = smtplib.SMTP_SSL("smtp.gmail.com", 465)
+        server.ehlo()
         
-        # Prepare email headers
-        msg_id = make_msgid(domain=settings.SITE_DOMAIN)
-        headers = {
-            'Message-ID': msg_id,
-            'Date': formatdate(localtime=True),
-            'X-Priority': '1',
-            'Importance': 'High',
-        }
+        # Login
+        print("Logging in...")
+        server.login(sender_email, password)
+        print("Login successful!")
         
-        # Send the email
-        print("\nSending test email...")
-        result = send_mail(
-            subject="Task Manager - Test Verification Email",
-            message=text_email,
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[recipient_email],
-            html_message=html_email,
-            fail_silently=False
-        )
+        # Send email
+        print("Sending email...")
+        server.sendmail(sender_email, receiver_email, message.as_string())
+        print("Email sent successfully!")
         
-        if result == 1:
-            print("✅ Test email sent successfully!")
-            print(f"Check {recipient_email} to verify the sender name and verification URL are correct.")
-        else:
-            print("❌ Failed to send email!")
-            
+        # Quit the server
+        server.quit()
+        return True
     except Exception as e:
-        print(f"Error sending email: {str(e)}")
+        print(f"Error sending email: {e}")
+        return False
 
 if __name__ == "__main__":
-    test_send_verification_email() 
+    send_test_email() 
