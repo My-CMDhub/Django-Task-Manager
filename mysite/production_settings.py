@@ -130,71 +130,31 @@ SITE_PROTOCOL = os.environ.get('SITE_PROTOCOL', 'https')
 SITE_URL = f"{SITE_PROTOCOL}://{SITE_DOMAIN}"
 
 # Cache for storing supabase client
-_supabase_client = None
-_supabase_admin_client = None  # For admin operations
+# These are now defined in the base settings.py
+# _supabase_client = None
+# _supabase_admin_client = None 
 
 # Option to completely bypass Supabase in production
-BYPASS_SUPABASE = os.environ.get('BYPASS_SUPABASE', 'True').lower() in ('true', '1', 't', 'yes')
-BYPASS_SUPABASE_RATE_LIMITS = True  # Set to True for production mode when Supabase is problematic
+# This overrides the default from settings.py
+BYPASS_SUPABASE = os.environ.get('BYPASS_SUPABASE_PRODUCTION', 'True').lower() in ('true', '1', 't', 'yes')
+BYPASS_SUPABASE_RATE_LIMITS = True  # Usually True for production when bypassing Supabase
 
-# Define client functions based on BYPASS_SUPABASE setting
+# The get_supabase_client and get_supabase_admin_client functions are now in base settings.py
+# and will respect the BYPASS_SUPABASE value set here.
+# No need to redefine the functions themselves in this file.
+
+# Default Email backend to console if not specified, to prevent NoneType errors
+EMAIL_BACKEND = os.environ.get('EMAIL_BACKEND', 'django.core.mail.backends.console.EmailBackend')
+EMAIL_HOST = os.environ.get('EMAIL_HOST', '')
+EMAIL_PORT = int(os.environ.get('EMAIL_PORT', 587))
+EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
+EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'True').lower() == 'true'
+EMAIL_USE_SSL = os.environ.get('EMAIL_USE_SSL', 'False').lower() == 'true'
+DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'noreply@example.com')
+SERVER_EMAIL = os.environ.get('SERVER_EMAIL', DEFAULT_FROM_EMAIL)
+
 if BYPASS_SUPABASE:
-    # Bypass functions that return None when Supabase is disabled
-    def get_supabase_client():
-        """Bypass function that returns None when Supabase is disabled"""
-        print("Supabase is bypassed in production, returning None")
-        return None
-        
-    def get_supabase_admin_client():
-        """Bypass function that returns None when Supabase is disabled"""
-        print("Supabase admin is bypassed in production, returning None")
-        return None
+    print("PRODUCTION SETTINGS: Supabase is BYPASSED.")
 else:
-    # Standard client functions with compatibility fixes
-    def get_supabase_admin_client():
-        """Get or initialize a Supabase client with admin privileges, compatible with Render"""
-        global _supabase_admin_client
-        
-        try:
-            if _supabase_admin_client is None:
-                if not SUPABASE_URL or not SUPABASE_SERVICE_KEY:
-                    print("Missing Supabase admin credentials")
-                    return None
-                    
-                print(f"Creating new Supabase admin client with URL: {SUPABASE_URL}")
-                # Directly create the client without proxy
-                from supabase import Client
-                _supabase_admin_client = Client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
-                print("Supabase admin client created successfully")
-                
-            return _supabase_admin_client
-        except Exception as e:
-            print(f"Error creating Supabase admin client: {e}")
-            return None
-
-    def get_supabase_client():
-        """Get or initialize a Supabase client instance, compatible with Render"""
-        global _supabase_client
-        try:
-            if _supabase_client is None:
-                if not SUPABASE_URL:
-                    print("Missing Supabase URL")
-                    return None
-                
-                # Use SUPABASE_ANON_KEY first, then fall back to SUPABASE_KEY if needed
-                anon_key = SUPABASE_ANON_KEY or SUPABASE_KEY
-                if not anon_key:
-                    print("Missing Supabase API key")
-                    return None
-                    
-                print(f"Creating new Supabase client with URL: {SUPABASE_URL}")
-                # Directly create the client without proxy
-                from supabase import Client
-                _supabase_client = Client(SUPABASE_URL, anon_key)
-                print("Supabase client created successfully")
-                
-            return _supabase_client
-        except Exception as e:
-            print(f"Error initializing Supabase client: {str(e)}")
-            # Fall back to None, which will cause the code to use Django-only mode
-            return None 
+    print("PRODUCTION SETTINGS: Supabase is ACTIVE.") 
