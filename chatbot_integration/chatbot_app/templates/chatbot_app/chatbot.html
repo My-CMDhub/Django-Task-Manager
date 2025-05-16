@@ -1,0 +1,429 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Task Manager AI Chatbot</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+        .chat-container {
+            max-width: 800px;
+            margin: 2rem auto;
+            border-radius: 12px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            background-color: white;
+            overflow: hidden;
+        }
+        .chat-header {
+            background-color: #4a6bdf;
+            color: white;
+            padding: 1.5rem;
+            border-top-left-radius: 12px;
+            border-top-right-radius: 12px;
+        }
+        .chat-messages {
+            height: 400px;
+            overflow-y: auto;
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+        }
+        .chat-input {
+            padding: 1.5rem;
+            border-top: 1px solid #eee;
+            background-color: #f8f9fa;
+        }
+        .message {
+            max-width: 70%;
+            margin-bottom: 1rem;
+            padding: 0.8rem 1.2rem;
+            border-radius: 18px;
+            position: relative;
+            word-wrap: break-word;
+        }
+        .user-message {
+            background-color: #e9f0ff;
+            align-self: flex-end;
+            border-bottom-right-radius: 4px;
+        }
+        .bot-message {
+            background-color: #f0f0f0;
+            align-self: flex-start;
+            border-bottom-left-radius: 4px;
+        }
+        .typing-indicator {
+            display: none;
+            align-self: flex-start;
+            background-color: #f0f0f0;
+            padding: 10px 20px;
+            border-radius: 18px;
+            margin-bottom: 10px;
+        }
+        .dot {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: #777;
+            animation: wave 1.3s linear infinite;
+            margin-right: 3px;
+        }
+        .dot:nth-child(2) {
+            animation-delay: -1.1s;
+        }
+        .dot:nth-child(3) {
+            animation-delay: -0.9s;
+        }
+        @keyframes wave {
+            0%, 60%, 100% {
+                transform: initial;
+            }
+            30% {
+                transform: translateY(-10px);
+            }
+        }
+        .btn-send {
+            background-color: #4a6bdf;
+            color: white;
+        }
+        .btn-send:hover {
+            background-color: #385dc9;
+            color: white;
+        }
+        
+        /* Enhanced task list styling */
+        .enhanced-task-list {
+            list-style: none;
+            padding: 0;
+            margin: 8px 0;
+        }
+        
+        .task-item {
+            background: white;
+            border-radius: 8px;
+            padding: 8px 12px;
+            margin-bottom: 8px;
+            border-left: 4px solid #d1d5db;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .task-item.high-priority {
+            border-left-color: #ef4444;
+        }
+        
+        .task-item.medium-priority {
+            border-left-color: #f59e0b;
+        }
+        
+        .task-item.low-priority {
+            border-left-color: #3b82f6;
+        }
+        
+        .task-title {
+            font-weight: 500;
+            margin-bottom: 4px;
+        }
+        
+        .task-details {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-bottom: 6px;
+            font-size: 12px;
+        }
+        
+        .priority-badge, .status-badge, .task-due-date {
+            padding: 2px 6px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 500;
+        }
+        
+        .priority-badge.high {
+            background-color: #fee2e2;
+            color: #b91c1c;
+        }
+        
+        .priority-badge.medium {
+            background-color: #fef3c7;
+            color: #b45309;
+        }
+        
+        .priority-badge.low {
+            background-color: #dbeafe;
+            color: #1d4ed8;
+        }
+        
+        .status-badge {
+            background-color: #e5e7eb;
+            color: #4b5563;
+        }
+        
+        .status-badge.completed {
+            background-color: #d1fae5;
+            color: #065f46;
+        }
+        
+        .status-badge.in-progress {
+            background-color: #e0e7ff;
+            color: #4338ca;
+        }
+        
+        .status-badge.todo {
+            background-color: #f3f4f6;
+            color: #4b5563;
+        }
+        
+        .task-due-date {
+            background-color: #f3f4f6;
+            color: #4b5563;
+        }
+        
+        .task-actions {
+            display: flex;
+            gap: 6px;
+        }
+        
+        .task-action-btn {
+            background-color: #f3f4f6;
+            color: #4f46e5;
+            border: none;
+            border-radius: 4px;
+            padding: 3px 8px;
+            font-size: 11px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .task-action-btn:hover {
+            background-color: #e5e7eb;
+        }
+        
+        .task-action-btn.mark-complete:hover {
+            background-color: #d1fae5;
+            color: #065f46;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="chat-container">
+            <div class="chat-header">
+                <h3 class="m-0">Task Manager Assistant</h3>
+                <p class="m-0">I'm here to help you find information about your tasks</p>
+            </div>
+            <div class="chat-messages" id="chat-messages">
+                <div class="message bot-message">
+                    Hello! I'm your task management assistant. I can help you find information about your tasks and projects. What would you like to know?
+                </div>
+                <div class="typing-indicator" id="typing-indicator">
+                    <span class="dot"></span>
+                    <span class="dot"></span>
+                    <span class="dot"></span>
+                </div>
+            </div>
+            <div class="chat-input">
+                <form id="chat-form">
+                    <div class="input-group">
+                        <input type="text" id="user-input" class="form-control" 
+                               placeholder="Type your message here..." autocomplete="off">
+                        <button type="submit" class="btn btn-send">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" 
+                                 fill="currentColor" class="bi bi-send" viewBox="0 0 16 16">
+                                <path d="M15.854.146a.5.5 0 0 1 .11.54l-5.819 14.547a.5.5 0 0 1-.95-.38l2.204-5.51L5.5 7.163a.5.5 0 0 1-.046-.715.5.5 0 0 1 .103-.1l14-6a.5.5 0 0 1 .744.555l-.227.536.863.855.227-.536.032-.066a.5.5 0 0 1 .782.103l-5.819 14.547a.5.5 0 0 1-.95-.38l2.204-5.51L5.5 7.163a.5.5 0 0 1-.046-.715.5.5 0 0 1 .103-.1l14-6a.5.5 0 0 1 .744.555l-.227.536.863.855.227-.536.032-.066a.5.5 0 0 1 .782.103l-5.819 14.547a.5.5 0 0 1-.95-.38l2.204-5.51">
+                                </path>
+                            </svg>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+    // Global function to handle task actions from UI
+    function handleTaskAction(action, taskTitle) {
+        if (action === 'mark') {
+            const chatForm = $('#chat-form');
+            if (chatForm.length) {
+                $('#user-input').val(`Mark task ${taskTitle} as completed`);
+                chatForm.submit();
+            }
+        } else if (action === 'view') {
+            const chatForm = $('#chat-form');
+            if (chatForm.length) {
+                $('#user-input').val(`Find task ${taskTitle}`);
+                chatForm.submit();
+            }
+        }
+    }
+    
+    $(document).ready(function() {
+        // Function to scroll to bottom of chat
+        function scrollToBottom() {
+            const chatMessages = document.getElementById('chat-messages');
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        // Format message text with markdown-like syntax
+        function formatMessageText(text) {
+            // Convert line breaks to <br>
+            text = text.replace(/\n/g, '<br>');
+            
+            // Bold text
+            text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+            
+            // Italic text
+            text = text.replace(/\*(.*?)\*/g, '<em>$1</em>');
+            
+            // Enhanced task list formatting with regex patterns
+            if (text.includes('• ')) {
+                // First, identify if it's a task list
+                if (text.includes('tasks:') || text.includes('Tasks:') || 
+                    text.includes('projects:') || text.includes('Projects:') ||
+                    text.includes('overdue') || text.includes('priority')) {
+                    
+                    // Extract the intro text (everything before the first bullet point)
+                    const parts = text.split('• ');
+                    const introText = parts.shift();
+                    
+                    // Format individual task items with styling
+                    const taskItems = parts.filter(Boolean).map(item => {
+                        // Handle priority indicators
+                        let priorityClass = '';
+                        let priorityBadge = '';
+                        
+                        if (item.includes('high priority') || item.includes('High priority') || item.includes('[Priority: High]')) {
+                            priorityClass = 'high-priority';
+                            priorityBadge = '<span class="priority-badge high">High</span>';
+                        } else if (item.includes('medium priority') || item.includes('Medium priority') || item.includes('[Priority: Medium]')) {
+                            priorityClass = 'medium-priority';
+                            priorityBadge = '<span class="priority-badge medium">Medium</span>';
+                        } else if (item.includes('low priority') || item.includes('Low priority') || item.includes('[Priority: Low]')) {
+                            priorityClass = 'low-priority';
+                            priorityBadge = '<span class="priority-badge low">Low</span>';
+                        }
+                        
+                        // Extract due date if present (simple pattern matching)
+                        let dueDate = '';
+                        const dueDateMatch = item.match(/\(Due:? ([^)]+)\)/i) || item.match(/\(due ([^)]+)\)/i) || item.match(/due on ([^,]+)/i) || item.match(/due ([^,]+)/i);
+                        if (dueDateMatch) {
+                            dueDate = `<span class="task-due-date">${dueDateMatch[1]}</span>`;
+                        }
+                        
+                        // Extract status if present
+                        let statusBadge = '';
+                        if (item.includes('Status: Completed') || item.includes('status: completed')) {
+                            statusBadge = '<span class="status-badge completed">Completed</span>';
+                        } else if (item.includes('Status: In Progress') || item.includes('status: in progress')) {
+                            statusBadge = '<span class="status-badge in-progress">In Progress</span>';
+                        } else if (item.includes('Status: To Do') || item.includes('status: to do')) {
+                            statusBadge = '<span class="status-badge todo">To Do</span>';
+                        }
+                        
+                        // Format the main task title - assuming it's the first part of the text before any details
+                        let taskTitle = item;
+                        // Remove status part if present
+                        taskTitle = taskTitle.replace(/- Status: .+$/, '');
+                        // Remove priority part if present
+                        taskTitle = taskTitle.replace(/\[Priority: .+?\]/, '');
+                        // Remove due date if present
+                        taskTitle = taskTitle.replace(/\(Due:? [^)]+\)/, '');
+                        
+                        // Clean up whitespace
+                        taskTitle = taskTitle.trim();
+                        
+                        // Assemble the formatted task item
+                        return `<li class="task-item ${priorityClass}">
+                            <div class="task-title">${taskTitle}</div>
+                            <div class="task-details">
+                                ${dueDate}
+                                ${priorityBadge}
+                                ${statusBadge}
+                            </div>
+                            <div class="task-actions">
+                                <button class="task-action-btn mark-complete" onclick="handleTaskAction('mark', '${taskTitle}')">Mark Complete</button>
+                            </div>
+                        </li>`;
+                    }).join('');
+                    
+                    // Put it all together
+                    return `${introText}<ul class="enhanced-task-list">${taskItems}</ul>`;
+                } else {
+                    // Standard bullet list formatting (non-task items)
+                    return '<ul>' + text.split('• ').filter(Boolean).map(item => `<li>${item.trim()}</li>`).join('') + '</ul>';
+                }
+            }
+            
+            return text;
+        }
+
+        // Form submission
+        $(document).on('submit', '#chat-form', function(e) {
+            e.preventDefault();
+            const userInput = $('#user-input').val() ? $('#user-input').val().trim() : '';
+            if (userInput === '') return;
+
+            $('#chat-messages').append(
+                `<div class="message user-message">${userInput}</div>`
+            );
+            $('#user-input').val('');
+            $('#typing-indicator').show();
+            scrollToBottom();
+
+            sendToBackend(userInput);
+        });
+
+        // Send message to backend and handle response
+        function sendToBackend(message) {
+            $.ajax({
+                url: '/chatbot/message/',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({ message: message }),
+                success: function(data) {
+                    console.log('Response received:', data);
+                    $('#typing-indicator').hide();
+
+                    let responseText;
+                    
+                    // Handle different response formats
+                    if (typeof data === 'string') {
+                        responseText = data;
+                    } else if (data.response) {
+                        responseText = data.response;
+                    } else if (data.message) {
+                        responseText = data.message;
+                    } else {
+                        responseText = "I received your message but I'm not sure how to respond.";
+                    }
+
+                    // Format the response text
+                    responseText = formatMessageText(responseText);
+
+                    // Add the bot's response to the chat
+                        $('#chat-messages').append(
+                        `<div class="message bot-message">${responseText}</div>`
+                        );
+                    
+                    scrollToBottom();
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error:', error);
+                    $('#typing-indicator').hide();
+                    $('#chat-messages').append(
+                        `<div class="message bot-message">Sorry, I encountered an error. Please try again later.</div>`
+                    );
+                    scrollToBottom();
+                }
+            });
+        }
+    });
+    </script>
+</body>
+</html> 

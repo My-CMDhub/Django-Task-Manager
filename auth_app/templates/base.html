@@ -57,7 +57,563 @@
              padding-left: 1rem; /* Adjust as needed */
              padding-right: 1rem; /* Adjust as needed */
         }
-
+        
+        /* Enhanced Chatbot styles */
+        .chatbot-container {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 1000;
+        }
+        
+        .chat-bubble {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(99, 102, 241, 0.5);
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            animation: pulse 2s infinite;
+        }
+        
+        .chat-bubble:hover {
+            transform: scale(1.1);
+            animation: none;
+            box-shadow: 0 6px 20px rgba(99, 102, 241, 0.6);
+        }
+        
+        @keyframes pulse {
+            0% {
+                box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.4);
+            }
+            70% {
+                box-shadow: 0 0 0 10px rgba(99, 102, 241, 0);
+            }
+            100% {
+                box-shadow: 0 0 0 0 rgba(99, 102, 241, 0);
+            }
+        }
+        
+        .chat-window {
+            position: fixed;
+            bottom: 90px;
+            right: 20px;
+            width: 380px;
+            height: 520px;
+            border-radius: 16px;
+            background: white;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+            display: none;
+            flex-direction: column;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            z-index: 1000;
+            transform: translateY(20px);
+            opacity: 0;
+        }
+        
+        .chat-window.open {
+            display: flex;
+            transform: translateY(0);
+            opacity: 1;
+        }
+        
+        .chat-header {
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+            color: white;
+            padding: 16px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .chat-header-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .chat-header h4 {
+            margin: 0;
+            font-size: 18px;
+            font-weight: 600;
+        }
+        
+        .chat-header .close-chat {
+            cursor: pointer;
+            font-size: 18px;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: background-color 0.2s;
+        }
+        
+        .chat-header .close-chat:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+        
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            background-color: #f9f9fc;
+        }
+        
+        .message {
+            max-width: 85%;
+            margin-bottom: 4px;
+            display: flex;
+            gap: 10px;
+        }
+        
+        .message-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            flex-shrink: 0;
+        }
+        
+        .bot-avatar {
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+            color: white;
+        }
+        
+        .user-avatar {
+            background: #e1e5ee;
+            color: #6b7280;
+        }
+        
+        .message-content {
+            padding: 12px 16px;
+            border-radius: 18px;
+            position: relative;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+            animation: fadeIn 0.3s;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .bot-message {
+            align-self: flex-start;
+        }
+        
+        .bot-message .message-content {
+            background-color: white;
+            color: #333;
+            border-bottom-left-radius: 4px;
+        }
+        
+        .user-message {
+            align-self: flex-end;
+            flex-direction: row-reverse;
+        }
+        
+        .user-message .message-content {
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+        
+        .message-time {
+            font-size: 10px;
+            color: #9ca3af;
+            margin-top: 4px;
+            text-align: right;
+        }
+        
+        .message-text {
+            line-height: 1.4;
+        }
+        
+        .message-text p {
+            margin-bottom: 8px;
+        }
+        
+        .message-text p:last-child {
+            margin-bottom: 0;
+        }
+        
+        .message-text ul, .message-text ol {
+            margin: 8px 0;
+            padding-left: 20px;
+        }
+        
+        .message-text strong {
+            font-weight: 600;
+        }
+        
+        .message-text em {
+            font-style: italic;
+        }
+        
+        .quick-replies {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 8px;
+        }
+        
+        .quick-reply-btn {
+            background-color: #f3f4f6;
+            color: #5850EC;
+            border: 1px solid #e5e7eb;
+            border-radius: 16px;
+            padding: 6px 12px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .quick-reply-btn:hover {
+            background-color: #e9e9f0;
+            transform: translateY(-1px);
+        }
+        
+        .chat-input-container {
+            padding: 16px;
+            border-top: 1px solid #f0f0f0;
+            background-color: white;
+        }
+        
+        .chat-input {
+            display: flex;
+            gap: 8px;
+            position: relative;
+        }
+        
+        .chat-input input {
+            flex: 1;
+            padding: 12px 16px;
+            border: 1px solid #e5e7eb;
+            border-radius: 24px;
+            outline: none;
+            font-size: 14px;
+            transition: border-color 0.2s;
+        }
+        
+        .chat-input input:focus {
+            border-color: #8b5cf6;
+            box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.1);
+        }
+        
+        .chat-input button {
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            flex-shrink: 0;
+        }
+        
+        .chat-input button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 2px 8px rgba(139, 92, 246, 0.3);
+        }
+        
+        .chat-input button:disabled {
+            background: #e5e7eb;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .suggestion-chips {
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+            padding: 8px 0;
+            margin-bottom: 8px;
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        
+        .suggestion-chips::-webkit-scrollbar {
+            display: none;
+        }
+        
+        .suggestion-chip {
+            background-color: #f3f4f6;
+            color: #5850EC;
+            border: 1px solid #e5e7eb;
+            border-radius: 16px;
+            padding: 6px 12px;
+            font-size: 13px;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.2s;
+        }
+        
+        .suggestion-chip:hover {
+            background-color: #e9e9f0;
+            transform: translateY(-1px);
+        }
+        
+        .typing-indicator {
+            display: flex;
+            align-items: center;
+            padding: 12px 16px;
+            background-color: white;
+            border-radius: 18px;
+            width: fit-content;
+            align-self: flex-start;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+            margin-bottom: 4px;
+        }
+        
+        .typing-indicator span {
+            height: 8px;
+            width: 8px;
+            background: #8b5cf6;
+            display: block;
+            border-radius: 50%;
+            opacity: 0.4;
+            margin: 0 1px;
+            animation: typing 1s infinite;
+        }
+        
+        .typing-indicator span:nth-child(1) {
+            animation-delay: 0s;
+        }
+        
+        .typing-indicator span:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+        
+        .typing-indicator span:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+        
+        @keyframes typing {
+            0% {
+                transform: translateY(0px);
+                opacity: 0.4;
+            }
+            50% {
+                transform: translateY(-5px);
+                opacity: 0.8;
+            }
+            100% {
+                transform: translateY(0px);
+                opacity: 0.4;
+            }
+        }
+        
+        .task-card {
+            background-color: white;
+            border-radius: 8px;
+            border-left: 4px solid #8b5cf6;
+            padding: 12px;
+            margin: 8px 0;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+        
+        .task-card-title {
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+        
+        .task-card-date {
+            font-size: 12px;
+            color: #6b7280;
+            margin-bottom: 8px;
+        }
+        
+        .task-card-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 8px;
+        }
+        
+        .task-action-btn {
+            background-color: #f3f4f6;
+            color: #5850EC;
+            border: none;
+            border-radius: 4px;
+            padding: 4px 8px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .task-action-btn:hover {
+            background-color: #e9e9f0;
+        }
+        
+        .welcome-card {
+            background-color: #f3f4f6;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 16px;
+            border-left: 4px solid #8b5cf6;
+        }
+        
+        .welcome-card h5 {
+            margin-top: 0;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #4b5563;
+        }
+        
+        .welcome-card p {
+            margin-bottom: 8px;
+            color: #6b7280;
+        }
+        
+        .welcome-card-suggestions {
+            margin-top: 12px;
+        }
+        
+        .welcome-card-suggestions p {
+            margin-bottom: 4px;
+            font-weight: 500;
+        }
+        
+        .actions-title {
+            font-size: 12px;
+            font-weight: 600;
+            color: #9ca3af;
+            text-transform: uppercase;
+            margin: 0 0 8px 8px;
+        }
+        
+        /* Enhanced task list styling */
+        .enhanced-task-list {
+            list-style: none;
+            padding: 0;
+            margin: 8px 0;
+        }
+        
+        .task-item {
+            background: white;
+            border-radius: 8px;
+            padding: 8px 12px;
+            margin-bottom: 8px;
+            border-left: 4px solid #d1d5db;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .task-item.high-priority {
+            border-left-color: #ef4444;
+        }
+        
+        .task-item.medium-priority {
+            border-left-color: #f59e0b;
+        }
+        
+        .task-item.low-priority {
+            border-left-color: #3b82f6;
+        }
+        
+        .task-title {
+            font-weight: 500;
+            margin-bottom: 4px;
+        }
+        
+        .task-details {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-bottom: 6px;
+            font-size: 12px;
+        }
+        
+        .priority-badge, .status-badge, .task-due-date {
+            padding: 2px 6px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 500;
+        }
+        
+        .priority-badge.high {
+            background-color: #fee2e2;
+            color: #b91c1c;
+        }
+        
+        .priority-badge.medium {
+            background-color: #fef3c7;
+            color: #b45309;
+        }
+        
+        .priority-badge.low {
+            background-color: #dbeafe;
+            color: #1d4ed8;
+        }
+        
+        .status-badge {
+            background-color: #e5e7eb;
+            color: #4b5563;
+        }
+        
+        .status-badge.completed {
+            background-color: #d1fae5;
+            color: #065f46;
+        }
+        
+        .status-badge.in-progress {
+            background-color: #e0e7ff;
+            color: #4338ca;
+        }
+        
+        .status-badge.todo {
+            background-color: #f3f4f6;
+            color: #4b5563;
+        }
+        
+        .task-due-date {
+            background-color: #f3f4f6;
+            color: #4b5563;
+        }
+        
+        .task-actions {
+            display: flex;
+            gap: 6px;
+        }
+        
+        .task-action-btn {
+            background-color: #f3f4f6;
+            color: #4f46e5;
+            border: none;
+            border-radius: 4px;
+            padding: 3px 8px;
+            font-size: 11px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .task-action-btn:hover {
+            background-color: #e5e7eb;
+        }
+        
+        .task-action-btn.mark-complete:hover {
+            background-color: #d1fae5;
+            color: #065f46;
+        }
     </style>
     {% block extra_head %}{% endblock extra_head %}
 </head>
@@ -143,6 +699,72 @@
                 </div> {# /.col... #}
             </div> {# /.row #}
         </div> {# /.container-fluid #}
+        
+        <!-- Enhanced Chatbot Widget - only visible to authenticated users -->
+        <div class="chatbot-container">
+            <div class="chat-bubble" id="chatBubble">
+                <i class="bi bi-chat-dots-fill"></i>
+            </div>
+            
+            <div class="chat-window" id="chatWindow">
+                <div class="chat-header">
+                    <div class="chat-header-title">
+                        <i class="bi bi-robot"></i>
+                        <h4>Task Assistant</h4>
+                    </div>
+                    <span class="close-chat" id="closeChat">
+                        <i class="bi bi-x-lg"></i>
+                    </span>
+                </div>
+                
+                <div class="chat-messages" id="chatMessages">
+                    <div class="welcome-card">
+                        <h5>👋 Welcome to your Task Assistant</h5>
+                        <p>I can help you find information about your tasks and projects. What would you like to know?</p>
+                        <div class="welcome-card-suggestions">
+                            <p>Try asking me:</p>
+                            <div class="quick-replies">
+                                <button class="quick-reply-btn" data-message="Show my tasks due today">Today's tasks</button>
+                                <button class="quick-reply-btn" data-message="Show my overdue tasks">Overdue tasks</button>
+                                <button class="quick-reply-btn" data-message="Show task statistics">Task statistics</button>
+                                <button class="quick-reply-btn" data-message="Find tasks with high priority">High priority tasks</button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="message bot-message">
+                        <div class="message-avatar bot-avatar">
+                            <i class="bi bi-robot"></i>
+                        </div>
+                        <div>
+                            <div class="message-content">
+                                <div class="message-text">
+                                    Hello! I'm your Task Assistant. I can help you find information about your tasks and projects. What would you like to know?
+                                </div>
+                            </div>
+                            <div class="message-time">Just now</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="chat-input-container">
+                    <div class="suggestion-chips">
+                        <button class="suggestion-chip" data-message="Show my tasks">Show tasks</button>
+                        <button class="suggestion-chip" data-message="Show overdue tasks">Overdue tasks</button>
+                        <button class="suggestion-chip" data-message="Task statistics">Statistics</button>
+                        <button class="suggestion-chip" data-message="Find tasks with high priority">High priority</button>
+                        <button class="suggestion-chip" data-message="Help">Help</button>
+                    </div>
+                    
+                    <div class="chat-input">
+                        <input type="text" id="userInput" placeholder="Type your message..." />
+                        <button id="sendMessage" disabled>
+                            <i class="bi bi-send-fill"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
     {% else %}
             </div> {# /.main-content-public #}
         </div> {# /.container #}
@@ -150,6 +772,428 @@
     <!-- Conditional Layout Closing Tags End -->
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    {% if user.is_authenticated %}
+    <!-- Enhanced Chatbot JavaScript -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Chatbot elements
+            const chatBubble = document.getElementById('chatBubble');
+            const chatWindow = document.getElementById('chatWindow');
+            const closeChat = document.getElementById('closeChat');
+            const userInput = document.getElementById('userInput');
+            const sendButton = document.getElementById('sendMessage');
+            const chatMessages = document.getElementById('chatMessages');
+            const suggestionChips = document.querySelectorAll('.suggestion-chip');
+            const quickReplyButtons = document.querySelectorAll('.quick-reply-btn');
+            
+            // Enable/disable send button based on input
+            userInput.addEventListener('input', function() {
+                sendButton.disabled = userInput.value.trim() === '';
+            });
+            
+            // Open chat window
+            chatBubble.addEventListener('click', function() {
+                chatWindow.classList.add('open');
+                userInput.focus();
+            });
+            
+            // Close chat window
+            closeChat.addEventListener('click', function() {
+                chatWindow.classList.remove('open');
+            });
+            
+            // Handle suggestion chips
+            suggestionChips.forEach(chip => {
+                chip.addEventListener('click', function() {
+                    const message = this.getAttribute('data-message');
+                    userInput.value = message;
+                    sendButton.disabled = false;
+                    userInput.focus();
+                });
+            });
+            
+            // Handle quick reply buttons
+            quickReplyButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    const message = this.getAttribute('data-message');
+                    handleUserMessage(message);
+                });
+            });
+            
+            // Format message text with markdown-like syntax
+            function formatMessageText(text) {
+                // Convert line breaks to <br>
+                text = text.replace(/\n/g, '<br>');
+                
+                // Bold text
+                text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+                
+                // Italic text
+                text = text.replace(/\*(.*?)\*/g, '<em>$1</em>');
+                
+                // Enhanced task list formatting with regex patterns
+                if (text.includes('• ')) {
+                    // First, identify if it's a task list
+                    if (text.includes('tasks:') || text.includes('Tasks:') || 
+                        text.includes('projects:') || text.includes('Projects:') ||
+                        text.includes('overdue') || text.includes('priority')) {
+                        
+                        // Extract the intro text (everything before the first bullet point)
+                        const parts = text.split('• ');
+                        const introText = parts.shift();
+                        
+                        // Format individual task items with styling
+                        const taskItems = parts.filter(Boolean).map(item => {
+                            // Handle priority indicators
+                            let priorityClass = '';
+                            let priorityBadge = '';
+                            
+                            if (item.includes('high priority') || item.includes('High priority') || item.includes('[Priority: High]')) {
+                                priorityClass = 'high-priority';
+                                priorityBadge = '<span class="priority-badge high">High</span>';
+                            } else if (item.includes('medium priority') || item.includes('Medium priority') || item.includes('[Priority: Medium]')) {
+                                priorityClass = 'medium-priority';
+                                priorityBadge = '<span class="priority-badge medium">Medium</span>';
+                            } else if (item.includes('low priority') || item.includes('Low priority') || item.includes('[Priority: Low]')) {
+                                priorityClass = 'low-priority';
+                                priorityBadge = '<span class="priority-badge low">Low</span>';
+                            }
+                            
+                            // Extract due date if present (simple pattern matching)
+                            let dueDate = '';
+                            const dueDateMatch = item.match(/\(Due:? ([^)]+)\)/i) || item.match(/\(due ([^)]+)\)/i) || item.match(/due on ([^,]+)/i) || item.match(/due ([^,]+)/i);
+                            if (dueDateMatch) {
+                                dueDate = `<span class="task-due-date">${dueDateMatch[1]}</span>`;
+                            }
+                            
+                            // Extract status if present
+                            let statusBadge = '';
+                            if (item.includes('Status: Completed') || item.includes('status: completed')) {
+                                statusBadge = '<span class="status-badge completed">Completed</span>';
+                            } else if (item.includes('Status: In Progress') || item.includes('status: in progress')) {
+                                statusBadge = '<span class="status-badge in-progress">In Progress</span>';
+                            } else if (item.includes('Status: To Do') || item.includes('status: to do')) {
+                                statusBadge = '<span class="status-badge todo">To Do</span>';
+                            }
+                            
+                            // Format the main task title - assuming it's the first part of the text before any details
+                            let taskTitle = item;
+                            // Remove status part if present
+                            taskTitle = taskTitle.replace(/- Status: .+$/, '');
+                            // Remove priority part if present
+                            taskTitle = taskTitle.replace(/\[Priority: .+?\]/, '');
+                            // Remove due date if present
+                            taskTitle = taskTitle.replace(/\(Due:? [^)]+\)/, '');
+                            
+                            // Clean up whitespace
+                            taskTitle = taskTitle.trim();
+                            
+                            // Assemble the formatted task item
+                            return `<li class="task-item ${priorityClass}">
+                                <div class="task-title">${taskTitle}</div>
+                                <div class="task-details">
+                                    ${dueDate}
+                                    ${priorityBadge}
+                                    ${statusBadge}
+                                </div>
+                                <div class="task-actions">
+                                    <button class="task-action-btn mark-complete" onclick="handleTaskAction('mark', '${taskTitle}')">Mark Complete</button>
+                                </div>
+                            </li>`;
+                        }).join('');
+                        
+                        // Put it all together
+                        return `${introText}<ul class="enhanced-task-list">${taskItems}</ul>`;
+                    } else {
+                        // Standard bullet list formatting (non-task items)
+                        return '<ul>' + text.split('• ').filter(Boolean).map(item => `<li>${item.trim()}</li>`).join('') + '</ul>';
+                    }
+                }
+                
+                return text;
+            }
+            
+            // Format timestamp
+            function formatTimestamp() {
+                const now = new Date();
+                return now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            }
+            
+            // Create message element
+            function createMessageElement(text, sender, withActions = false) {
+                const messageDiv = document.createElement('div');
+                messageDiv.classList.add('message', `${sender}-message`);
+                
+                const avatarDiv = document.createElement('div');
+                avatarDiv.classList.add('message-avatar', `${sender}-avatar`);
+                
+                const iconElement = document.createElement('i');
+                iconElement.className = sender === 'bot' ? 'bi bi-robot' : 'bi bi-person';
+                avatarDiv.appendChild(iconElement);
+                
+                const contentContainer = document.createElement('div');
+                
+                const messageContent = document.createElement('div');
+                messageContent.classList.add('message-content');
+                
+                const messageText = document.createElement('div');
+                messageText.classList.add('message-text');
+                messageText.innerHTML = formatMessageText(text);
+                messageContent.appendChild(messageText);
+                
+                contentContainer.appendChild(messageContent);
+                
+                // Add quick actions for bot messages if requested
+                if (sender === 'bot' && withActions) {
+                    const actionsDiv = document.createElement('div');
+                    actionsDiv.classList.add('quick-replies');
+                    
+                    // Add relevant action buttons based on message content
+                    if (text.toLowerCase().includes('task') && !text.toLowerCase().includes('completed')) {
+                        const completeBtn = document.createElement('button');
+                        completeBtn.classList.add('quick-reply-btn');
+                        completeBtn.textContent = 'Mark as Complete';
+                        completeBtn.addEventListener('click', function() {
+                            handleUserMessage('Mark task as completed');
+                        });
+                        actionsDiv.appendChild(completeBtn);
+                    }
+                    
+                    if (text.toLowerCase().includes('tasks') || text.toLowerCase().includes('found') || text.toLowerCase().includes('results')) {
+                        const viewMoreBtn = document.createElement('button');
+                        viewMoreBtn.classList.add('quick-reply-btn');
+                        viewMoreBtn.textContent = 'View All Tasks';
+                        viewMoreBtn.addEventListener('click', function() {
+                            handleUserMessage('Show all my tasks');
+                        });
+                        actionsDiv.appendChild(viewMoreBtn);
+                    }
+                    
+                    if (actionsDiv.childNodes.length > 0) {
+                        messageContent.appendChild(actionsDiv);
+                    }
+                }
+                
+                const timeElement = document.createElement('div');
+                timeElement.classList.add('message-time');
+                timeElement.textContent = formatTimestamp();
+                contentContainer.appendChild(timeElement);
+                
+                if (sender === 'bot') {
+                    messageDiv.appendChild(avatarDiv);
+                    messageDiv.appendChild(contentContainer);
+                } else {
+                    messageDiv.appendChild(contentContainer);
+                    messageDiv.appendChild(avatarDiv);
+                }
+                
+                return messageDiv;
+            }
+            
+            // Add message to chat
+            function addMessage(text, sender, withActions = false) {
+                const messageElement = createMessageElement(text, sender, withActions);
+                chatMessages.appendChild(messageElement);
+                scrollToBottom();
+            }
+            
+            // Add task card in chat
+            function addTaskCard(task) {
+                const taskDiv = document.createElement('div');
+                taskDiv.classList.add('message', 'bot-message');
+                
+                const avatarDiv = document.createElement('div');
+                avatarDiv.classList.add('message-avatar', 'bot-avatar');
+                
+                const iconElement = document.createElement('i');
+                iconElement.className = 'bi bi-robot';
+                avatarDiv.appendChild(iconElement);
+                
+                const contentContainer = document.createElement('div');
+                
+                const messageContent = document.createElement('div');
+                messageContent.classList.add('message-content');
+                
+                const taskCard = document.createElement('div');
+                taskCard.classList.add('task-card');
+                
+                const taskTitle = document.createElement('div');
+                taskTitle.classList.add('task-card-title');
+                taskTitle.textContent = task.title || 'New Task';
+                
+                const taskDate = document.createElement('div');
+                taskDate.classList.add('task-card-date');
+                taskDate.textContent = task.dueDate || 'No due date';
+                
+                const taskDesc = document.createElement('div');
+                taskDesc.textContent = task.description || '';
+                
+                const taskActions = document.createElement('div');
+                taskActions.classList.add('task-card-actions');
+                
+                const viewBtn = document.createElement('button');
+                viewBtn.classList.add('task-action-btn');
+                viewBtn.textContent = 'View';
+                
+                const completeBtn = document.createElement('button');
+                completeBtn.classList.add('task-action-btn');
+                completeBtn.textContent = 'Complete';
+                
+                taskActions.appendChild(viewBtn);
+                taskActions.appendChild(completeBtn);
+                
+                taskCard.appendChild(taskTitle);
+                taskCard.appendChild(taskDate);
+                taskCard.appendChild(taskDesc);
+                taskCard.appendChild(taskActions);
+                
+                messageContent.appendChild(taskCard);
+                contentContainer.appendChild(messageContent);
+                
+                const timeElement = document.createElement('div');
+                timeElement.classList.add('message-time');
+                timeElement.textContent = formatTimestamp();
+                contentContainer.appendChild(timeElement);
+                
+                taskDiv.appendChild(avatarDiv);
+                taskDiv.appendChild(contentContainer);
+                
+                chatMessages.appendChild(taskDiv);
+                scrollToBottom();
+            }
+            
+            // Show typing indicator
+            function showTypingIndicator() {
+                const typingDiv = document.createElement('div');
+                typingDiv.classList.add('typing-indicator');
+                typingDiv.id = 'typingIndicator';
+                
+                for (let i = 0; i < 3; i++) {
+                    const dot = document.createElement('span');
+                    typingDiv.appendChild(dot);
+                }
+                
+                chatMessages.appendChild(typingDiv);
+                scrollToBottom();
+            }
+            
+            // Remove typing indicator
+            function removeTypingIndicator() {
+                const typingIndicator = document.getElementById('typingIndicator');
+                if (typingIndicator) {
+                    typingIndicator.remove();
+                }
+            }
+            
+            // Scroll to bottom of chat
+            function scrollToBottom() {
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }
+            
+            // Handle user message
+            function handleUserMessage(message) {
+                // Add user message to chat
+                addMessage(message, 'user');
+                
+                // Clear input and disable send button
+                userInput.value = '';
+                sendButton.disabled = true;
+                
+                // Simulate typing indicator
+                showTypingIndicator();
+                
+                // Send to backend and get response
+                fetch('/chatbot/process_message/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    },
+                    body: JSON.stringify({ message: message })
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    // Remove typing indicator after a short delay for better UX
+                    setTimeout(() => {
+                        removeTypingIndicator();
+                        
+                        // Check if the response includes task data
+                        if (data.task) {
+                            addTaskCard(data.task);
+                        } else {
+                            // Add bot response with potential quick actions
+                            const responseText = data.response || data.message || 'I\'m not sure how to respond to that.';
+                            addMessage(responseText, 'bot', true);
+                            
+                            // Show suggestions based on the response context
+                            if (responseText.toLowerCase().includes('completed') || 
+                                responseText.toLowerCase().includes('found') || 
+                                responseText.toLowerCase().includes('tasks')) {
+                                // Maybe show related actions
+                            }
+                        }
+                    }, 1000); // Delay for natural feel
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    setTimeout(() => {
+                        removeTypingIndicator();
+                        addMessage('Sorry, I encountered an error. Please try again.', 'bot');
+                    }, 1000);
+                });
+            }
+            
+            // Get CSRF token
+            function getCookie(name) {
+                let cookieValue = null;
+                if (document.cookie && document.cookie !== '') {
+                    const cookies = document.cookie.split(';');
+                    for (let i = 0; i < cookies.length; i++) {
+                        const cookie = cookies[i].trim();
+                        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                            break;
+                        }
+                    }
+                }
+                return cookieValue;
+            }
+            
+            // Send message on button click
+            sendButton.addEventListener('click', function() {
+                const message = userInput.value.trim();
+                if (message) {
+                    handleUserMessage(message);
+                }
+            });
+            
+            // Send message on Enter key
+            userInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    const message = userInput.value.trim();
+                    if (message) {
+                        handleUserMessage(message);
+                    }
+                }
+            });
+            
+            function handleTaskAction(action, taskTitle) {
+                if (action === 'mark') {
+                    handleUserMessage(`Mark task ${taskTitle} as completed`);
+                } else if (action === 'view') {
+                    handleUserMessage(`Find task ${taskTitle}`);
+                }
+            }
+        });
+    </script>
+    {% endif %}
+    
     {% block extra_scripts %}{% endblock extra_scripts %}
 </body>
 </html>

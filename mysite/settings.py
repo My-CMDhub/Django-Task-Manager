@@ -33,6 +33,9 @@ INSTALLED_APPS = [
     # 'django_ratelimit', # Temporarily disabled due to installation issues
     'rest_framework',
     'rest_framework_simplejwt',
+    # 'chatbot_app',  # Original chatbot integration - commented out to avoid conflicts
+    'chatbot_integration.apps.ChatbotIntegrationConfig',  # Chatbot integration package
+    'chatbot_integration.chatbot_app',  # Chatbot app module with app config
 ]
 
 MIDDLEWARE = [
@@ -73,6 +76,9 @@ SUPABASE_WEBHOOK_SECRET = os.environ.get('SUPABASE_WEBHOOK_SECRET', '***REMOVED*
 SUPABASE_SYNC_ENABLED = os.environ.get('SUPABASE_SYNC_ENABLED', 'True').lower() in ('true', '1', 't', 'yes')
 BYPASS_SUPABASE_RATE_LIMITS = True  # Set to True for development mode, will bypass Supabase registration
 WEBHOOK_MAX_RETRIES = int(os.environ.get('WEBHOOK_MAX_RETRIES', '3'))
+
+# OpenAI API key
+OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY', '')
 
 # Supabase Site URL configuration (critical for email verification)
 # This tells Supabase where to redirect after verification
@@ -355,6 +361,11 @@ LOGGING = {
             'filename': os.path.join(BASE_DIR, 'logs', 'webhook.log'),
             'formatter': 'verbose',
         },
+        'chatbot_file': {
+            'class': 'logging.FileHandler',
+            'filename': os.path.join(BASE_DIR, 'logs', 'chatbot.log'),
+            'formatter': 'verbose',
+        },
     },
     'loggers': {
         'django': {
@@ -366,8 +377,20 @@ LOGGING = {
             'level': 'INFO',
             'propagate': False,
         },
+        'chatbot_integration': {
+            'handlers': ['console', 'chatbot_file'],
+            'level': 'DEBUG',
+            'propagate': False,
+        },
     },
 }
 
 # Ensure log directory exists
 os.makedirs(os.path.join(BASE_DIR, 'logs'), exist_ok=True)
+
+# OpenAI API key for chatbot
+CHATBOT_SETTINGS = {
+    'OPENAI_API_KEY': os.environ.get('OPENAI_API_KEY'),
+    'VECTOR_DB_PATH': os.path.join(BASE_DIR, 'PKL_file'),
+    'TRAINING_DATA_PATH': os.path.join(BASE_DIR, 'data'),
+}

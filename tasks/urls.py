@@ -1,5 +1,6 @@
 from django.urls import path
 from . import views
+from .views import TaskListView
 
 app_name = 'tasks'
 
@@ -49,4 +50,5 @@ urlpatterns = [
     
     # Task stats
     path('tasks/stats/', views.task_stats, name='task_stats'),
+    path('tasks_list/', TaskListView.as_view(), name='task-list'),
 ] 

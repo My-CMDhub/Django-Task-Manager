@@ -23,6 +23,9 @@ from django.core.management import call_command
 from django.db import transaction
 import io
 import uuid
+from rest_framework import generics
+from .models import Task
+from .serializers import TaskSerializer
 
 logger = logging.getLogger(__name__)
 
@@ -269,10 +272,14 @@ def task_create(request):
             return redirect('tasks:task_detail', task_id=task.id)
     else:
         form = TaskForm(initial=initial_data, user=request.user)
+        # Ensure this is treated as a new instance
+        if hasattr(form, 'instance'):
+            form.instance.id = None
     
     context = {
         'form': form,
-        'title': 'Create Task'
+        'title': 'Create Task',
+        'is_new': True  # Add a flag to indicate this is a new task
     }
     return render(request, 'tasks/task_form.html', context)
 
@@ -309,7 +316,8 @@ def task_update(request, task_id):
     context = {
         'form': form,
         'task': task,
-        'title': 'Update Task'
+        'title': 'Update Task',
+        'is_new': False  # Explicitly mark this as not a new task
     }
     return render(request, 'tasks/task_form.html', context)
 
@@ -1111,3 +1119,7 @@ def task_stats(request):
         'overdue_tasks': overdue_tasks,
         'completion_percentage': completion_percentage
     })
+
+class TaskListView(generics.ListAPIView):
+    queryset = Task.objects.all()
+    serializer_class = TaskSerializer

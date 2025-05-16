@@ -129,27 +129,27 @@ ngrok exposes your local server to the internet, which is required for Supabase 
 ## Step 3: Local Django Environment Setup
 
 ### 3.1 Clone the Repository
-```bash
-git clone <repository-url>
-cd Task_Manager
-```
+   ```bash
+   git clone <repository-url>
+   cd Task_Manager
+   ```
 
 ### 3.2 Create and Activate a Virtual Environment
 - **On Windows:**
-  ```bash
-  python -m venv venv
-  venv\Scripts\activate
+   ```bash
+   python -m venv venv
+   venv\Scripts\activate
   ```
 - **On Mac/Linux:**
   ```bash
-  python3 -m venv venv
-  source venv/bin/activate
-  ```
+   python3 -m venv venv
+   source venv/bin/activate
+   ```
 
 ### 3.3 Install Python Dependencies
-```bash
-pip install -r requirements.txt
-```
+   ```bash
+   pip install -r requirements.txt
+   ```
 
 ---
 
@@ -157,10 +157,10 @@ pip install -r requirements.txt
 
 ### 4.1 Create Your `.env` File
 1. Copy the example file:
-   ```bash
-   cp .env.example .env
+     ```bash
+     cp .env.example .env
    # On Windows, use: copy .env.example .env
-   ```
+     ```
 2. Open `.env` in your text editor and fill in:
    - `SUPABASE_URL` (from Supabase dashboard)
    - `SUPABASE_ANON_KEY` (from Supabase dashboard)
@@ -174,8 +174,8 @@ pip install -r requirements.txt
 ```env
 SUPABASE_URL=https://xyzcompany.supabase.co
 SUPABASE_ANON_KEY=your_anon_key
-SUPABASE_SERVICE_KEY=your_service_role_key
-SECRET_KEY=django_secret_key_here
+   SUPABASE_SERVICE_KEY=your_service_role_key
+   SECRET_KEY=django_secret_key_here
 SUPABASE_WEBHOOK_SECRET=your_webhook_secret
 EMAIL_HOST_USER=your_email@gmail.com
 EMAIL_HOST_PASSWORD=your_app_password
@@ -244,10 +244,10 @@ When you run `./run-dev.sh`, the terminal will display a webhook URL (using your
 - Stop any other process using port 8000, or change the port in `run-dev.sh` and Django settings.
 
 ### User Synchronization Issues
-- Use the sync command:
-  ```bash
-  python manage.py sync_users --direction=both
-  ```
+   - Use the sync command:
+     ```bash
+     python manage.py sync_users --direction=both
+     ```
 - Check logs in the `logs/` directory.
 
 ### General Tips
@@ -297,7 +297,7 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 - Based on the development roadmap in `Development/development.md`
 - Built with Supabase for authentication
-- Uses Django framework
+- Uses Django framework 
 
 ---
 

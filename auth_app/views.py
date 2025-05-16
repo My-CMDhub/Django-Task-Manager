@@ -375,60 +375,32 @@ def login(request):
                             logger.info(f"Updated verification status from Supabase for {user.email}")
                             # Continue with login flow
                         else:
-                            # Auto-verify if over an hour old - this handles verification timing issues
-                            if user.date_joined < (timezone.now() - timezone.timedelta(hours=1)):
-                                user.email_verified = True
-                                user.save()
-                                logger.info(f"Auto-verified user {user.email} since account is over 1 hour old")
-                                messages.info(request, "Your account has been automatically verified.")
-                            else:
-                                # Still not verified in either system
-                                error_message = "Your email address has not been verified yet. Please check your inbox for the verification email or click the 'Resend Verification Email' button below."
-                                if error_info and error_info.get('type') == 'connection_error':
-                                    error_message = "We're having trouble connecting to our verification service. Please try again later."
-                                
-                                messages.warning(request, error_message)
-                                return render(request, 'auth/login.html', {'email': user.email, 'show_resend': True})
+                            # Not verified in either system - prevent login
+                            error_message = "Your email address has not been verified yet. Please check your inbox for the verification email or click the 'Resend Verification Email' button below."
+                            messages.warning(request, error_message)
+                            return render(request, 'auth/login.html', {'email': user.email, 'show_resend': True})
                     except Exception as inner_e:
                         logger.error(f"Error in Supabase verification check for {user.email}: {str(inner_e)}")
-                        # If we can't check Supabase due to API error, allow login but set a warning
+                        # Do not allow login if we can't verify status
                         messages.warning(request, 
-                            "We couldn't verify your email status with our authentication provider. "
-                            "You'll be allowed to log in, but some features may be limited until verification is confirmed."
-                        )
-                        # Optimistically mark as verified to avoid future issues
-                        user.email_verified = True
-                        user.save(update_fields=['email_verified'])
-                else:
-                    # If Supabase connection failed completely, check if account is older than 1 day
-                    if user.date_joined < (timezone.now() - timezone.timedelta(days=1)):
-                        # For accounts older than 1 day, assume verified to ensure users can log in
-                        user.email_verified = True
-                        user.save(update_fields=['email_verified'])
-                        logger.warning(f"Marked user {user.email} as verified due to Supabase connection failure")
-                        messages.info(request, "Your account has been automatically verified.")
-                    else:
-                        # For very new accounts, still show verification message
-                        messages.warning(request, 
-                            "Your email address has not been verified yet. Please check your inbox for the verification email or "
-                            "click the 'Resend Verification Email' button below."
+                            "We couldn't verify your email status. Please verify your email before logging in."
                         )
                         return render(request, 'auth/login.html', {'email': user.email, 'show_resend': True})
-            except Exception as e:
-                logger.error(f"Error checking verification status with Supabase: {str(e)}")
-                # Allow login if Supabase is down to prevent lockouts
-                if user.date_joined < (timezone.now() - timezone.timedelta(hours=1)):
-                    # Mark as verified if account is at least 1 hour old
-                    user.email_verified = True
-                    user.save(update_fields=['email_verified'])
-                    logger.warning(f"Auto-verified user {user.email} due to Supabase error: {str(e)}")
-                    messages.info(request, "Your account has been automatically verified due to temporary issues with our verification system.")
                 else:
+                    # If no Supabase connection, still enforce verification
                     messages.warning(request, 
                         "Your email address has not been verified yet. Please check your inbox for the verification email or "
                         "click the 'Resend Verification Email' button below."
                     )
                     return render(request, 'auth/login.html', {'email': user.email, 'show_resend': True})
+            except Exception as e:
+                logger.error(f"Error checking verification status with Supabase: {str(e)}")
+                # Do not allow login without verification
+                messages.warning(request, 
+                    "Your email address has not been verified yet. Please check your inbox for the verification email or "
+                    "click the 'Resend Verification Email' button below."
+                )
+                return render(request, 'auth/login.html', {'email': user.email, 'show_resend': True})
             
         # Authenticate user
         user_auth = authenticate(request, username=user.username, password=password)
@@ -452,6 +424,43 @@ def login(request):
             
             messages.error(request, "Invalid username or password.")
             return render(request, 'auth/login.html')
+        
+        # Additional check to ensure email is verified
+        if hasattr(user_auth, 'email_verified') and not user_auth.email_verified:
+            # Double-check with Supabase one more time
+            try:
+                supabase_client = get_supabase_admin_client()
+                is_verified = False
+                
+                if supabase_client and user.supabase_id:
+                    is_verified, error_info = check_supabase_verification_status(user.supabase_id, supabase_client)
+                    
+                    if is_verified:
+                        # User is verified in Supabase but not in Django - fix it
+                        user_auth.email_verified = True
+                        user_auth.save()
+                        logger.info(f"Updated verification status from Supabase for {user_auth.email}")
+                    else:
+                        # Not verified - prevent login
+                        messages.warning(request, 
+                            "Your email address has not been verified yet. Please check your inbox for the verification email or "
+                            "click the 'Resend Verification Email' button below."
+                        )
+                        return render(request, 'auth/login.html', {'email': user_auth.email, 'show_resend': True})
+                else:
+                    # No Supabase client available - still enforce verification
+                    messages.warning(request, 
+                        "Your email address has not been verified yet. Please check your inbox for the verification email or "
+                        "click the 'Resend Verification Email' button below."
+                    )
+                    return render(request, 'auth/login.html', {'email': user_auth.email, 'show_resend': True})
+            except Exception as e:
+                logger.error(f"Error in final verification check: {str(e)}")
+                # Prevent login if verification status can't be confirmed
+                messages.warning(request, 
+                    "Your email verification status could not be confirmed. Please verify your email before logging in."
+                )
+                return render(request, 'auth/login.html', {'email': user_auth.email, 'show_resend': True})
             
         # Successful login - reset failed login attempts
         if hasattr(user, 'failed_login_attempts'):
@@ -635,87 +644,47 @@ def send_verification_email(request, user):
     """
     logger.info(f"Sending verification email to {user.email}")
     try:
-        # Generate token
-        verification_token = encode_verification_token(user.email)
-        if not verification_token:
-            logger.error(f"Failed to generate verification token for {user.email}")
-            return False
-            
-        # Create URLs for verification
-        current_site = get_current_site(request)
-        site_name = current_site.name or 'Task Manager'
-        domain = current_site.domain
-        protocol = 'https' if request.is_secure() else 'http'
+        logger.info(f"Attempting to send verification email to {user.email}")
         
-        # If we're in development, use localhost
-        if settings.DEBUG:
-            domain = '127.0.0.1:8000'
-            
-        # Create the verification URL with both path and query approaches for robustness
-        verify_url = f"{protocol}://{domain}/auth/verify-email/{verification_token}/"
-        alternate_url = f"{protocol}://{domain}/auth/login/?verification_token={verification_token}"
-        
-        # Get the current year for the template
-        from datetime import datetime
-        current_year = datetime.now().year
-        
-        # Prepare email context
-        context = {
-            'user': user,
-            'verify_url': verify_url,
-            'site_name': site_name,
-            'domain': domain,
-            'protocol': protocol,
-            'expiration_days': 1,
-            'current_year': current_year,
-            'company_address': 'Task Manager, Inc.'
-        }
-        
-        # Generate a unique message ID for DKIM compatibility
-        msg_id = make_msgid(domain=domain)
-        
-        # Prepare custom headers for better deliverability
-        headers = {
-            'Message-ID': msg_id,
-            'Date': formatdate(localtime=True),
-            'X-Priority': '1',
-            'Importance': 'High',
-            'Precedence': 'bulk',
-            'Auto-Submitted': 'auto-generated',
-            'X-Mailer': 'Django',
-            'List-Unsubscribe': f'<{protocol}://{domain}/auth/unsubscribe/?email={user.email}>',
-            'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
-            'List-ID': f'<verification.{domain}>',
-    }
-    
-    # Render email templates
-        subject = f"Verify Your Email - {site_name} Account Activation"
         try:
-            html_message = render_to_string('emails/verification_email.html', context)
-            plain_message = strip_tags(html_message)
-        except Exception as template_error:
-            logger.error(f"Error rendering email template: {str(template_error)}")
-            return False
-    
-        # Send email
-        try:
-            sent = send_mail(
-                subject=subject,
-                message=plain_message,
-                from_email=settings.DEFAULT_FROM_EMAIL,
-                recipient_list=[user.email],
-                html_message=html_message,
-                fail_silently=False
-            )
+            # Let's use Supabase's email service for verification
+            # Check if we have access to the Supabase admin client
+            supabase_client = get_supabase_admin_client()
+            if supabase_client and hasattr(supabase_client.auth, 'admin'):
+                try:
+                    # Try to send password recovery email which will act as verification
+                    # This is a workaround since we don't have direct API access for email verification
+                    supabase_client.auth.admin.send_email(
+                        user.email,
+                        {
+                            "type": "recovery",
+                            "email": user.email
+                        }
+                    )
+                    logger.info(f"Sent verification/recovery email to {user.email} via Supabase")
+                    return True
+                except Exception as admin_error:
+                    logger.error(f"Error sending email via Supabase admin: {str(admin_error)}")
+                    # Fall back to normal method
             
-            if sent:
-                logger.info(f"Verification email sent successfully to {user.email}")
-                return True
-            else:
-                logger.warning(f"Failed to send verification email to {user.email}")
-                return False
-        except Exception as mail_error:
-            logger.error(f"Mail sending error: {str(mail_error)}")
+            # Get basic Supabase client as fallback  
+            if not supabase_client:
+                supabase_client = get_supabase_client()
+                
+            if supabase_client:
+                try:
+                    # Send password reset email as a substitute for verification
+                    supabase_client.auth.reset_password_email(user.email)
+                    logger.info(f"Sent reset password email to {user.email} (as verification substitute)")
+                    return True
+                except Exception as reset_error:
+                    logger.error(f"Error sending reset email: {str(reset_error)}")
+            
+            logger.warning(f"Could not send verification email to {user.email} via Supabase")
+            return False
+                
+        except Exception as e:
+            logger.error(f"Error in verification email process: {str(e)}")
             return False
             
     except Exception as e:
@@ -1231,16 +1200,9 @@ def register(request):
                     )
                     logger.info(f"User profile created: {email}")
                 
-                # Generate verification token and send email
-                email_sent = False
-                try:
-                    email_sent = send_verification_email(request, user)
-                    if email_sent:
-                        logger.info(f"Verification email sent to: {email}")
-                    else:
-                        logger.warning(f"Failed to send verification email to: {email}")
-                except Exception as email_error:
-                    logger.error(f"Error sending verification email to {email}: {str(email_error)}")
+                # Don't send custom verification email - rely only on Supabase email
+                # The Supabase email will be automatically sent by Supabase's auth system
+                logger.info(f"Registration successful for {email}. Relying on Supabase for verification email.")
                 
                 # Store registration status in session for improved UX
                 request.session['just_registered'] = True
@@ -2508,17 +2470,47 @@ def resend_verification_email(request):
                 messages.info(request, "Your account is already verified. Please login.")
                 return redirect('login')
             
-            # Send verification email
-            logger.info(f"Sending verification email to {email}")
-            send_custom_verification_email(request, user)
+            # Send verification email using Supabase
+            logger.info(f"Sending verification email to {email} using Supabase")
             
-            messages.success(request, 
-                "A verification email has been sent. Please check your inbox and spam folder. "
-                "The link will expire in 24 hours."
-            )
+            # Try using Supabase admin client
+            supabase_admin = get_supabase_admin_client()
+            if supabase_admin and hasattr(supabase_admin.auth, 'admin'):
+                try:
+                    # Try to send verification email directly (if admin API supports it)
+                    response = supabase_admin.auth.admin.send_email(
+                        email, 
+                        {"type": "signup"}
+                    )
+                    logger.info(f"Sent verification email via Supabase admin API to {email}")
+                    messages.success(request, 
+                        "A verification email has been sent. Please check your inbox and spam folder. "
+                        "The link will expire in 24 hours."
+                    )
+                    return redirect('login')
+                except Exception as e:
+                    logger.error(f"Error sending email via Supabase admin API: {str(e)}")
+                    # Continue to fallback method
+            
+            # Fallback method: send password reset email which serves as verification
+            try:
+                supabase_client = get_supabase_client()
+                if supabase_client:
+                    supabase_client.auth.reset_password_email(email)
+                    logger.info(f"Sent password reset email as verification alternative to {email}")
+                    messages.success(request, 
+                        "A verification email has been sent. Please check your inbox and spam folder. "
+                        "The link will expire in 24 hours."
+                    )
+                    return redirect('login')
+            except Exception as e:
+                logger.error(f"Error sending password reset email: {str(e)}")
+                
+            # Both methods failed, show error
+            messages.error(request, "Unable to send verification email. Please try again later.")
             
         except Exception as e:
-            logger.error(f"Error sending verification email to {email}: {str(e)}")
+            logger.error(f"Error during verification email process for {email}: {str(e)}")
             messages.error(request, "An error occurred. Please try again later.")
     
     return render(request, 'auth/resend_verification.html')

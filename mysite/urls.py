@@ -116,4 +116,8 @@ urlpatterns = [
     path('', home, name='home'),
     path('dashboard/', login_required(dashboard), name='dashboard'),
     path('tasks/', include('tasks.urls')),
+    path('api/', include('tasks.urls', namespace='api_tasks')),
+    # path('api/chatbot/', include('chatbot_app.urls')),  # Original chatbot integration - commented out
+    # Updated chatbot integration - with unique app_name
+    path('chatbot/', include('chatbot_integration.chatbot_app.urls')),
 ]

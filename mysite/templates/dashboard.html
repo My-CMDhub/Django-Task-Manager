@@ -58,7 +58,7 @@
         background-color: #f3f4f6;
         transform: translateX(5px);
     }
-    .welcome-card {
+    .welcome-card-main {
         background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
         color: white;
         border-radius: 10px;
@@ -97,11 +97,63 @@
         opacity: 1;
         transform: translateY(0);
     }
+
+    .col-lg-8 p {
+        color: white;
+    }
+    
+    /* Task status badge styling */
+    .status-badge {
+        padding: 0.4em 0.7em;
+        border-radius: 6px;
+        font-weight: 500;
+        margin-right: 0.4rem;
+    }
+    .status-todo {
+        background-color: #e9ecef;
+        color: #495057;
+    }
+    .status-in_progress {
+        background-color: #cfe2ff;
+        color: #0d6efd;
+    }
+    .status-completed {
+        background-color: #d1e7dd;
+        color: #0f5132;
+    }
+    .status-archived {
+        background-color: #e9ecef;
+        color: #495057;
+    }
+    
+    /* Priority badge styling */
+    .priority-badge {
+        padding: 0.4em 0.7em;
+        border-radius: 6px;
+        font-weight: 500;
+        margin-right: 0.4rem;
+    }
+    .priority-low {
+        background-color: #d1e7dd;
+        color: #0f5132;
+    }
+    .priority-medium {
+        background-color: #fff3cd;
+        color: #664d03;
+    }
+    .priority-high {
+        background-color: #ffe5d0;
+        color: #fd7e14;
+    }
+    .priority-urgent {
+        background-color: #f8d7da;
+        color: #842029;
+    }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="welcome-card fade-in">
+<div class="welcome-card-main fade-in">
     <div class="row align-items-center">
         <div class="col-lg-8">
             <h2 class="fw-bold mb-2">Welcome, {{ user.username }}!</h2>
@@ -244,9 +296,10 @@
                                         {% endif %}
                                     </small>
                                 </div>
-                                <p class="mb-1 text-truncate">{{ task.description|truncatechars:50 }}</p>
+                                <p class="mb-1 text-truncate" style="color: rgb(68, 67, 67);">{{ task.description|truncatechars:50 }}</p>
                                 <div>
-                                    <span class="badge bg-{{ task.priority }}">{{ task.get_priority_display }}</span>
+                                    <span class="status-badge status-{{ task.status }}">{{ task.get_status_display }}</span>
+                                    <span class="priority-badge priority-{{ task.priority }}">{{ task.get_priority_display }}</span>
                                     {% if task.project %}
                                     <span class="badge bg-info">{{ task.project.name }}</span>
                                     {% endif %}
@@ -283,8 +336,7 @@
                                     <span class="badge bg-primary">{{ project.tasks.count }} tasks</span>
                                 </div>
                                 <div class="progress" style="height: 6px;">
-                                    <div class="progress-bar bg-success" role="progressbar" 
-                                        style="width: {{ project.completion_rate|default:0 }}%"></div>
+                                    <div class="progress-bar bg-success" role="progressbar" style="width: {{ project.completion_rate|default:0 }}%"></div>
                                 </div>
                                 <div class="d-flex justify-content-between mt-2">
                                     <small class="text-muted">Progress</small>
