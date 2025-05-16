@@ -133,66 +133,68 @@ SITE_URL = f"{SITE_PROTOCOL}://{SITE_DOMAIN}"
 _supabase_client = None
 _supabase_admin_client = None  # For admin operations
 
-# Override Supabase client for Render compatibility
-def get_supabase_admin_client():
-    """Get or initialize a Supabase client with admin privileges, compatible with Render"""
-    global _supabase_admin_client
-    
-    try:
-        if _supabase_admin_client is None:
-            if not SUPABASE_URL or not SUPABASE_SERVICE_KEY:
-                print("Missing Supabase admin credentials")
-                return None
-                
-            print(f"Creating new Supabase admin client with URL: {SUPABASE_URL}")
-            try:
-                # Try with modern client
-                _supabase_admin_client = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
-            except TypeError as e:
-                if 'proxy' in str(e):
-                    # Handle older client that doesn't accept proxy argument
-                    from supabase import Client, create_client
-                    _supabase_admin_client = Client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
-                else:
-                    raise
-            print("Supabase admin client created successfully")
-            
-        return _supabase_admin_client
-    except Exception as e:
-        print(f"Error creating Supabase admin client: {e}")
-        return None
+# Option to completely bypass Supabase in production
+BYPASS_SUPABASE = os.environ.get('BYPASS_SUPABASE', 'True').lower() in ('true', '1', 't', 'yes')
+BYPASS_SUPABASE_RATE_LIMITS = True  # Set to True for production mode when Supabase is problematic
 
-# Override regular Supabase client for Render compatibility
-def get_supabase_client():
-    """Get or initialize a Supabase client instance, compatible with Render"""
-    global _supabase_client
-    try:
-        if _supabase_client is None:
-            if not SUPABASE_URL:
-                print("Missing Supabase URL")
-                return None
-            
-            # Use SUPABASE_ANON_KEY first, then fall back to SUPABASE_KEY if needed
-            anon_key = SUPABASE_ANON_KEY or SUPABASE_KEY
-            if not anon_key:
-                print("Missing Supabase API key")
-                return None
+# Define client functions based on BYPASS_SUPABASE setting
+if BYPASS_SUPABASE:
+    # Bypass functions that return None when Supabase is disabled
+    def get_supabase_client():
+        """Bypass function that returns None when Supabase is disabled"""
+        print("Supabase is bypassed in production, returning None")
+        return None
+        
+    def get_supabase_admin_client():
+        """Bypass function that returns None when Supabase is disabled"""
+        print("Supabase admin is bypassed in production, returning None")
+        return None
+else:
+    # Standard client functions with compatibility fixes
+    def get_supabase_admin_client():
+        """Get or initialize a Supabase client with admin privileges, compatible with Render"""
+        global _supabase_admin_client
+        
+        try:
+            if _supabase_admin_client is None:
+                if not SUPABASE_URL or not SUPABASE_SERVICE_KEY:
+                    print("Missing Supabase admin credentials")
+                    return None
+                    
+                print(f"Creating new Supabase admin client with URL: {SUPABASE_URL}")
+                # Directly create the client without proxy
+                from supabase import Client
+                _supabase_admin_client = Client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
+                print("Supabase admin client created successfully")
                 
-            print(f"Creating new Supabase client with URL: {SUPABASE_URL}")
-            try:
-                # Try with modern client
-                _supabase_client = create_client(SUPABASE_URL, anon_key)
-            except TypeError as e:
-                if 'proxy' in str(e):
-                    # Handle older client that doesn't accept proxy argument
-                    from supabase import Client, create_client
-                    _supabase_client = Client(SUPABASE_URL, anon_key)
-                else:
-                    raise
-            print("Supabase client created successfully")
-            
-        return _supabase_client
-    except Exception as e:
-        print(f"Error initializing Supabase client: {str(e)}")
-        # Fall back to None, which will cause the code to use Django-only mode
-        return None 
+            return _supabase_admin_client
+        except Exception as e:
+            print(f"Error creating Supabase admin client: {e}")
+            return None
+
+    def get_supabase_client():
+        """Get or initialize a Supabase client instance, compatible with Render"""
+        global _supabase_client
+        try:
+            if _supabase_client is None:
+                if not SUPABASE_URL:
+                    print("Missing Supabase URL")
+                    return None
+                
+                # Use SUPABASE_ANON_KEY first, then fall back to SUPABASE_KEY if needed
+                anon_key = SUPABASE_ANON_KEY or SUPABASE_KEY
+                if not anon_key:
+                    print("Missing Supabase API key")
+                    return None
+                    
+                print(f"Creating new Supabase client with URL: {SUPABASE_URL}")
+                # Directly create the client without proxy
+                from supabase import Client
+                _supabase_client = Client(SUPABASE_URL, anon_key)
+                print("Supabase client created successfully")
+                
+            return _supabase_client
+        except Exception as e:
+            print(f"Error initializing Supabase client: {str(e)}")
+            # Fall back to None, which will cause the code to use Django-only mode
+            return None 
