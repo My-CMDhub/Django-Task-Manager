@@ -106,7 +106,7 @@ os.makedirs(os.path.join(BASE_DIR, 'logs'), exist_ok=True)
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': os.path.join('/opt/render/project/src/Task_Manager', 'db.sqlite3'),
+        'NAME': os.path.join('/opt/render/project/src/', 'db.sqlite3'),
     }
 }
 

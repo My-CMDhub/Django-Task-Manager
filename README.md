@@ -379,79 +379,60 @@ You can use your own beautiful HTML email for verification emails sent by Supaba
 
 ## Deployment to Render
 
-This application is configured for deployment to [Render](https://render.com/), a cloud hosting platform. The deployment strategy includes:
+### Initial Setup on Render
 
-1. **Production Configuration**:
-   - Using `mysite/production_settings.py` which extends the base settings for production
-   - `Procfile` defines how to run the application using Gunicorn
-   - WhiteNoise middleware for serving static files efficiently
+1. Create a new Web Service in Render
+2. Connect your GitHub repository
+3. Configure the following settings:
+   - **Name**: Task Manager (or your preferred name)
+   - **Build Command**: `pip install -r requirements.txt`
+   - **Start Command**: `gunicorn mysite.wsgi --env DJANGO_SETTINGS_MODULE=mysite.production_settings`
 
-2. **Authentication**:
-   - In production, Supabase integration is automatically bypassed (`BYPASS_SUPABASE = True`)
-   - Django's native authentication system is used
-   - Email verification can be enabled or disabled via the `AUTO_VERIFY_USERS` environment variable
-   - When `AUTO_VERIFY_USERS=False`, users must verify their email before logging in
-   - When `AUTO_VERIFY_USERS=True`, email verification is skipped, and users can log in immediately
+### Environment Variables
 
-3. **Chatbot Integration**:
-   - AI-powered chatbot assistant for task management
-   - Accessible at `/chatbot/` endpoint
-   - Uses OpenAI for natural language interaction
-   - Can display task statistics and lists of tasks
+Add the following environment variables in the Render dashboard:
 
-4. **Database Configuration**:
-   - Using SQLite in Render's persistent storage
+- `SECRET_KEY`: Your Django secret key
+- `DJANGO_SETTINGS_MODULE`: `mysite.production_settings`
+- `EMAIL_HOST_USER`: Your email address
+- `EMAIL_HOST_PASSWORD`: Your email password
+- `SMTP_HOST`: Your SMTP host (e.g., smtp.gmail.com)
+- `SMTP_PORT`: Your SMTP port (e.g., 465)
+- `EMAIL_USE_SSL`: "True" for SSL (port 465)
+- `EMAIL_USE_TLS`: "True" for TLS (port 587)
+- `SENDER_NAME`: "Task Manager" (or your preferred sender name)
+- `SENDER_EMAIL`: Your sender email
+- `SITE_DOMAIN`: Your Render app domain (e.g., taskmanager-mztm.onrender.com)
+- `SITE_PROTOCOL`: "https"
 
-### Initial Deployment Steps
+### Database Configuration
 
-1. Create a new Web Service on Render
-2. Connect to your GitHub repository
-3. Select the production branch
-4. Set build command: `pip install -r requirements.txt && python manage.py collectstatic --noinput`
-5. Set start command: `gunicorn mysite.wsgi --env DJANGO_SETTINGS_MODULE=mysite.production_settings`
-6. Add environment variables:
-   - `SECRET_KEY`: Set to a secure random string
-   - `OPENAI_API_KEY`: (Optional) Set to enable AI chatbot functionality
-   - `SMTP_HOST`: Email server hostname (e.g., smtp.gmail.com)
-   - `SMTP_PORT`: Email server port (e.g., 587 for TLS)
-   - `EMAIL_HOST_USER`: Email username/address
-   - `EMAIL_HOST_PASSWORD`: Email password or app password
-   - `SENDER_EMAIL`: From email address
-   - `SENDER_NAME`: From name in emails
-   - `AUTO_VERIFY_USERS`: Set to 'False' to require email verification (recommended for production)
+For SQLite in Render:
 
-### Email Verification in Production
-
-When deploying to production, you can configure email verification with the following environment variables in Render:
-
-1. `SMTP_HOST`: Your SMTP server host (default: smtp.gmail.com)
-2. `SMTP_PORT`: Your SMTP server port (default: 465)
-3. `EMAIL_HOST_USER`: Your email address
-4. `EMAIL_HOST_PASSWORD`: Your email password or app password
-5. `EMAIL_USE_SSL`: True/False (default: True for port 465)
-6. `EMAIL_USE_TLS`: True/False (default: False for port 465, True for port 587)
-7. `SENDER_EMAIL`: The sender email address (defaults to EMAIL_HOST_USER)
-8. `SENDER_NAME`: The sender name to display in emails (default: "Task Manager")
-9. `SITE_DOMAIN`: Your Render domain (default: taskmanager-mztm.onrender.com)
-10. `SITE_PROTOCOL`: Protocol to use in links (default: https)
-11. `AUTO_VERIFY_USERS`: Set to "True" to automatically verify users without email confirmation
-
-Note that when `BYPASS_SUPABASE=True` (the default in production), Django's native email verification system is used.
-
-### Post-Deployment Setup
-
-After deploying to Render, run the following steps for proper email configuration:
-
-1. **Update the Site Configuration**: Run the site configuration script via the Render Shell to ensure email verification links use the correct domain:
-   ```bash
-   python create_site.py
+1. The application is configured to use SQLite in the persistent storage location at `/opt/render/project/src/`
+2. When deploying, Render will use this path for the database file
+3. If you encounter database access issues, you can test by running:
+   ```
+   python fix_db_path.py
    ```
 
-2. **Test Email Sending**: Verify email functionality by sending a test email:
-   ```bash
-   python test_email_direct.py your_email@example.com
+### Troubleshooting Email Verification
+
+If you encounter issues with email verification:
+
+1. Use the test script to verify email configuration:
    ```
+   python test_email_verification.py your-email@example.com
+   ```
+2. This will send a test verification email without requiring database access
+3. Check the email to confirm that the verification link uses the correct domain
+4. Verify that the sender name appears correctly in your email client
 
-3. **Verify Database Path**: If you encounter database errors, ensure the database path in `mysite/production_settings.py` is correct for your Render setup.
+### Important Production Notes
 
-If your verification emails are not displaying the correct sender name or the links are pointing to the wrong domain, double-check your environment variables and ensure the Site model has been properly configured. 
+1. In production, Supabase integration is bypassed by default (`BYPASS_SUPABASE = True` in production_settings.py)
+2. Email verification is fully handled by Django
+3. The application uses WhiteNoise for serving static files
+4. HTTPS is enforced with security middleware
+
+Always check your logs in the Render dashboard if you encounter issues with deployment. 

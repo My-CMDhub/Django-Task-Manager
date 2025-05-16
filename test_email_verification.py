@@ -5,6 +5,7 @@ import uuid
 import random
 import string
 import sys
+from collections import namedtuple
 
 # Set up Django environment
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "mysite.settings")
@@ -13,15 +14,14 @@ django.setup()
 
 from django.conf import settings
 from django.utils import timezone
-from django.contrib.auth import get_user_model
 from django.template.loader import render_to_string
 from django.utils.html import strip_tags
 from django.core.mail import send_mail
-from django.urls import reverse
 from email.utils import make_msgid, formatdate
 from auth_app.views import encode_verification_token
 
-User = get_user_model()
+# Create a mock User object to avoid database access
+MockUser = namedtuple('MockUser', ['username', 'email', 'email_verified'])
 
 def generate_random_username():
     """Generate a random username"""
@@ -32,26 +32,23 @@ def generate_random_email():
     username = generate_random_username()
     return f"{username}@example.com"
 
-def create_test_user():
-    """Create a test user with email verification disabled"""
+def create_mock_test_user():
+    """Create a mock test user without database access"""
     email = generate_random_email()
     username = generate_random_username()
-    password = "testpassword"
     
-    # Create user with email_verified=False
-    user = User.objects.create_user(
+    # Create a mock user
+    user = MockUser(
         username=username,
         email=email,
-        password=password,
-        email_verified=False,
-        supabase_id=f"django-{str(uuid.uuid4())}"
+        email_verified=False
     )
     
-    print(f"Created test user: {username}, email: {email}")
+    print(f"Created mock test user: {username}, email: {email}")
     return user
 
 def test_verification_email():
-    """Test sending a verification email directly"""
+    """Test sending a verification email directly without database access"""
     print("\n=== TESTING EMAIL VERIFICATION FLOW ===")
     
     # Print current settings to verify
@@ -61,11 +58,21 @@ def test_verification_email():
     print(f"SENDER_EMAIL: {getattr(settings, 'SENDER_EMAIL', 'Not set')}")
     print(f"DEFAULT_FROM_EMAIL: {settings.DEFAULT_FROM_EMAIL}")
     
-    # Create a test user
-    user = create_test_user()
+    # Get test recipient email from command line
+    recipient_email = sys.argv[1] if len(sys.argv) > 1 else None
+    if not recipient_email:
+        print("Error: Please provide a test recipient email as command line argument")
+        print("Usage: python test_email_verification.py your-email@example.com")
+        return None
+    
+    # Create a mock test user
+    user = create_mock_test_user()
+    
+    # Use recipient email for token generation
+    email_for_token = recipient_email
     
     # Generate a real verification token
-    token = encode_verification_token(user.email)
+    token = encode_verification_token(email_for_token)
     
     # Generate the verification URL
     verify_url = f"{settings.SITE_PROTOCOL}://{settings.SITE_DOMAIN}/auth/verify-email/{token}/"
@@ -95,11 +102,8 @@ def test_verification_email():
             'Date': formatdate(localtime=True),
             'X-Priority': '1',
             'Importance': 'High',
-            'List-Unsubscribe': f'<{settings.SITE_PROTOCOL}://{settings.SITE_DOMAIN}/auth/unsubscribe/?email={user.email}>',
+            'List-Unsubscribe': f'<{settings.SITE_PROTOCOL}://{settings.SITE_DOMAIN}/auth/unsubscribe/?email={recipient_email}>',
         }
-        
-        # Send to test recipient if provided as command line argument
-        recipient_email = sys.argv[1] if len(sys.argv) > 1 else user.email
         
         print(f"\nSending test email to: {recipient_email}")
         print(f"From: {settings.DEFAULT_FROM_EMAIL}")
