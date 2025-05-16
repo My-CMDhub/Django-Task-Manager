@@ -391,18 +391,22 @@ This application is configured for deployment to [Render](https://render.com/), 
    - Users are automatically verified without requiring email verification
    - The `/auth/auto-verify-users/` endpoint is available for admin users to verify any existing unverified users
 
-3. **Database Configuration**:
+3. **Chatbot Integration**:
+   - AI-powered chatbot assistant for task management
+   - Accessible at `/chatbot/` endpoint
+   - Uses OpenAI for natural language interaction
+   - Can display task statistics and lists of tasks
+
+4. **Database Configuration**:
    - Using SQLite in Render's persistent storage
 
 ### Initial Deployment Steps
 
-1. Push your code to GitHub
-2. Create a new Web Service in Render, connecting to your GitHub repository
-3. Select the "Python" environment
-4. Set the build command: `pip install -r requirements.txt`
-5. Set the start command: `gunicorn mysite.wsgi --env DJANGO_SETTINGS_MODULE=mysite.production_settings`
+1. Create a new Web Service on Render
+2. Connect to your GitHub repository
+3. Select the production branch
+4. Set build command: `pip install -r requirements.txt && python manage.py collectstatic --noinput`
+5. Set start command: `gunicorn mysite.wsgi --env DJANGO_SETTINGS_MODULE=mysite.production_settings`
 6. Add environment variables:
-   - `SECRET_KEY`: Your Django secret key
-   - `DJANGO_SETTINGS_MODULE`: `mysite.production_settings`
-
-After deployment, any admin user can visit `/auth/auto-verify-users/` to ensure all users are verified in the production environment. 
+   - `SECRET_KEY`: Set to a secure random string
+   - `OPENAI_API_KEY`: (Optional) Set to enable AI chatbot functionality 
