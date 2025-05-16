@@ -737,7 +737,6 @@ def send_verification_email(request, user):
                     [user.email],
                     html_message=html_email,
                     fail_silently=False,
-                    headers=headers,
                     connection=connection
                 )
                 logger.info(f"Verification email sent successfully to {user.email} using Django's email system")
