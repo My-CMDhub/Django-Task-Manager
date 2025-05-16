@@ -1,0 +1,1 @@
+web: gunicorn mysite.wsgi --env DJANGO_SETTINGS_MODULE=mysite.production_settings
