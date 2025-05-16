@@ -132,6 +132,7 @@ EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
 EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
 EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'False').lower() == 'true'
 EMAIL_USE_SSL = os.environ.get('EMAIL_USE_SSL', 'True').lower() == 'true'
+EMAIL_TIMEOUT = 30  # Set timeout to 30 seconds to avoid hanging
 
 # Set sender name and email
 SENDER_NAME = os.environ.get('SENDER_NAME', 'Task Manager')

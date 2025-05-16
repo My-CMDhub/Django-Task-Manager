@@ -7,11 +7,12 @@ from django.core.exceptions import PermissionDenied, ObjectDoesNotExist
 from django.contrib import messages
 from django.utils import timezone
 from django.conf import settings
-from django.core.mail import send_mail
+from django.core.mail import send_mail, get_connection
 from django.template.loader import render_to_string
 from django.utils.html import strip_tags
 from django.utils.crypto import get_random_string
 from django.urls import reverse
+import traceback
 
 # Check if Supabase module is available
 try:
@@ -56,6 +57,7 @@ import time
 import random
 from django.middleware.csrf import get_token
 from django.contrib.sites.models import Site
+from datetime import timezone as dt_timezone
 
 logger = logging.getLogger(__name__)
 
@@ -716,6 +718,18 @@ def send_verification_email(request, user):
                 
                 logger.info(f"Sending verification email from: {from_email}")
                 
+                # Get connection with timeout
+                connection = get_connection(
+                    backend=settings.EMAIL_BACKEND,
+                    host=settings.EMAIL_HOST,
+                    port=settings.EMAIL_PORT,
+                    username=settings.EMAIL_HOST_USER,
+                    password=settings.EMAIL_HOST_PASSWORD,
+                    use_tls=settings.EMAIL_USE_TLS,
+                    use_ssl=settings.EMAIL_USE_SSL,
+                    timeout=getattr(settings, 'EMAIL_TIMEOUT', 30)  # Use timeout setting or default to 30 seconds
+                )
+                
                 send_mail(
                     f'Please Verify Your Email - {site_name} Account Activation',
                     text_email,
@@ -723,11 +737,20 @@ def send_verification_email(request, user):
                     [user.email],
                     html_message=html_email,
                     fail_silently=False,
+                    headers=headers,
+                    connection=connection
                 )
                 logger.info(f"Verification email sent successfully to {user.email} using Django's email system")
                 return True
+            except smtplib.SMTPException as smtp_error:
+                logger.error(f"SMTP error sending email via Django: {str(smtp_error)}")
+                return False
+            except socket.timeout as timeout_error:
+                logger.error(f"Timeout error sending email via Django: {str(timeout_error)}")
+                return False
             except Exception as email_error:
                 logger.error(f"Error sending email via Django: {str(email_error)}")
+                traceback.print_exc()
                 return False
         
         # Original Supabase flow if not bypassing

@@ -5,6 +5,7 @@ import uuid
 import random
 import string
 import sys
+import traceback
 from collections import namedtuple
 
 # Set up Django environment
@@ -16,7 +17,7 @@ from django.conf import settings
 from django.utils import timezone
 from django.template.loader import render_to_string
 from django.utils.html import strip_tags
-from django.core.mail import send_mail
+from django.core.mail import send_mail, get_connection
 from email.utils import make_msgid, formatdate
 from auth_app.views import encode_verification_token
 
@@ -57,6 +58,10 @@ def test_verification_email():
     print(f"SENDER_NAME: {getattr(settings, 'SENDER_NAME', 'Not set')}")
     print(f"SENDER_EMAIL: {getattr(settings, 'SENDER_EMAIL', 'Not set')}")
     print(f"DEFAULT_FROM_EMAIL: {settings.DEFAULT_FROM_EMAIL}")
+    print(f"EMAIL_HOST: {settings.EMAIL_HOST}")
+    print(f"EMAIL_PORT: {settings.EMAIL_PORT}")
+    print(f"EMAIL_USE_TLS: {settings.EMAIL_USE_TLS}")
+    print(f"EMAIL_USE_SSL: {settings.EMAIL_USE_SSL}")
     
     # Get test recipient email from command line
     recipient_email = sys.argv[1] if len(sys.argv) > 1 else None
@@ -108,6 +113,18 @@ def test_verification_email():
         print(f"\nSending test email to: {recipient_email}")
         print(f"From: {settings.DEFAULT_FROM_EMAIL}")
         
+        # Get a connection with timeout
+        connection = get_connection(
+            backend=settings.EMAIL_BACKEND,
+            host=settings.EMAIL_HOST,
+            port=settings.EMAIL_PORT,
+            username=settings.EMAIL_HOST_USER,
+            password=settings.EMAIL_HOST_PASSWORD,
+            use_tls=settings.EMAIL_USE_TLS,
+            use_ssl=settings.EMAIL_USE_SSL,
+            timeout=30
+        )
+        
         # Send the email
         result = send_mail(
             f'Please Verify Your Email - Task Manager Account Activation',
@@ -116,13 +133,16 @@ def test_verification_email():
             [recipient_email],
             html_message=html_email,
             fail_silently=False,
-            headers=headers
+            headers=headers,
+            connection=connection
         )
         
         print(f"Verification email sent: {result == 1}")
         
     except Exception as e:
         print(f"Error sending verification email: {str(e)}")
+        print("Traceback:")
+        traceback.print_exc()
     
     print("\nCheck your email to verify the production URLs and sender name are correct!")
     return user
