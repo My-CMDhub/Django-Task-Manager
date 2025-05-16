@@ -23,16 +23,33 @@ DEBUG = False
 
 # Updated allowed hosts
 ALLOWED_HOSTS = [
-    '127.0.0.1',
-    'localhost',
-    '.pythonanywhere.com',  # Allow any subdomain
-    'taskmanager-mztm.onrender.com'
-]
+    'taskmanager-mztm.onrender.com', # Your Render app domain
+    '.onrender.com', # Allow any Render subdomain for flexibility
+] 
+# Add other production hosts if needed
+
+# Force Supabase bypass in production
+BYPASS_SUPABASE = True
+BYPASS_SUPABASE_RATE_LIMITS = True 
+
+# Nullify Supabase credentials if bypassed to prevent accidental use
+# The client functions in settings.py will already return None if BYPASS_SUPABASE is True
+if BYPASS_SUPABASE:
+    SUPABASE_URL = None
+    SUPABASE_KEY = None
+    SUPABASE_ANON_KEY = None
+    SUPABASE_SERVICE_KEY = None
+    print("PRODUCTION SETTINGS: Supabase is FULLY BYPASSED. Client functions will return None.")
+else:
+    # This block should ideally not be hit in production if BYPASS_SUPABASE is True
+    print("PRODUCTION SETTINGS: Supabase is ACTIVE. Ensure SUPABASE_URL and keys are set in environment.")
+    # SUPABASE_URL = os.environ.get('SUPABASE_URL') # Example if not bypassing
+    # SUPABASE_KEY = os.environ.get('SUPABASE_KEY') # Example if not bypassing
 
 # Stronger security settings
 CSRF_COOKIE_SECURE = True
 SESSION_COOKIE_SECURE = True
-SECURE_SSL_REDIRECT = False  # Set to True if your PythonAnywhere account supports HTTPS
+SECURE_SSL_REDIRECT = True # Set to True if your Render setup enforces HTTPS
 SECURE_HSTS_SECONDS = 31536000  # 1 year
 SECURE_HSTS_INCLUDE_SUBDOMAINS = True
 SECURE_HSTS_PRELOAD = True
@@ -43,7 +60,7 @@ MIDDLEWARE.insert(1, 'whitenoise.middleware.WhiteNoiseMiddleware')  # Add after 
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # Static files configuration (CSS, JavaScript, Images)
-STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles_prod') # Separate static root for production build
 
 # Logging
 LOGGING = {
@@ -51,47 +68,27 @@ LOGGING = {
     'disable_existing_loggers': False,
     'formatters': {
         'verbose': {
-            'format': '{levelname} {asctime} {module} {message}',
-            'style': '{',
+            'format': '%(levelname)s %(asctime)s %(module)s %(process)d %(thread)d %(message)s'
         },
     },
     'handlers': {
-        'file': {
-            'class': 'logging.FileHandler',
-            'filename': os.path.join(BASE_DIR, 'logs', 'django.log'),
-            'formatter': 'verbose',
-        },
         'console': {
+            'level': 'INFO', # Adjust as needed
             'class': 'logging.StreamHandler',
             'formatter': 'verbose',
         },
     },
     'root': {
-        'handlers': ['file', 'console'],
-        'level': 'WARNING',
+        'handlers': ['console'],
+        'level': 'INFO', # Adjust as needed
     },
     'loggers': {
         'django': {
-            'handlers': ['file', 'console'],
-            'level': os.getenv('DJANGO_LOG_LEVEL', 'WARNING'),
+            'handlers': ['console'],
+            'level': os.getenv('DJANGO_LOG_LEVEL', 'INFO'),
             'propagate': False,
         },
-        'auth_app': {
-            'handlers': ['file', 'console'],
-            'level': 'WARNING',
-            'propagate': False,
-        },
-        'tasks': {
-            'handlers': ['file', 'console'],
-            'level': 'WARNING',
-            'propagate': False,
-        },
-        'chatbot_integration': {
-            'handlers': ['file', 'console'],
-            'level': 'WARNING',
-            'propagate': False,
-        },
-    },
+    }
 }
 
 # Ensure log directory exists - PythonAnywhere might need different permissions
@@ -134,27 +131,15 @@ SITE_URL = f"{SITE_PROTOCOL}://{SITE_DOMAIN}"
 # _supabase_client = None
 # _supabase_admin_client = None 
 
-# Option to completely bypass Supabase in production
-# This overrides the default from settings.py
-BYPASS_SUPABASE = os.environ.get('BYPASS_SUPABASE_PRODUCTION', 'True').lower() in ('true', '1', 't', 'yes')
-BYPASS_SUPABASE_RATE_LIMITS = True  # Usually True for production when bypassing Supabase
-
-# The get_supabase_client and get_supabase_admin_client functions are now in base settings.py
-# and will respect the BYPASS_SUPABASE value set here.
-# No need to redefine the functions themselves in this file.
-
 # Default Email backend to console if not specified, to prevent NoneType errors
-EMAIL_BACKEND = os.environ.get('EMAIL_BACKEND', 'django.core.mail.backends.console.EmailBackend')
+EMAIL_BACKEND = os.environ.get('EMAIL_BACKEND_PRODUCTION', 'django.core.mail.backends.console.EmailBackend')
 EMAIL_HOST = os.environ.get('EMAIL_HOST', '')
 EMAIL_PORT = int(os.environ.get('EMAIL_PORT', 587))
 EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
 EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
 EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'True').lower() == 'true'
 EMAIL_USE_SSL = os.environ.get('EMAIL_USE_SSL', 'False').lower() == 'true'
-DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'noreply@example.com')
-SERVER_EMAIL = os.environ.get('SERVER_EMAIL', DEFAULT_FROM_EMAIL)
+DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL_PRODUCTION', 'noreply@taskmanager-mztm.onrender.com')
+SERVER_EMAIL = os.environ.get('SERVER_EMAIL_PRODUCTION', DEFAULT_FROM_EMAIL)
 
-if BYPASS_SUPABASE:
-    print("PRODUCTION SETTINGS: Supabase is BYPASSED.")
-else:
-    print("PRODUCTION SETTINGS: Supabase is ACTIVE.") 
+print(f"PRODUCTION SETTINGS LOADED: BYPASS_SUPABASE is set to {BYPASS_SUPABASE}") 

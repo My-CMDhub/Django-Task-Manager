@@ -4,6 +4,13 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+# Attempt to import Supabase client, but don't fail if it's not critical for base setup
+try:
+    from supabase import Client as SupabaseClient # Renamed to avoid conflict if create_client is also imported
+except ImportError:
+    SupabaseClient = None
+    print("WARNING: supabase.Client could not be imported. Supabase features will be unavailable.")
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = 'django-insecure-!@#your-secret-key-here!@#'
@@ -37,6 +44,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware', # For serving static files efficiently
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -107,8 +115,11 @@ _supabase_admin_client = None  # For admin operations
 def get_supabase_client():
     """Get or initialize a Supabase client instance"""
     global _supabase_client
-    if BYPASS_SUPABASE:
-        print("Supabase client is BYPASSED via settings.BYPASS_SUPABASE")
+    if BYPASS_SUPABASE or SupabaseClient is None:
+        if BYPASS_SUPABASE:
+            print("Supabase client is BYPASSED via settings.BYPASS_SUPABASE")
+        if SupabaseClient is None and not BYPASS_SUPABASE:
+            print("Supabase client could not be imported, bypassing.")
         return None
     try:
         if _supabase_client is None:
@@ -120,8 +131,7 @@ def get_supabase_client():
                 print("Missing Supabase API key")
                 return None
             print(f"Creating new Supabase client with URL: {SUPABASE_URL} (from base settings)")
-            from supabase import Client # Ensure Client is imported
-            _supabase_client = Client(SUPABASE_URL, anon_key) # Direct instantiation
+            _supabase_client = SupabaseClient(SUPABASE_URL, anon_key)
             print("Supabase client created successfully (from base settings)")
         return _supabase_client
     except Exception as e:
@@ -131,8 +141,11 @@ def get_supabase_client():
 def get_supabase_admin_client():
     """Get or initialize a Supabase client with admin privileges"""
     global _supabase_admin_client
-    if BYPASS_SUPABASE:
-        print("Supabase admin client is BYPASSED via settings.BYPASS_SUPABASE")
+    if BYPASS_SUPABASE or SupabaseClient is None:
+        if BYPASS_SUPABASE:
+            print("Supabase admin client is BYPASSED via settings.BYPASS_SUPABASE")
+        if SupabaseClient is None and not BYPASS_SUPABASE:
+            print("Supabase admin client could not be imported, bypassing.")
         return None
     try:
         if _supabase_admin_client is None:
@@ -140,8 +153,7 @@ def get_supabase_admin_client():
                 print("Missing Supabase admin credentials")
                 return None
             print(f"Creating new Supabase admin client with URL: {SUPABASE_URL} (from base settings)")
-            from supabase import Client # Ensure Client is imported
-            _supabase_admin_client = Client(SUPABASE_URL, SUPABASE_SERVICE_KEY) # Direct instantiation
+            _supabase_admin_client = SupabaseClient(SUPABASE_URL, SUPABASE_SERVICE_KEY)
             print("Supabase admin client created successfully (from base settings)")
         return _supabase_admin_client
     except Exception as e:
