@@ -418,4 +418,19 @@ This application is configured for deployment to [Render](https://render.com/), 
    - `EMAIL_HOST_PASSWORD`: Email password or app password
    - `SENDER_EMAIL`: From email address
    - `SENDER_NAME`: From name in emails
-   - `AUTO_VERIFY_USERS`: Set to 'False' to require email verification (recommended for production) 
+   - `AUTO_VERIFY_USERS`: Set to 'False' to require email verification (recommended for production)
+
+### Email Verification in Production
+
+When deploying to production, you can configure email verification with the following environment variables in Render:
+
+1. `SMTP_HOST`: Your SMTP server host (default: smtp.gmail.com)
+2. `SMTP_PORT`: Your SMTP server port (default: 465)
+3. `EMAIL_HOST_USER`: Your email address
+4. `EMAIL_HOST_PASSWORD`: Your email password or app password
+5. `EMAIL_USE_SSL`: True/False (default: True for port 465)
+6. `EMAIL_USE_TLS`: True/False (default: False for port 465, True for port 587)
+7. `SENDER_EMAIL`: The sender email address (defaults to EMAIL_HOST_USER)
+8. `AUTO_VERIFY_USERS`: Set to "True" to automatically verify users without email confirmation
+
+Note that when `BYPASS_SUPABASE=True` (the default in production), Django's native email verification system is used. 

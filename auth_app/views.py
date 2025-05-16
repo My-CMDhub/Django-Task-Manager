@@ -1,7 +1,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.sites.shortcuts import get_current_site
 from django.contrib.auth import login as auth_login, logout as auth_logout, authenticate
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required, user_passes_test
 from django.views.decorators.http import require_http_methods
 from django.core.exceptions import PermissionDenied, ObjectDoesNotExist
 from django.contrib import messages
@@ -55,6 +55,7 @@ import hashlib
 import time
 import random
 from django.middleware.csrf import get_token
+from django.contrib.sites.models import Site
 
 logger = logging.getLogger(__name__)
 
@@ -624,7 +625,6 @@ def send_custom_verification_email(request, user, verification_token=None):
                 f'{site_name} <{settings.DEFAULT_FROM_EMAIL}>',
                 [user.email],
                 html_message=html_email,
-                headers=headers,
                 fail_silently=False,
             )
             logger.info(f"Verification email sent successfully to {user.email}")
@@ -650,7 +650,67 @@ def send_verification_email(request, user):
     """
     logger.info(f"Sending verification email to {user.email}")
     try:
-        logger.info(f"Attempting to send verification email to {user.email}")
+        # When bypassing Supabase, use Django's native email system
+        if getattr(settings, 'BYPASS_SUPABASE', False):
+            logger.info(f"Using Django's email system for verification (BYPASS_SUPABASE=True)")
+            
+            # Generate a verification token
+            token = encode_verification_token(user.email)
+            
+            # Create the verification URL
+            current_site = get_current_site(request) if request else Site(domain=settings.SITE_DOMAIN, name="Task Manager")
+            site_name = current_site.name
+            domain = current_site.domain
+            
+            # If we're in development, use localhost instead of the current site domain
+            if settings.DEBUG:
+                domain = '127.0.0.1:8000'
+                
+            protocol = 'https' if request and request.is_secure() else 'http'
+            verify_url = f"{protocol}://{domain}/auth/verify-email/{token}/"
+            
+            # Prepare the email context
+            context = {
+                'user': user,
+                'verify_url': verify_url,
+                'site_name': site_name,
+                'domain': domain,
+                'protocol': protocol,
+                'current_year': timezone.now().year,
+            }
+            
+            # Prepare email headers
+            msg_id = make_msgid(domain=domain)
+            headers = {
+                'Message-ID': msg_id,
+                'Date': formatdate(localtime=True),
+                'X-Priority': '1',
+                'Importance': 'High',
+                'List-Unsubscribe': f'<{protocol}://{domain}/auth/unsubscribe/?email={user.email}>',
+            }
+            
+            # Render the email templates
+            html_email = render_to_string('emails/verification_email.html', context)
+            text_email = strip_tags(html_email)  # Fallback plain text version
+            
+            # Send the email
+            try:
+                send_mail(
+                    f'Please Verify Your Email - {site_name} Account Activation',
+                    text_email,
+                    settings.DEFAULT_FROM_EMAIL,
+                    [user.email],
+                    html_message=html_email,
+                    fail_silently=False,
+                )
+                logger.info(f"Verification email sent successfully to {user.email} using Django's email system")
+                return True
+            except Exception as email_error:
+                logger.error(f"Error sending email via Django: {str(email_error)}")
+                return False
+        
+        # Original Supabase flow if not bypassing
+        logger.info(f"Attempting to send verification email via Supabase to {user.email}")
         
         try:
             # Let's use Supabase's email service for verification
@@ -688,7 +748,7 @@ def send_verification_email(request, user):
             
             logger.warning(f"Could not send verification email to {user.email} via Supabase")
             return False
-                
+        
         except Exception as e:
             logger.error(f"Error in verification email process: {str(e)}")
             return False

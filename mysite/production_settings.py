@@ -124,7 +124,16 @@ DATABASES = {
 }
 """
 
-# Email configuration - for production you may want to configure mailgun or another service
+# Email configuration for production
+EMAIL_BACKEND = os.environ.get('EMAIL_BACKEND_PRODUCTION', 'django.core.mail.backends.smtp.EmailBackend')
+EMAIL_HOST = os.environ.get('SMTP_HOST', 'smtp.gmail.com')
+EMAIL_PORT = int(os.environ.get('SMTP_PORT', '465'))
+EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
+EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'False').lower() == 'true'
+EMAIL_USE_SSL = os.environ.get('EMAIL_USE_SSL', 'True').lower() == 'true'
+DEFAULT_FROM_EMAIL = os.environ.get('SENDER_EMAIL', EMAIL_HOST_USER) or os.environ.get('DEFAULT_FROM_EMAIL_PRODUCTION', 'noreply@taskmanager-mztm.onrender.com')
+SERVER_EMAIL = os.environ.get('SERVER_EMAIL_PRODUCTION', DEFAULT_FROM_EMAIL)
 
 # Supabase site URL for production
 SUPABASE_SITE_URL = os.environ.get('SUPABASE_SITE_URL', 'https://yourusername.pythonanywhere.com')
@@ -138,16 +147,5 @@ SITE_URL = f"{SITE_PROTOCOL}://{SITE_DOMAIN}"
 # These are now defined in the base settings.py
 # _supabase_client = None
 # _supabase_admin_client = None 
-
-# Default Email backend to console if not specified, to prevent NoneType errors
-EMAIL_BACKEND = os.environ.get('EMAIL_BACKEND_PRODUCTION', 'django.core.mail.backends.console.EmailBackend')
-EMAIL_HOST = os.environ.get('EMAIL_HOST', '')
-EMAIL_PORT = int(os.environ.get('EMAIL_PORT', 587))
-EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
-EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
-EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'True').lower() == 'true'
-EMAIL_USE_SSL = os.environ.get('EMAIL_USE_SSL', 'False').lower() == 'true'
-DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL_PRODUCTION', 'noreply@taskmanager-mztm.onrender.com')
-SERVER_EMAIL = os.environ.get('SERVER_EMAIL_PRODUCTION', DEFAULT_FROM_EMAIL)
 
 print(f"PRODUCTION SETTINGS LOADED: BYPASS_SUPABASE is set to {BYPASS_SUPABASE}") 

@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="color-scheme" content="light">
     <meta name="supported-color-schemes" content="light">
-    <title>Verify Your Email Address for Task Manager</title>
+    <title>Verify Your Email</title>
     <!-- Preheader text that will show in email clients inbox view -->
     <span style="display: none !important; visibility: hidden; mso-hide: all; font-size: 1px; line-height: 1px; max-height: 0px; max-width: 0px; opacity: 0; overflow: hidden;">
         Please verify your email address to complete your Task Manager registration and get started. This will only take a moment.
@@ -24,84 +24,39 @@
         .container {
             background-color: #ffffff;
             border: 1px solid #dddddd;
-            border-radius: 8px;
-            padding: 30px;
+            border-radius: 5px;
+            padding: 20px;
             margin: 20px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
         }
         .header {
             background-color: #4C7BF3;
             color: white;
-            padding: 25px 20px;
+            padding: 15px;
             text-align: center;
-            border-radius: 8px 8px 0 0;
-            margin: -30px -30px 25px;
-        }
-        .logo {
-            margin-bottom: 15px;
-            width: 150px;
+            border-radius: 5px 5px 0 0;
+            margin: -20px -20px 20px;
         }
         .button {
             display: inline-block;
             background-color: #4C7BF3;
             color: white !important;
             text-decoration: none;
-            padding: 12px 25px;
-            border-radius: 5px;
-            margin: 25px 0;
+            padding: 10px 20px;
+            border-radius: 3px;
+            margin: 20px 0;
             font-weight: bold;
-            font-size: 16px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-            border: none;
-            cursor: pointer;
-            transition: background-color 0.3s ease;
-        }
-        .button:hover {
-            background-color: #3a5fc0;
         }
         .footer {
-            margin-top: 35px;
+            margin-top: 30px;
             font-size: 12px;
             color: #777777;
             text-align: center;
             border-top: 1px solid #eeeeee;
-            padding-top: 20px;
+            padding-top: 15px;
         }
-        .verification-link {
+        .verify-link {
             word-break: break-all;
-            padding: 15px;
-            background-color: #f9f9f9;
-            border: 1px solid #eeeeee;
-            border-radius: 5px;
-            font-size: 14px;
-            color: #555555;
-            margin: 20px 0;
-        }
-        .benefits-container {
-            background-color: #f9f9f9;
-            border-radius: 5px;
-            padding: 15px;
-            margin: 25px 0;
-        }
-        .benefits-item {
-            display: flex;
-            align-items: flex-start;
-            margin-bottom: 10px;
-        }
-        .benefits-icon {
-            min-width: 24px;
-            height: 24px;
-            background-color: #4C7BF3;
-            border-radius: 50%;
-            color: white;
-            text-align: center;
-            line-height: 24px;
-            margin-right: 10px;
-            font-weight: bold;
-        }
-        .company-name {
             color: #4C7BF3;
-            font-weight: bold;
         }
         /* Add responsive styles */
         @media only screen and (max-width: 480px) {
@@ -123,71 +78,30 @@
 <body>
     <div class="container">
         <div class="header">
-            <!-- Optional: Add your logo here -->
-            <!-- <img src="https://yourdomain.com/logo.png" alt="Task Manager" class="logo"> -->
-            <h1 style="margin: 0; font-size: 26px;">Verify Your Email Address</h1>
-            <p style="margin: 10px 0 0; opacity: 0.9;">One quick step to complete your registration</p>
+            <h1>Email Verification</h1>
         </div>
         
-        <p style="font-size: 16px;">Hello {% if user.first_name %}{{ user.first_name }}{% else %}there{% endif %},</p>
+        <p>Hello {{ user.username }},</p>
         
-        <p style="font-size: 16px;">Thank you for registering with <span class="company-name">{{ site_name }}</span>. We're excited to have you join our community!</p>
+        <p>Thank you for registering with Task Manager! To complete your registration and verify your email address, please click the button below:</p>
         
-        <p style="font-size: 16px;">To activate your account and start using our platform, please verify your email address by clicking the button below:</p>
-        
-        <div style="text-align: center;">
+        <p style="text-align: center;">
             <a href="{{ verify_url }}" class="button">Verify My Email</a>
-        </div>
-        
-        <p style="font-size: 15px; color: #555;">This link will expire in {{ expiration_days }} days for security reasons.</p>
-        
-        <p style="font-size: 15px;">If the button doesn't work, copy and paste this link into your browser:</p>
-        
-        <div class="verification-link">
-            {{ verify_url }}
-        </div>
-        
-        <div class="benefits-container">
-            <h3 style="margin-top: 0; color: #4C7BF3;">Why verify your email?</h3>
-            
-            <div class="benefits-item">
-                <div class="benefits-icon">✓</div>
-                <div>
-                    <strong>Security:</strong> Protects your account from unauthorized access
-                </div>
-            </div>
-            
-            <div class="benefits-item">
-                <div class="benefits-icon">✓</div>
-                <div>
-                    <strong>Recovery:</strong> Allows you to reset your password if needed
-                </div>
-            </div>
-            
-            <div class="benefits-item">
-                <div class="benefits-icon">✓</div>
-                <div>
-                    <strong>Updates:</strong> Receive important notifications about your account
-                </div>
-            </div>
-        </div>
-        
-        <p style="font-size: 15px;">If you did not create an account on {{ site_name }}, please disregard this email or contact our support team if you have concerns.</p>
-        
-        <p style="font-size: 16px; margin-top: 30px;">
-            Thank you,<br>
-            <strong>The {{ site_name }} Team</strong>
         </p>
         
+        <p>If the button doesn't work, you can also copy and paste the following link into your browser:</p>
+        
+        <p><a href="{{ verify_url }}" class="verify-link">{{ verify_url }}</a></p>
+        
+        <p>This verification link will expire in 24 hours. If you didn't register for an account with Task Manager, please ignore this email.</p>
+        
+        <p>Best regards,<br>
+        The Task Manager Team</p>
+        
         <div class="footer">
-            <p>This message was sent to {{ user.email }} because you registered for an account.</p>
-            <p>© {{ current_year }} {{ site_name }} - This is an automated email. Please do not reply.</p>
-            <p style="font-size: 11px; color: #999999;">
-                If you'd prefer not to receive these emails, you can 
-                <a href="{{ verify_url|urlencode }}?unsubscribe=true" style="color: #999999;">unsubscribe</a>.
-                <br>
-                {{ company_address }}
-            </p>
+            <p>&copy; {{ current_year }} Task Manager. All rights reserved.</p>
+            <p>This email was sent to {{ user.email }} because you registered for an account on Task Manager.</p>
+            <p>If you no longer wish to receive these emails, you can <a href="{{ protocol }}://{{ domain }}/auth/unsubscribe/?email={{ user.email }}">unsubscribe</a>.</p>
         </div>
     </div>
 </body>

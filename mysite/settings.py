@@ -31,6 +31,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django.contrib.sites',  # Required for Site model
     'allauth',
     'allauth.account',
     'allauth.socialaccount',
@@ -230,7 +231,7 @@ WSGI_APPLICATION = 'mysite.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': os.path.join('/opt/render/project/src/', 'db.sqlite3'),
+        'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),  # Use local path for development
     }
 }
 
@@ -257,73 +258,35 @@ USE_TZ = True
 STATIC_URL = 'static/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# Email configuration
-if 'SMTP_HOST' in os.environ and os.environ.get('SMTP_HOST'):
-    # SMTP settings from environment
-    EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-    EMAIL_HOST = os.environ.get('SMTP_HOST')
-    EMAIL_PORT = int(os.environ.get('SMTP_PORT', '465'))
-    EMAIL_HOST_USER = os.environ.get('SMTP_USER')
-    EMAIL_HOST_PASSWORD = os.environ.get('SMTP_PASS')
-    EMAIL_USE_TLS = EMAIL_PORT == 587
-    EMAIL_USE_SSL = EMAIL_PORT == 465
-    DEFAULT_FROM_EMAIL = os.environ.get('SENDER_EMAIL', 'noreply@yourdomain.com')
-    SERVER_EMAIL = DEFAULT_FROM_EMAIL
-    
-    # Use a proper display name in the from field to reduce spam likelihood
-    if os.environ.get('SENDER_NAME'):
-        DEFAULT_FROM_EMAIL = f"{os.environ.get('SENDER_NAME')} <{DEFAULT_FROM_EMAIL}>"
-    
-    # Additional email headers to improve deliverability
-    EMAIL_EXTRA_HEADERS = {
-        'X-Auto-Response-Suppress': 'OOF, DR, RN, NRN, AutoReply',
-        'X-Priority': '1',
-        'X-MSMail-Priority': 'High',
-        'Importance': 'High',
-        'Precedence': 'bulk',
-        'Auto-Submitted': 'auto-generated',
-    }
-    
-    # Only log email configuration if not suppressed
-    if not os.environ.get('SUPPRESS_EMAIL_WARNINGS') == 'true':
-        print(f"Email configuration: Backend={EMAIL_BACKEND}, Host={EMAIL_HOST}, Port={EMAIL_PORT}")
-else:
-    # Instead of console, let's default to Gmail configuration
-    # You'll need to set up an app password: https://myaccount.google.com/apppasswords
-    EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-    EMAIL_HOST = 'smtp.gmail.com'
-    EMAIL_PORT = 587  # Gmail uses TLS on port 587
-    EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')  # Default to your email
-    EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')  # You'll need to set this
-    EMAIL_USE_TLS = True
-    EMAIL_USE_SSL = False
-    DEFAULT_FROM_EMAIL = os.environ.get('SENDER_EMAIL', EMAIL_HOST_USER)
-    SERVER_EMAIL = DEFAULT_FROM_EMAIL
-    
-    # Use a proper display name in the from field to reduce spam likelihood
-    if os.environ.get('SENDER_NAME'):
-        DEFAULT_FROM_EMAIL = f"{os.environ.get('SENDER_NAME')} <{DEFAULT_FROM_EMAIL}>"
-    else:
-        DEFAULT_FROM_EMAIL = f"Task Manager <{EMAIL_HOST_USER}>"
-    
-    # Additional email headers to improve deliverability
-    EMAIL_EXTRA_HEADERS = {
-        'X-Auto-Response-Suppress': 'OOF, DR, RN, NRN, AutoReply',
-        'X-Priority': '1',
-        'X-MSMail-Priority': 'High',
-        'Importance': 'High',
-        'Precedence': 'bulk',
-        'Auto-Submitted': 'auto-generated',
-    }
-    
-    # Only log email configuration if not suppressed
-    if not os.environ.get('SUPPRESS_EMAIL_WARNINGS') == 'true':
-        print(f"Email configuration: Backend={EMAIL_BACKEND}, Host={EMAIL_HOST}, Port={EMAIL_PORT}")
-        print(f"Using from email: {DEFAULT_FROM_EMAIL}")
-        print("WARNING: Using Gmail SMTP. Please set EMAIL_HOST_PASSWORD environment variable.")
-        print("For Gmail, you may need to create an App Password: https://myaccount.google.com/apppasswords")
-        print("NOTE: To avoid spam filtering, add SPF and DKIM records for your domain.")
-        print("Gmail has built-in SPF/DKIM support, but deliverability to some providers may be limited.")
+# Email settings
+EMAIL_BACKEND = os.environ.get('EMAIL_BACKEND', 'django.core.mail.backends.smtp.EmailBackend')
+EMAIL_HOST = os.environ.get('SMTP_HOST', 'smtp.gmail.com')
+EMAIL_PORT = int(os.environ.get('SMTP_PORT', '465'))
+EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
+EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'False').lower() == 'true'
+EMAIL_USE_SSL = os.environ.get('EMAIL_USE_SSL', 'True').lower() == 'true'
+DEFAULT_FROM_EMAIL = os.environ.get('SENDER_EMAIL', EMAIL_HOST_USER) or f"Task Manager <{EMAIL_HOST_USER}>"
+SERVER_EMAIL = DEFAULT_FROM_EMAIL
+
+# Additional email headers to improve deliverability
+EMAIL_EXTRA_HEADERS = {
+    'X-Auto-Response-Suppress': 'OOF, DR, RN, NRN, AutoReply',
+    'X-Priority': '1',
+    'X-MSMail-Priority': 'High',
+    'Importance': 'High',
+    'Precedence': 'bulk',
+    'Auto-Submitted': 'auto-generated',
+}
+
+# Only log email configuration if not suppressed
+if not os.environ.get('SUPPRESS_EMAIL_WARNINGS') == 'true':
+    print(f"Email configuration: Backend={EMAIL_BACKEND}, Host={EMAIL_HOST}, Port={EMAIL_PORT}")
+    print(f"Using from email: {DEFAULT_FROM_EMAIL}")
+    print("WARNING: Using Gmail SMTP. Please set EMAIL_HOST_PASSWORD environment variable.")
+    print("For Gmail, you may need to create an App Password: https://myaccount.google.com/apppasswords")
+    print("NOTE: To avoid spam filtering, add SPF and DKIM records for your domain.")
+    print("Gmail has built-in SPF/DKIM support, but deliverability to some providers may be limited.")
 
 # Instructions for improving email deliverability (for reference)
 """
@@ -412,3 +375,6 @@ CHATBOT_SETTINGS = {
     'VECTOR_DB_PATH': os.path.join(BASE_DIR, 'PKL_file'),
     'TRAINING_DATA_PATH': os.path.join(BASE_DIR, 'data'),
 }
+
+# Site ID for django.contrib.sites
+SITE_ID = 1
