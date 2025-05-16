@@ -386,10 +386,12 @@ This application is configured for deployment to [Render](https://render.com/), 
    - `Procfile` defines how to run the application using Gunicorn
    - WhiteNoise middleware for serving static files efficiently
 
-2. **Supabase Integration**:
+2. **Authentication**:
    - In production, Supabase integration is automatically bypassed (`BYPASS_SUPABASE = True`)
-   - Users are automatically verified without requiring email verification
-   - The `/auth/auto-verify-users/` endpoint is available for admin users to verify any existing unverified users
+   - Django's native authentication system is used
+   - Email verification can be enabled or disabled via the `AUTO_VERIFY_USERS` environment variable
+   - When `AUTO_VERIFY_USERS=False`, users must verify their email before logging in
+   - When `AUTO_VERIFY_USERS=True`, email verification is skipped, and users can log in immediately
 
 3. **Chatbot Integration**:
    - AI-powered chatbot assistant for task management
@@ -409,4 +411,11 @@ This application is configured for deployment to [Render](https://render.com/), 
 5. Set start command: `gunicorn mysite.wsgi --env DJANGO_SETTINGS_MODULE=mysite.production_settings`
 6. Add environment variables:
    - `SECRET_KEY`: Set to a secure random string
-   - `OPENAI_API_KEY`: (Optional) Set to enable AI chatbot functionality 
+   - `OPENAI_API_KEY`: (Optional) Set to enable AI chatbot functionality
+   - `SMTP_HOST`: Email server hostname (e.g., smtp.gmail.com)
+   - `SMTP_PORT`: Email server port (e.g., 587 for TLS)
+   - `EMAIL_HOST_USER`: Email username/address
+   - `EMAIL_HOST_PASSWORD`: Email password or app password
+   - `SENDER_EMAIL`: From email address
+   - `SENDER_NAME`: From name in emails
+   - `AUTO_VERIFY_USERS`: Set to 'False' to require email verification (recommended for production) 

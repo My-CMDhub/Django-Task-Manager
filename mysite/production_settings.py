@@ -32,6 +32,9 @@ ALLOWED_HOSTS = [
 BYPASS_SUPABASE = True  # Always bypass in production, regardless of environment variables
 BYPASS_SUPABASE_RATE_LIMITS = True
 
+# Email verification settings 
+AUTO_VERIFY_USERS = os.environ.get('AUTO_VERIFY_USERS', 'False').lower() in ('true', '1', 't', 'yes')
+
 # OpenAI API key for production
 OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY', '')
 
