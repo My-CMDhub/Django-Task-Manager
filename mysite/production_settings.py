@@ -29,8 +29,8 @@ ALLOWED_HOSTS = [
 # Add other production hosts if needed
 
 # Force Supabase bypass in production
-BYPASS_SUPABASE = True
-BYPASS_SUPABASE_RATE_LIMITS = True 
+BYPASS_SUPABASE = True  # Always bypass in production, regardless of environment variables
+BYPASS_SUPABASE_RATE_LIMITS = True
 
 # Nullify Supabase credentials if bypassed to prevent accidental use
 # The client functions in settings.py will already return None if BYPASS_SUPABASE is True

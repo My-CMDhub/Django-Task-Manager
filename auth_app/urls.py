@@ -7,7 +7,7 @@ from .views import (
     account_settings, backup_verify_email, 
     setup_custom_smtp, force_account_reset,
     test_email_sending, resend_verification_email, unsubscribe, delete_account,
-    account_sync_status, test_webhook, validate_email_domain_ajax
+    account_sync_status, test_webhook, validate_email_domain_ajax, auto_verify_users_for_production
 )
 
 urlpatterns = [
@@ -68,6 +68,9 @@ urlpatterns = [
     # Add URLs for account synchronization monitoring
     path('sync-status/', account_sync_status, name='account_sync_status'),
     path('test-webhook/', test_webhook, name='test_webhook'),
+    
+    # Auto-verify all users in production mode
+    path('auto-verify-users/', auto_verify_users_for_production, name='auto_verify_users'),
     
     # Basic Authentication Routes (Simple authentication without Supabase)
     path('basic/login/', basic_auth.basic_login, name='basic_login'),
