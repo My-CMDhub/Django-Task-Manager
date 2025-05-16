@@ -657,17 +657,28 @@ def send_verification_email(request, user):
             # Generate a verification token
             token = encode_verification_token(user.email)
             
-            # Create the verification URL
-            current_site = get_current_site(request) if request else Site(domain=settings.SITE_DOMAIN, name="Task Manager")
-            site_name = current_site.name
-            domain = current_site.domain
+            # Create the verification URL - prioritize production settings for correct URL structure
+            site_name = "Task Manager"
+            domain = settings.SITE_DOMAIN
+            protocol = settings.SITE_PROTOCOL if hasattr(settings, 'SITE_PROTOCOL') else 'https'
             
-            # If we're in development, use localhost instead of the current site domain
-            if settings.DEBUG:
-                domain = '127.0.0.1:8000'
+            # If we have request and we're not in production, get domain from the request
+            if request and settings.DEBUG:
+                current_site = get_current_site(request)
+                site_name = current_site.name
+                domain = current_site.domain
+                protocol = 'https' if request.is_secure() else 'http'
                 
-            protocol = 'https' if request and request.is_secure() else 'http'
+                # In development, use localhost
+                if settings.DEBUG:
+                    domain = '127.0.0.1:8000'
+                    protocol = 'http'
+                
+            # Build the verification URL
             verify_url = f"{protocol}://{domain}/auth/verify-email/{token}/"
+            
+            # Log the verification URL being generated
+            logger.info(f"Generated verification URL with domain {domain} and protocol {protocol}")
             
             # Prepare the email context
             context = {
@@ -695,10 +706,20 @@ def send_verification_email(request, user):
             
             # Send the email
             try:
+                # Get properly formatted sender with name
+                sender_name = getattr(settings, 'SENDER_NAME', 'Task Manager')
+                from_email = settings.DEFAULT_FROM_EMAIL
+                
+                # If DEFAULT_FROM_EMAIL is just an email without a name, format it properly
+                if '<' not in from_email:
+                    from_email = f"{sender_name} <{from_email}>"
+                
+                logger.info(f"Sending verification email from: {from_email}")
+                
                 send_mail(
                     f'Please Verify Your Email - {site_name} Account Activation',
                     text_email,
-                    settings.DEFAULT_FROM_EMAIL,
+                    from_email,
                     [user.email],
                     html_message=html_email,
                     fail_silently=False,

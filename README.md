@@ -431,6 +431,27 @@ When deploying to production, you can configure email verification with the foll
 5. `EMAIL_USE_SSL`: True/False (default: True for port 465)
 6. `EMAIL_USE_TLS`: True/False (default: False for port 465, True for port 587)
 7. `SENDER_EMAIL`: The sender email address (defaults to EMAIL_HOST_USER)
-8. `AUTO_VERIFY_USERS`: Set to "True" to automatically verify users without email confirmation
+8. `SENDER_NAME`: The sender name to display in emails (default: "Task Manager")
+9. `SITE_DOMAIN`: Your Render domain (default: taskmanager-mztm.onrender.com)
+10. `SITE_PROTOCOL`: Protocol to use in links (default: https)
+11. `AUTO_VERIFY_USERS`: Set to "True" to automatically verify users without email confirmation
 
-Note that when `BYPASS_SUPABASE=True` (the default in production), Django's native email verification system is used. 
+Note that when `BYPASS_SUPABASE=True` (the default in production), Django's native email verification system is used.
+
+### Post-Deployment Setup
+
+After deploying to Render, run the following steps for proper email configuration:
+
+1. **Update the Site Configuration**: Run the site configuration script via the Render Shell to ensure email verification links use the correct domain:
+   ```bash
+   python create_site.py
+   ```
+
+2. **Test Email Sending**: Verify email functionality by sending a test email:
+   ```bash
+   python test_email_direct.py your_email@example.com
+   ```
+
+3. **Verify Database Path**: If you encounter database errors, ensure the database path in `mysite/production_settings.py` is correct for your Render setup.
+
+If your verification emails are not displaying the correct sender name or the links are pointing to the wrong domain, double-check your environment variables and ensure the Site model has been properly configured. 

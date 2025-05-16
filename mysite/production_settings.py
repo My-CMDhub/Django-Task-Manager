@@ -106,7 +106,7 @@ os.makedirs(os.path.join(BASE_DIR, 'logs'), exist_ok=True)
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': os.path.join('/opt/render/project/src/', 'db.sqlite3'),
+        'NAME': os.path.join('/opt/render/project/src/Task_Manager', 'db.sqlite3'),
     }
 }
 
@@ -132,14 +132,20 @@ EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
 EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
 EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'False').lower() == 'true'
 EMAIL_USE_SSL = os.environ.get('EMAIL_USE_SSL', 'True').lower() == 'true'
-DEFAULT_FROM_EMAIL = os.environ.get('SENDER_EMAIL', EMAIL_HOST_USER) or os.environ.get('DEFAULT_FROM_EMAIL_PRODUCTION', 'noreply@taskmanager-mztm.onrender.com')
+
+# Set sender name and email
+SENDER_NAME = os.environ.get('SENDER_NAME', 'Task Manager')
+SENDER_EMAIL = os.environ.get('SENDER_EMAIL', EMAIL_HOST_USER)
+
+# Proper format for email with sender name
+DEFAULT_FROM_EMAIL = f"{SENDER_NAME} <{SENDER_EMAIL}>" if SENDER_NAME and SENDER_EMAIL else os.environ.get('DEFAULT_FROM_EMAIL_PRODUCTION', 'Task Manager <noreply@taskmanager-mztm.onrender.com>')
 SERVER_EMAIL = os.environ.get('SERVER_EMAIL_PRODUCTION', DEFAULT_FROM_EMAIL)
 
 # Supabase site URL for production
-SUPABASE_SITE_URL = os.environ.get('SUPABASE_SITE_URL', 'https://yourusername.pythonanywhere.com')
+SUPABASE_SITE_URL = os.environ.get('SUPABASE_SITE_URL', 'https://taskmanager-mztm.onrender.com')
 
 # Site configuration
-SITE_DOMAIN = os.environ.get('SITE_DOMAIN', 'yourusername.pythonanywhere.com')
+SITE_DOMAIN = os.environ.get('SITE_DOMAIN', 'taskmanager-mztm.onrender.com')
 SITE_PROTOCOL = os.environ.get('SITE_PROTOCOL', 'https')
 SITE_URL = f"{SITE_PROTOCOL}://{SITE_DOMAIN}"
 
