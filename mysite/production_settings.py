@@ -17,6 +17,7 @@ ALLOWED_HOSTS = [
     '127.0.0.1',
     'localhost',
     '.pythonanywhere.com',  # Allow any subdomain
+    'taskmanager-mztm.onrender.com'
 ]
 
 # Stronger security settings
