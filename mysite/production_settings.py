@@ -32,6 +32,9 @@ ALLOWED_HOSTS = [
 BYPASS_SUPABASE = True  # Always bypass in production, regardless of environment variables
 BYPASS_SUPABASE_RATE_LIMITS = True
 
+# OpenAI API key for production
+OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY', '')
+
 # Nullify Supabase credentials if bypassed to prevent accidental use
 # The client functions in settings.py will already return None if BYPASS_SUPABASE is True
 if BYPASS_SUPABASE:
@@ -60,7 +63,9 @@ MIDDLEWARE.insert(1, 'whitenoise.middleware.WhiteNoiseMiddleware')  # Add after 
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # Static files configuration (CSS, JavaScript, Images)
-STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles_prod') # Separate static root for production build
+STATIC_URL = '/static/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
 
 # Logging
 LOGGING = {
