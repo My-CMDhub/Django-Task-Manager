@@ -88,8 +88,15 @@ LOGGING = {
 # Ensure log directory exists - PythonAnywhere might need different permissions
 os.makedirs(os.path.join(BASE_DIR, 'logs'), exist_ok=True)
 
-# Database remains SQLite for the free tier
-# If you upgrade to a paid plan, you can switch to MySQL using:
+# Use SQLite in Render's persistent storage location
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': os.path.join('/opt/render/project/src/', 'db.sqlite3'),
+    }
+}
+
+# MySQL configuration example (for reference):
 """
 DATABASES = {
     'default': {
