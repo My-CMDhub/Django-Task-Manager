@@ -1,0 +1,88 @@
+{% load static %}
+<!-- Chatbot functionality fix -->
+<script>
+// Chatbot resize functionality fix
+(function() {
+    // Function to apply the fix
+    function applyChatbotResizeFix() {
+        // Try to find the chatbot elements
+        const chatMessages = document.getElementById('chatMessages');
+        const toggleSizeBtn = document.getElementById('toggleChatSizeBtn');
+        
+        // If the elements don't exist, exit early
+        if (!chatMessages || !toggleSizeBtn) {
+            console.log('Chatbot elements not found, skipping resize fix');
+            return;
+        }
+        
+        console.log('Applying chatbot resize fix');
+        
+        // Define heights
+        const defaultHeight = 400;
+        const expandedHeight = 800;
+        const collapsedHeight = 200;
+        
+        // Track state
+        let isExpanded = false;
+        
+        // Define the click handler
+        function handleToggleClick(e) {
+            // Prevent default behavior and stop propagation
+            e.preventDefault();
+            e.stopPropagation();
+            
+            console.log('Chatbot toggle button clicked');
+            
+            // Toggle state
+            isExpanded = !isExpanded;
+            
+            if (isExpanded) {
+                // Force expanded height with !important to override conflicting styles
+                chatMessages.style.cssText = `height: ${expandedHeight}px !important; transition: height 0.3s ease !important;`;
+                toggleSizeBtn.innerHTML = '<i class="bi bi-arrows-angle-contract"></i>';
+                toggleSizeBtn.title = "Collapse";
+                console.log('Expanded chat window to', expandedHeight + 'px');
+            } else {
+                // Force collapsed height with !important to override conflicting styles
+                chatMessages.style.cssText = `height: ${collapsedHeight}px !important; transition: height 0.3s ease !important;`;
+                toggleSizeBtn.innerHTML = '<i class="bi bi-arrows-angle-expand"></i>';
+                toggleSizeBtn.title = "Expand";
+                console.log('Collapsed chat window to', collapsedHeight + 'px');
+            }
+            
+            // Scroll to bottom after resize with delay for transition
+            setTimeout(function() {
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }, 300);
+        }
+        
+        // Use jQuery to unbind any previous click handlers
+        $(toggleSizeBtn).off('click');
+        
+        // Bind the new click handler using jQuery
+        $(toggleSizeBtn).on('click', handleToggleClick);
+        
+        // Make sure the button is visible and styled properly
+        toggleSizeBtn.style.cursor = 'pointer';
+        toggleSizeBtn.style.zIndex = '1010';
+        toggleSizeBtn.style.position = 'relative';
+        
+        console.log('Chatbot resize fix applied successfully');
+    }
+    
+    // Apply the fix when the document is ready
+    $(document).ready(function() {
+        console.log('Document ready, initializing chatbot resize fix');
+        applyChatbotResizeFix();
+        
+        // Also try again after a delay to ensure all other scripts have initialized
+        setTimeout(applyChatbotResizeFix, 1000);
+    });
+    
+    // Also apply the fix when the window loads fully
+    $(window).on('load', function() {
+        console.log('Window loaded, applying chatbot resize fix again');
+        applyChatbotResizeFix();
+    });
+})();
+</script> 

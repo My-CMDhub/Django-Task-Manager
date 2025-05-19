@@ -21,6 +21,8 @@ from django.shortcuts import render
 from django.db.models import Q
 from tasks.models import Task, Project
 from django.utils import timezone
+from django.conf import settings
+from django.conf.urls.static import static
 
 def home(request):
     return render(request, 'home.html')
@@ -121,3 +123,8 @@ urlpatterns = [
     # Updated chatbot integration - with unique app_name
     path('chatbot/', include('chatbot_integration.chatbot_app.urls')),
 ]
+
+# Serve static and media files in development
+if settings.DEBUG:
+    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

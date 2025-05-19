@@ -35,7 +35,7 @@ SUPABASE_URL=your-supabase-url
 SUPABASE_KEY=your-supabase-key
 SUPABASE_ANON_KEY=your-supabase-anon-key
 SUPABASE_SERVICE_KEY=your-supabase-service-key
-OPENAI_API_KEY=your-openai-api-key
+
 EOL
 
 echo "Created sample environment file pythonanywhere.env"

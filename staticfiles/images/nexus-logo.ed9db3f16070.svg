@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="200" height="60" viewBox="0 0 200 60" xmlns="http://www.w3.org/2000/svg">
+  <style>
+    @keyframes pulse {
+      0% { opacity: 0.8; transform: scale(1); }
+      50% { opacity: 1; transform: scale(1.05); }
+      100% { opacity: 0.8; transform: scale(1); }
+    }
+    @keyframes glow {
+      0% { filter: drop-shadow(0 0 2px rgba(93, 95, 239, 0.3)); }
+      50% { filter: drop-shadow(0 0 6px rgba(93, 95, 239, 0.6)); }
+      100% { filter: drop-shadow(0 0 2px rgba(93, 95, 239, 0.3)); }
+    }
+    @keyframes connectingLine {
+      0% { stroke-dashoffset: 100; }
+      100% { stroke-dashoffset: 0; }
+    }
+    .left-node { animation: pulse 3s infinite ease-in-out; animation-delay: 0s; }
+    .right-node { animation: pulse 3s infinite ease-in-out; animation-delay: 0.5s; }
+    .top-node { animation: pulse 3s infinite ease-in-out; animation-delay: 1s; }
+    .connecting-line { stroke-dasharray: 100; stroke-dashoffset: 0; animation: connectingLine 2s ease-in-out; }
+    .logo-text { 
+      animation: glow 3s infinite ease-in-out; 
+      transition: fill 0.3s ease, filter 0.3s ease;
+    }
+    .logo-text:hover {
+      fill: #5D5FEF;
+      filter: drop-shadow(0 0 8px rgba(93, 95, 239, 0.8));
+    }
+    #logo-group:hover + .logo-text,
+    g:hover > .logo-text {
+      fill: #5D5FEF;
+      filter: drop-shadow(0 0 8px rgba(93, 95, 239, 0.8));
+    }
+    #logo-group { filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.2)); }
+  </style>
+  
+  <g id="logo-group">
+    <!-- Left Node -->
+    <circle class="left-node" cx="30" cy="30" r="12" fill="#5D5FEF" />
+    
+    <!-- Right Node -->
+    <circle class="right-node" cx="70" cy="30" r="12" fill="#3D35CC" />
+    
+    <!-- Top Node -->
+    <circle class="top-node" cx="50" cy="15" r="8" fill="#00C39A" />
+    
+    <!-- Connecting Lines -->
+    <path class="connecting-line" d="M38.5 24.5L46.5 18.5" stroke="#5D5FEF" stroke-width="3" stroke-linecap="round" />
+    <path class="connecting-line" d="M53.5 18.5L61.5 24.5" stroke="#3D35CC" stroke-width="3" stroke-linecap="round" />
+    <path class="connecting-line" d="M30 30L70 30" stroke="#5D5FEF" stroke-width="3" stroke-linecap="round" />
+  </g>
+  
+  <!-- NEXUS Text -->
+  <text class="logo-text" x="90" y="39" font-family="Arial, sans-serif" font-weight="bold" font-size="26" fill="#333333">NEXUS</text>
+</svg> 

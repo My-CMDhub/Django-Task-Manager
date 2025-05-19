@@ -3,7 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Task Manager{% endblock title %}</title>
+    <title>{% block title %}Nexus{% endblock title %}</title>
+    {% load static %}
+    <link rel="icon" href="{% static 'images/nexus-favicon.svg' %}" type="image/svg+xml">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <style>
@@ -11,6 +13,23 @@
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
             background-color: #f8f9fa;
         }
+        
+        /* Enhanced logo styling */
+        .logo-container {
+            transition: transform 0.3s ease;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
+        }
+        .logo-container:hover {
+            transform: translateY(-2px);
+            filter: drop-shadow(0 4px 6px rgba(0,0,0,0.15));
+        }
+        .navbar-brand img, .sidebar img {
+            transition: all 0.3s ease;
+        }
+        .navbar-brand:hover img, .sidebar .logo-container:hover img {
+            filter: brightness(1.1);
+        }
+        
         .navbar-brand {
             font-weight: bold;
         }
@@ -162,6 +181,48 @@
             background-color: rgba(255, 255, 255, 0.1);
         }
         
+        .chat-header-controls {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .chat-control-btn {
+            background: none;
+            border: none;
+            color: white;
+            cursor: pointer;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: background-color 0.2s;
+            position: relative;
+            z-index: 1010 !important;
+        }
+        
+        .chat-control-btn:hover {
+            background-color: rgba(255, 255, 255, 0.3);
+            transform: scale(1.1);
+        }
+        
+        #toggleChatSizeBtn {
+            min-width: 36px;
+            min-height: 36px;
+            padding: 8px;
+            margin-right: 5px;
+            background-color: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        #toggleChatSizeBtn:hover {
+            background-color: rgba(255, 255, 255, 0.3);
+        }
+        
         .chat-messages {
             flex: 1;
             overflow-y: auto;
@@ -170,6 +231,8 @@
             flex-direction: column;
             gap: 16px;
             background-color: #f9f9fc;
+            transition: all 0.3s ease;
+            height: 400px; /* Default height */
         }
         
         .message {
@@ -621,7 +684,9 @@
     <!-- Navigation -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
         <div class="container-fluid">
-            <a class="navbar-brand" href="{% url 'home' %}">Task Manager</a>
+            <a class="navbar-brand d-flex align-items-center" href="{% url 'home' %}">
+                <img src="{% static 'images/nexus-logo.svg' %}" alt="Nexus" height="40"  class="me-2 logo-container">
+            </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
             </button>
@@ -712,9 +777,14 @@
                         <i class="bi bi-robot"></i>
                         <h4>Task Assistant</h4>
                     </div>
-                    <span class="close-chat" id="closeChat">
-                        <i class="bi bi-x-lg"></i>
-                    </span>
+                    <div class="chat-header-controls">
+                        <button class="chat-control-btn" id="toggleChatSizeBtn" title="Expand/Collapse">
+                            <i class="bi bi-arrows-angle-expand"></i>
+                        </button>
+                        <div class="close-chat" id="closeChat">
+                            <i class="bi bi-x"></i>
+                        </div>
+                    </div>
                 </div>
                 
                 <div class="chat-messages" id="chatMessages">
@@ -802,6 +872,47 @@
             closeChat.addEventListener('click', function() {
                 chatWindow.classList.remove('open');
             });
+            
+            // Toggle chat size functionality
+            let isExpanded = false;
+            const toggleSizeBtn = document.getElementById('toggleChatSizeBtn');
+            const defaultHeight = 400; // Default height in pixels
+            const expandedHeight = 800; // Expanded height in pixels
+            const collapsedHeight = 200; // Collapsed height in pixels
+            
+            // Store original height
+            const originalHeight = chatMessages.offsetHeight;
+            console.log("Original chat height:", originalHeight);
+            
+            toggleSizeBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log("Toggle button clicked");
+                
+                isExpanded = !isExpanded;
+                
+                if (isExpanded) {
+                    // Direct style manipulation with !important to override any conflicting styles
+                    chatMessages.style.cssText = `height: ${expandedHeight}px !important; transition: height 0.3s ease !important;`;
+                    toggleSizeBtn.innerHTML = '<i class="bi bi-arrows-angle-contract"></i>';
+                    toggleSizeBtn.title = "Collapse";
+                    console.log("Expanded chat window to", expandedHeight + "px");
+                } else {
+                    // Direct style manipulation with !important to override any conflicting styles
+                    chatMessages.style.cssText = `height: ${collapsedHeight}px !important; transition: height 0.3s ease !important;`;
+                    toggleSizeBtn.innerHTML = '<i class="bi bi-arrows-angle-expand"></i>';
+                    toggleSizeBtn.title = "Expand";
+                    console.log("Collapsed chat window to", collapsedHeight + "px");
+                }
+                
+                // Scroll to bottom after resize with delay for transition
+                setTimeout(scrollToBottom, 300);
+            });
+            
+            // Make sure the button is visible and styled properly
+            toggleSizeBtn.style.cursor = 'pointer';
+            toggleSizeBtn.style.zIndex = '1000';
+            toggleSizeBtn.style.position = 'relative';
             
             // Handle suggestion chips
             suggestionChips.forEach(chip => {
@@ -1195,5 +1306,10 @@
     {% endif %}
     
     {% block extra_scripts %}{% endblock extra_scripts %}
+    
+    {% if user.is_authenticated %}
+    <!-- Include chatbot fix script -->
+    {% include 'includes/chatbot_scripts.html' %}
+    {% endif %}
 </body>
 </html>

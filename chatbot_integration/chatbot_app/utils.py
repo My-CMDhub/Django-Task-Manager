@@ -3,6 +3,12 @@ import datetime
 from dateutil import parser
 from django.utils import timezone
 from django.db import models
+import logging
+import time
+from django.db.models import Q
+from tasks.models import Task, Project
+
+logger = logging.getLogger(__name__)
 
 def extract_task_info(message):
     """
@@ -160,4 +166,65 @@ def format_task_list(tasks):
         priority_info = f", {task.priority} priority"
         result.append(f"{i}. {task.title}{due_info}{priority_info}")
     
-    return "\n".join(result) 
+    return "\n".join(result)
+
+def process_context_with_query(conversation_context, user_message):
+    """
+    Process the conversation context with the user's query to understand
+    context-based references.
+    
+    Args:
+        conversation_context (list): List of recent messages with role and content
+        user_message (str): Current user message
+        
+    Returns:
+        tuple: (processed_message, context_info) 
+               - processed_message is the message with context applied if needed
+               - context_info is a dict with additional context information
+    """
+    # Initialize context info dictionary
+    context_info = {
+        'referenced_tasks': [],
+        'referenced_projects': [],
+        'referencing_previous': False,
+        'action_context': None
+    }
+    
+    # Check for reference indicators
+    referencing_indicators = ['it', 'this', 'that', 'these', 'those', 'the task', 'the project', 
+                             'this task', 'that task', 'this project', 'that project',
+                             'first', 'second', 'third', 'last one']
+    
+    for indicator in referencing_indicators:
+        if indicator in user_message.lower():
+            context_info['referencing_previous'] = True
+            break
+    
+    # Extract task/project names from previous messages
+    if context_info['referencing_previous']:
+        for message in reversed(conversation_context):
+            if message['role'] == 'assistant':
+                # Extract task names from bullet points
+                bullet_items = re.findall(r'•\s+([^•\n]+)', message['content'])
+                for item in bullet_items:
+                    # Clean up the task name
+                    task_name = re.sub(r'\(.*?\)', '', item).strip()
+                    task_name = re.sub(r'\[.*?\]', '', task_name).strip()
+                    task_name = re.sub(r'-\s*Status:.*$', '', task_name).strip()
+                    context_info['referenced_tasks'].append(task_name)
+                
+                # Look for task names in regular text
+                task_mentions = re.findall(r"task ['\"]([^'\"]+)['\"]", message['content'])
+                context_info['referenced_tasks'].extend(task_mentions)
+                
+                # Look for project mentions
+                project_mentions = re.findall(r"project ['\"]([^'\"]+)['\"]", message['content'])
+                context_info['referenced_projects'].extend(project_mentions)
+    
+    # Determine action context
+    if 'mark' in user_message.lower() or 'complete' in user_message.lower() or 'done' in user_message.lower() or 'finish' in user_message.lower():
+        context_info['action_context'] = 'complete'
+    elif 'delete' in user_message.lower() or 'remove' in user_message.lower():
+        context_info['action_context'] = 'delete'
+    
+    return (user_message, context_info) 

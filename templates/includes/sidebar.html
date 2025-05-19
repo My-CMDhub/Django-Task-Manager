@@ -1,10 +1,8 @@
 <!-- Sidebar -->
+{% load static %}
 <div class="col-md-3 col-lg-2 d-md-block sidebar py-4">
     <div class="position-sticky">
-        <div class="d-flex align-items-center justify-content-center mb-4">
-            <i class="bi bi-check2-square fs-4 me-2"></i>
-            <h5 class="mb-0">Task Manager</h5>
-        </div>
+      
         <ul class="nav flex-column">
             <li class="nav-item">
                 <a class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" href="{% url 'dashboard' %}">

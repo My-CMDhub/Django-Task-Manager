@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+  <!-- Left Node -->
+  <circle cx="8" cy="16" r="6" fill="#5D5FEF" />
+  
+  <!-- Right Node -->
+  <circle cx="24" cy="16" r="6" fill="#3D35CC" />
+  
+  <!-- Top Node -->
+  <circle cx="16" cy="8" r="4" fill="#00C39A" />
+  
+  <!-- Connecting Lines -->
+  <path d="M11 13L14 10" stroke="#5D5FEF" stroke-width="2" stroke-linecap="round" />
+  <path d="M18 10L21 13" stroke="#3D35CC" stroke-width="2" stroke-linecap="round" />
+  <path d="M8 16L24 16" stroke="#5D5FEF" stroke-width="2" stroke-linecap="round" />
+</svg> 
