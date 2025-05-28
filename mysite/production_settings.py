@@ -5,6 +5,7 @@ This file imports all base settings and overrides them for production.
 
 import os
 from .settings import *  # Import base settings
+import dj_database_url
 
 # Import Supabase - needed for client functions
 try:
@@ -23,6 +24,7 @@ DEBUG = False
 
 # Updated allowed hosts
 ALLOWED_HOSTS = [
+    'nexuss.herokuapp.com',
     'taskmanager-mztm.onrender.com', # Your Render app domain
     '.onrender.com', # Allow any Render subdomain for flexibility
 ] 
@@ -104,10 +106,9 @@ os.makedirs(os.path.join(BASE_DIR, 'logs'), exist_ok=True)
 
 # Use SQLite in Render's persistent storage location
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': os.path.join('/opt/render/project/src/', 'db.sqlite3'),
-    }
+    'default': dj_database_url.config(
+        default=os.environ.get('DATABASE_URL')
+    )
 }
 
 # MySQL configuration example (for reference):
