@@ -2,7 +2,7 @@
 
 # Display banner
 echo "====================================="
-echo "  Task Manager - User Reset Script  "
+echo "  Nexus - User Reset Script  "
 echo "====================================="
 echo ""
 echo "This script will completely reset all users from both Django and Supabase databases."

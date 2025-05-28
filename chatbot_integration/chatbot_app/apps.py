@@ -5,7 +5,7 @@ class ChatbotAppConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
     name = 'chatbot_integration.chatbot_app'
     label = 'chatbot_integration_chatbot_app'
-    verbose_name = 'ChatGPT Task Manager Assistant'
+    verbose_name = 'ChatGPT Nexus Assistant'
     
     def ready(self):
         """

@@ -78,7 +78,7 @@ def test_email_direct():
                 <h1>Email Test from {settings.SITE_DOMAIN}</h1>
             </div>
             <div class="content">
-                <p>This is a test email sent from your Task Manager production environment.</p>
+                <p>This is a test email sent from your Nexus production environment.</p>
                 <p>If you're seeing this email, your email configuration is working correctly.</p>
                 <hr>
                 <p><strong>Server Details:</strong></p>
@@ -91,7 +91,7 @@ def test_email_direct():
                 <p>You can now proceed with confidence that email notifications will work properly.</p>
             </div>
             <div class="footer">
-                <p>This is an automated test email from your Task Manager application.</p>
+                <p>This is an automated test email from your Nexus application.</p>
             </div>
         </div>
     </body>

@@ -1,6 +1,6 @@
 # Chatbot Response Patterns
 
-The Task Manager chatbot has been enhanced with various response patterns to provide a professional and personalized user experience. This document outlines the various patterns and how they work.
+The Nexus chatbot has been enhanced with various response patterns to provide a professional and personalized user experience. This document outlines the various patterns and how they work.
 
 ## Key Response Patterns
 

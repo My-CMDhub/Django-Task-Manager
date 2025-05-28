@@ -2,7 +2,7 @@
 
 ## System Architecture
 
-The Task Manager application follows a typical Django MVT (Model-View-Template) architecture with several components working together to provide a complete task management solution.
+The Nexus application follows a typical Django MVT (Model-View-Template) architecture with several components working together to provide a complete task management solution.
 
 ### Architecture Overview
 

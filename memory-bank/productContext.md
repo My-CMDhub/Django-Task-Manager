@@ -2,7 +2,7 @@
 
 ## Why This Project Exists
 
-The Task Manager application addresses the growing need for smart, efficient task management in both personal and professional contexts. As the complexity of work and personal responsibilities increases, traditional to-do lists and task managers fall short in providing the structure, intelligence, and automation needed for modern productivity.
+The Nexus application addresses the growing need for smart, efficient task management in both personal and professional contexts. As the complexity of work and personal responsibilities increases, traditional to-do lists and Nexuss fall short in providing the structure, intelligence, and automation needed for modern productivity.
 
 This application exists to:
 
@@ -41,7 +41,7 @@ This application exists to:
 
 ## How It Should Work
 
-The Task Manager should provide a seamless, intuitive experience that gradually introduces more advanced features as users become comfortable with the system. Core workflows include:
+The Nexus should provide a seamless, intuitive experience that gradually introduces more advanced features as users become comfortable with the system. Core workflows include:
 
 ### Task Creation and Management
 

@@ -107,7 +107,7 @@ if not SUPABASE_SITE_URL:
 # through the admin API (when available)
 SUPABASE_SMTP_CONFIG = {
     "SENDER_EMAIL": os.environ.get('SUPABASE_SENDER_EMAIL', 'noreply@yourdomain.com'),
-    "SENDER_NAME": os.environ.get('SUPABASE_SENDER_NAME', 'Task Manager'),
+    "SENDER_NAME": os.environ.get('SUPABASE_SENDER_NAME', 'Nexus'),
     "SMTP_HOST": os.environ.get('SMTP_HOST', 'smtp.gmail.com'),
     "SMTP_PORT": int(os.environ.get('SMTP_PORT', '465')),
     "SMTP_USER": os.environ.get('EMAIL_HOST_USER', ''),
@@ -277,7 +277,7 @@ EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
 EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
 EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'False').lower() == 'true'
 EMAIL_USE_SSL = os.environ.get('EMAIL_USE_SSL', 'True').lower() == 'true'
-DEFAULT_FROM_EMAIL = os.environ.get('SENDER_EMAIL', EMAIL_HOST_USER) or f"Task Manager <{EMAIL_HOST_USER}>"
+DEFAULT_FROM_EMAIL = os.environ.get('SENDER_EMAIL', EMAIL_HOST_USER) or f"Nexus <{EMAIL_HOST_USER}>"
 SERVER_EMAIL = DEFAULT_FROM_EMAIL
 
 # Additional email headers to improve deliverability

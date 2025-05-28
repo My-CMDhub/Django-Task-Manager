@@ -2,7 +2,7 @@
 
 # Display banner
 echo "====================================="
-echo "  Task Manager - Complete Reset Tool "
+echo "  Nexus - Complete Reset Tool "
 echo "====================================="
 echo ""
 echo "This script will:"

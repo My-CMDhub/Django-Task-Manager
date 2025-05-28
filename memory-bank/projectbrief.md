@@ -1,8 +1,8 @@
-# Project Brief: Task Manager with AI Automation ChatBot
+# Project Brief: Nexus with AI Automation ChatBot
 
 ## Overview
 
-Task Manager is a Django-based application designed to help users organize and manage their tasks effectively. The system includes AI automation features through a chatbot integration, enhancing productivity and providing intelligent suggestions for task management.
+Nexus is a Django-based application designed to help users organize and manage their tasks effectively. The system includes AI automation features through a chatbot integration, enhancing productivity and providing intelligent suggestions for task management.
 
 ## Core Requirements
 

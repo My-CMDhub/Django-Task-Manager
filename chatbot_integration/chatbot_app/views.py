@@ -720,7 +720,7 @@ def generate_bot_response(user, conversation, user_message):
                 total_projects = Project.objects.filter(members=user).count()
                 
                 # Create a dashboard-like response
-                response = "📊 **Your Task Manager Dashboard**\n\n"
+                response = "📊 **Your Nexus Dashboard**\n\n"
                 response += "**Tasks Summary:**\n"
                 response += f"• Total Tasks: {total_tasks}\n"
                 response += f"• Completed: {completed_tasks}\n"

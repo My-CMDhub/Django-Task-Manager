@@ -2,7 +2,7 @@
 
 ## Current Status
 
-Based on the initial code exploration, the Task Manager application appears to be well-developed with several key components implemented. Here's the current status of different features:
+Based on the initial code exploration, the Nexus application appears to be well-developed with several key components implemented. Here's the current status of different features:
 
 ### Core Functionality
 

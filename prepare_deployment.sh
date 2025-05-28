@@ -1,9 +1,9 @@
 #!/bin/bash
 #
-# Prepare Task Manager for PythonAnywhere deployment
+# Prepare Nexus for PythonAnywhere deployment
 #
 
-echo "Preparing Task Manager for PythonAnywhere deployment..."
+echo "Preparing Nexus for PythonAnywhere deployment..."
 
 # Create the staticfiles directory
 mkdir -p staticfiles

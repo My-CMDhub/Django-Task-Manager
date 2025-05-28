@@ -1,6 +1,6 @@
-# Task Manager with AI Automation ChatBot 📝 🤖
+# Nexus with AI Automation ChatBot 📝 🤖
 
-A Django-based task manager application with Supabase integration for authentication.
+A Django-based Nexus application with Supabase integration for authentication.
 
 ---
 
@@ -24,7 +24,7 @@ A Django-based task manager application with Supabase integration for authentica
 
 ## Project Overview
 
-This project is a full-featured task manager built with Django and enhanced with AI automation. It uses [Supabase](https://supabase.com) for user authentication and leverages [ngrok](https://ngrok.com) to make your local development server accessible on the internet for webhook and email verification flows.
+This project is a full-featured Nexus built with Django and enhanced with AI automation. It uses [Supabase](https://supabase.com) for user authentication and leverages [ngrok](https://ngrok.com) to make your local development server accessible on the internet for webhook and email verification flows.
 
 ---
 
@@ -68,7 +68,7 @@ Supabase provides a default SMTP server for testing, but you should set up your 
 2. Toggle **Enable Custom SMTP**.
 3. Enter your SMTP provider details (e.g., Gmail, SendGrid, AWS SES, etc.):
    - **Sender Email**: e.g., `no-reply@yourdomain.com`
-   - **Sender Name**: e.g., `Task Manager`
+   - **Sender Name**: e.g., `Nexus`
    - **SMTP Host**: e.g., `smtp.gmail.com`
    - **SMTP Port**: e.g., `465` (SSL) or `587` (TLS)
    - **SMTP Username**: your email address or username
@@ -183,7 +183,7 @@ EMAIL_HOST_PASSWORD=your_app_password
 SMTP_HOST=smtp.gmail.com
 SMTP_PORT=465
 SENDER_EMAIL=your_email@gmail.com
-SENDER_NAME=Task Manager
+SENDER_NAME=Nexus
 ```
 
 ---

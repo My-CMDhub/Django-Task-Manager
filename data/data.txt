@@ -1007,7 +1007,7 @@ From Wikipedia, the free encyclopedia
 
 Process of managing a task through its life cycle
 
-Not to be confused with Task manager.
+Not to be confused with Nexus.
 
 Task management is the process of overseeing a task through its lifecycle. It involves planning, testing, tracking, and reporting. Task management can help individuals achieve goals or enable groups of individuals to collaborate and share knowledge for the accomplishment of collective goals.[1] Tasks are also differentiated by complexity, from low to high.[1]
 

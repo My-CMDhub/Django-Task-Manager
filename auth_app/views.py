@@ -660,7 +660,7 @@ def send_verification_email(request, user):
             token = encode_verification_token(user.email)
             
             # Create the verification URL - prioritize production settings for correct URL structure
-            site_name = "Task Manager"
+            site_name = "Nexus"
             domain = settings.SITE_DOMAIN
             protocol = settings.SITE_PROTOCOL if hasattr(settings, 'SITE_PROTOCOL') else 'https'
             
@@ -709,7 +709,7 @@ def send_verification_email(request, user):
             # Send the email
             try:
                 # Get properly formatted sender with name
-                sender_name = getattr(settings, 'SENDER_NAME', 'Task Manager')
+                sender_name = getattr(settings, 'SENDER_NAME', 'Nexus')
                 from_email = settings.DEFAULT_FROM_EMAIL
                 
                 # If DEFAULT_FROM_EMAIL is just an email without a name, format it properly
@@ -1160,7 +1160,7 @@ def register(request):
                     # If auto-verification is enabled, auto-login and redirect
                     if auto_verify:
                         messages.success(request, 
-                            f"Registration successful! Welcome to Task Manager, {username}!"
+                            f"Registration successful! Welcome to Nexus, {username}!"
                         )
                         
                         # Auto-login the user
@@ -2228,7 +2228,7 @@ def setup_custom_smtp(request):
                 try:
                     send_mail(
                         subject=f"Test email from {sender_name}",
-                        message="This is a test email from your Task Manager application. If you received this, your SMTP settings are working correctly!",
+                        message="This is a test email from your Nexus application. If you received this, your SMTP settings are working correctly!",
                         from_email=f"{sender_name} <{sender_email}>",
                         recipient_list=[admin_email],
                         fail_silently=False,
@@ -2332,8 +2332,8 @@ def test_email_sending(request):
             test_id = get_random_string(8)
             
             # Send a test email
-            subject = "Task Manager - Test Email"
-            message = "This is a test email sent from Task Manager to verify the email sending functionality."
+            subject = "Nexus - Test Email"
+            message = "This is a test email sent from Nexus to verify the email sending functionality."
             
             # Create a more professional HTML email
             html_message = f"""
@@ -2342,7 +2342,7 @@ def test_email_sending(request):
             <head>
                 <meta charset="UTF-8">
                 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                <title>Task Manager Test Email</title>
+                <title>Nexus Test Email</title>
                 <style>
                     body {{
                         font-family: Arial, 'Helvetica Neue', Helvetica, sans-serif;
@@ -2388,12 +2388,12 @@ def test_email_sending(request):
             <body>
                 <div class="container">
                     <div class="header">
-                        <h1>Task Manager Test Email</h1>
+                        <h1>Nexus Test Email</h1>
                     </div>
                     
                     <p>Hello there,</p>
                     
-                    <p>This is a test email sent from Task Manager to verify that our email sending functionality is working correctly.</p>
+                    <p>This is a test email sent from Nexus to verify that our email sending functionality is working correctly.</p>
                     
                     <p><strong>If you received this email, it means your email configuration is working properly!</strong></p>
                     
@@ -2420,7 +2420,7 @@ def test_email_sending(request):
                     <p>Thank you for helping us test our email system!</p>
                     
                     <p>Best regards,<br>
-                    The Task Manager Team</p>
+                    The Nexus Team</p>
                     
                     <div class="footer">
                         <p>This is an automated test email. Please do not reply to this message.</p>
@@ -2438,7 +2438,7 @@ def test_email_sending(request):
                 from_email = settings.DEFAULT_FROM_EMAIL
                 # If DEFAULT_FROM_EMAIL already has a display name, use it as is
                 if '<' not in from_email:
-                    from_email = f"Task Manager <{from_email}>"
+                    from_email = f"Nexus <{from_email}>"
             
             # Add message ID and other headers to improve deliverability
             message_id = f"<test-{test_id}@{request.get_host().split(':')[0]}>"
@@ -2831,7 +2831,7 @@ def configure_supabase_smtp():
             "SMTP_USER": os.environ.get('SMTP_USER', ''),
             "SMTP_PASS": os.environ.get('SMTP_PASS', ''),
             "SMTP_MAX_FREQUENCY": 60,  # Seconds between emails (rate limit)
-            "SMTP_SENDER_NAME": os.environ.get('SENDER_NAME', 'Task Manager'),
+            "SMTP_SENDER_NAME": os.environ.get('SENDER_NAME', 'Nexus'),
             "SMTP_SENDER_EMAIL": os.environ.get('SENDER_EMAIL', '')
         }
         

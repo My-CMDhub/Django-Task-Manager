@@ -9,7 +9,7 @@ CYAN='\033[0;36m'
 MAGENTA='\033[0;35m'
 NC='\033[0m' # No Color
 
-echo -e "${BLUE}Starting Task Manager Development Environment${NC}"
+echo -e "${BLUE}Starting Nexus Development Environment${NC}"
 echo -e "${BLUE}===============================================${NC}"
 
 # Check if ngrok is installed

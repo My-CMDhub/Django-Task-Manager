@@ -1,4 +1,4 @@
-# Example Django integration for Task Manager project
+# Example Django integration for Nexus project
 
 """
 This file shows how to integrate the chatbot URLs into your Django project's urls.py file.

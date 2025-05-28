@@ -8,7 +8,7 @@
     <title>Verify Your Email</title>
     <!-- Preheader text that will show in email clients inbox view -->
     <span style="display: none !important; visibility: hidden; mso-hide: all; font-size: 1px; line-height: 1px; max-height: 0px; max-width: 0px; opacity: 0; overflow: hidden;">
-        Please verify your email address to complete your Task Manager registration and get started. This will only take a moment.
+        Please verify your email address to complete your Nexus registration and get started. This will only take a moment.
     </span>
     <style>
         /* Use web-safe fonts to ensure consistent display */
@@ -83,7 +83,7 @@
         
         <p>Hello {{ user.username }},</p>
         
-        <p>Thank you for registering with Task Manager! To complete your registration and verify your email address, please click the button below:</p>
+        <p>Thank you for registering with Nexus! To complete your registration and verify your email address, please click the button below:</p>
         
         <p style="text-align: center;">
             <a href="{{ verify_url }}" class="button">Verify My Email</a>
@@ -93,14 +93,14 @@
         
         <p><a href="{{ verify_url }}" class="verify-link">{{ verify_url }}</a></p>
         
-        <p>This verification link will expire in 24 hours. If you didn't register for an account with Task Manager, please ignore this email.</p>
+        <p>This verification link will expire in 24 hours. If you didn't register for an account with Nexus, please ignore this email.</p>
         
         <p>Best regards,<br>
-        The Task Manager Team</p>
+        The Nexus Team</p>
         
         <div class="footer">
-            <p>&copy; {{ current_year }} Task Manager. All rights reserved.</p>
-            <p>This email was sent to {{ user.email }} because you registered for an account on Task Manager.</p>
+            <p>&copy; {{ current_year }} Nexus. All rights reserved.</p>
+            <p>This email was sent to {{ user.email }} because you registered for an account on Nexus.</p>
             <p>If you no longer wish to receive these emails, you can <a href="{{ protocol }}://{{ domain }}/auth/unsubscribe/?email={{ user.email }}">unsubscribe</a>.</p>
         </div>
     </div>

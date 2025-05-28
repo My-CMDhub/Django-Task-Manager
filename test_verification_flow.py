@@ -66,7 +66,7 @@ def test_verification_email():
     context = {
         'user': user,
         'verify_url': verify_url,
-        'site_name': 'Task Manager',
+        'site_name': 'Nexus',
         'domain': '127.0.0.1:8000',
         'protocol': 'http',
         'current_year': timezone.now().year,
@@ -89,7 +89,7 @@ def test_verification_email():
         
         # Send the email
         result = send_mail(
-            f'Please Verify Your Email - Task Manager Account Activation',
+            f'Please Verify Your Email - Nexus Account Activation',
             text_email,
             settings.DEFAULT_FROM_EMAIL,
             [user.email],
@@ -103,7 +103,7 @@ def test_verification_email():
         if settings.EMAIL_HOST_USER:
             # Send to test email that actually exists
             result = send_mail(
-                f'Task Manager Test - Please Verify Your Email',
+                f'Nexus Test - Please Verify Your Email',
                 text_email,
                 settings.DEFAULT_FROM_EMAIL,
                 [settings.EMAIL_HOST_USER],  # Send to actual email

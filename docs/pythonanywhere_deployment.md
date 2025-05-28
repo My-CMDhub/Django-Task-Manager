@@ -1,11 +1,11 @@
-# Task Manager - PythonAnywhere Deployment Guide
+# Nexus - PythonAnywhere Deployment Guide
 
-This guide provides step-by-step instructions for deploying the Task Manager application to PythonAnywhere.
+This guide provides step-by-step instructions for deploying the Nexus application to PythonAnywhere.
 
 ## Prerequisites
 
 - PythonAnywhere account (free tier is sufficient for this lab exercise)
-- Git repository access for the Task Manager project
+- Git repository access for the Nexus project
 - Supabase and OpenAI API keys (if using those features)
 
 ## Step 1: Set up PythonAnywhere

@@ -1,6 +1,6 @@
-# Task Manager Chatbot Integration Guide
+# Nexus Chatbot Integration Guide
 
-This guide provides step-by-step instructions to integrate the AI-powered Task Assistant chatbot into your Django Task Manager application.
+This guide provides step-by-step instructions to integrate the AI-powered Task Assistant chatbot into your Django Nexus application.
 
 ## Overview
 
@@ -8,11 +8,11 @@ The chatbot integration provides:
 - Natural language task creation and management
 - An interactive chat interface built in React
 - Knowledge retrieval capabilities powered by LlamaIndex and OpenAI
-- Seamless integration with your existing Django Task Manager
+- Seamless integration with your existing Django Nexus
 
 ## Prerequisites
 
-- Django Task Manager project
+- Django Nexus project
 - React frontend
 - Python 3.8+
 - OpenAI API key

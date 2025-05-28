@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-Startup script for the Task Manager application that handles:
+Startup script for the Nexus application that handles:
 1. Starting ngrok for a public URL
 2. Starting the Django server
 3. Updating Supabase webhook URLs
@@ -20,7 +20,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 def parse_arguments():
-    parser = argparse.ArgumentParser(description='Start the Task Manager with Supabase integration')
+    parser = argparse.ArgumentParser(description='Start the Nexus with Supabase integration')
     parser.add_argument('--no-ngrok', action='store_true', help='Skip starting ngrok')
     parser.add_argument('--port', type=int, default=8000, help='Port for Django server')
     parser.add_argument('--no-browser', action='store_true', help='Don\'t open browser')

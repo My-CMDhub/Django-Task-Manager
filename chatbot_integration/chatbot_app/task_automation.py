@@ -139,7 +139,7 @@ def get_user_statistics(user):
     project_counts = get_user_project_count(user)
     
     # Create a formatted response
-    response = "📊 **Your Task Manager Statistics**\n\n"
+    response = "📊 **Your Nexus Statistics**\n\n"
     
     # Task statistics
     response += "**Tasks:**\n"

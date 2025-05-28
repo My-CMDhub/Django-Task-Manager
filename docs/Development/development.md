@@ -1,6 +1,6 @@
 
 
-### 🚀 Ultimate Task Manager + AI Chatbot Roadmap using Django
+### 🚀 Ultimate Nexus + AI Chatbot Roadmap using Django
 
 
 

@@ -136,7 +136,7 @@ def check_urls():
         return False
 
 def main():
-    print("\n===== Task Manager Chatbot Integration Checker =====\n")
+    print("\n===== Nexus Chatbot Integration Checker =====\n")
     
     django_ok = check_django_settings()
     if not django_ok:

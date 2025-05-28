@@ -1,6 +1,6 @@
 # Chatbot Context Awareness
 
-The Task Manager chatbot has been enhanced with context awareness capabilities, allowing it to understand and respond appropriately to messages that reference previous parts of the conversation.
+The Nexus chatbot has been enhanced with context awareness capabilities, allowing it to understand and respond appropriately to messages that reference previous parts of the conversation.
 
 ## How It Works
 

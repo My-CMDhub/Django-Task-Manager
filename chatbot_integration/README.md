@@ -1,15 +1,15 @@
-# Task Manager AI Chatbot
+# Nexus AI Chatbot
 
-An AI-powered Task Assistant for your Django Task Manager application.
+An AI-powered Task Assistant for your Django Nexus application.
 
-![Task Manager Chatbot](https://img.shields.io/badge/Task%20Manager-AI%20Chatbot-006622)
+![Nexus Chatbot](https://img.shields.io/badge/Task%20Manager-AI%20Chatbot-006622)
 ![Python 3.8+](https://img.shields.io/badge/Python-3.8+-blue)
 ![Django 4.0+](https://img.shields.io/badge/Django-4.0+-green)
 ![React](https://img.shields.io/badge/React-17.0+-61DAFB)
 
 ## 🤖 About
 
-This chatbot integrates with your Django Task Manager to provide an AI-powered assistant that helps users create and manage tasks through natural language. It supports task creation, listing, updating, and smart responses to productivity-related questions.
+This chatbot integrates with your Django Nexus to provide an AI-powered assistant that helps users create and manage tasks through natural language. It supports task creation, listing, updating, and smart responses to productivity-related questions.
 
 ## ✨ Features
 
