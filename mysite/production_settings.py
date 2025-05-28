@@ -24,7 +24,7 @@ DEBUG = False
 
 # Updated allowed hosts
 ALLOWED_HOSTS = [
-    'nexuss.herokuapp.com',
+    'nexuss-baf9e168e5c4.herokuapp.com',
     'taskmanager-mztm.onrender.com', # Your Render app domain
     '.onrender.com', # Allow any Render subdomain for flexibility
 ] 
