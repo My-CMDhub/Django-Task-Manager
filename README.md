@@ -411,7 +411,7 @@ This application is configured for deployment to [Render](https://render.com/), 
 5. Set start command: `gunicorn mysite.wsgi --env DJANGO_SETTINGS_MODULE=mysite.production_settings`
 6. Add environment variables:
    - `SECRET_KEY`: Set to a secure random string
-   - `OPENAI_API_KEY`: (Optional) Set to enable AI chatbot functionality
+   - `MISTRAL_API_KEY`: (Optional) Set to enable AI chatbot functionality
    - `SMTP_HOST`: Email server hostname (e.g., smtp.gmail.com)
    - `SMTP_PORT`: Email server port (e.g., 587 for TLS)
    - `EMAIL_HOST_USER`: Email username/address

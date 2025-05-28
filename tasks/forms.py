@@ -284,8 +284,20 @@ class TaskSearchForm(forms.Form):
             ('today', 'Due Today'),
             ('tomorrow', 'Due Tomorrow'),
             ('week', 'Due This Week'),
+            ('month', 'Due This Month'),
             ('overdue', 'Overdue'),
             ('none', 'No Due Date'),
+        ],
+        widget=forms.Select(attrs={'class': 'filter-select'})
+    )
+    created_date = forms.ChoiceField(
+        required=False,
+        choices=[
+            ('', 'Any Creation Date'),
+            ('today', 'Created Today'),
+            ('yesterday', 'Created Yesterday'),
+            ('week', 'Created This Week'),
+            ('month', 'Created This Month'),
         ],
         widget=forms.Select(attrs={'class': 'filter-select'})
     )
@@ -295,12 +307,62 @@ class TaskSearchForm(forms.Form):
         empty_label="Any Assignee",
         widget=forms.Select(attrs={'class': 'filter-select'})
     )
+    created_by = forms.ModelChoiceField(
+        required=False,
+        queryset=User.objects.filter(is_active=True),
+        empty_label="Created By Anyone",
+        widget=forms.Select(attrs={'class': 'filter-select'})
+    )
     tags = forms.ModelMultipleChoiceField(
         required=False,
         queryset=TaskTag.objects.all(),
         widget=forms.SelectMultiple(attrs={'class': 'select2-multiple'})
     )
     is_ai_generated = forms.BooleanField(required=False)
+    has_attachments = forms.BooleanField(required=False)
+    has_comments = forms.BooleanField(required=False)
+    project = forms.ModelChoiceField(
+        required=False,
+        queryset=Project.objects.all(),
+        empty_label="Any Project",
+        widget=forms.Select(attrs={'class': 'filter-select'})
+    )
+    estimated_hours_min = forms.DecimalField(
+        required=False,
+        min_value=0,
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Min Hours'})
+    )
+    estimated_hours_max = forms.DecimalField(
+        required=False,
+        min_value=0,
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Max Hours'})
+    )
+    is_subtask = forms.BooleanField(required=False)
+    search_in = forms.MultipleChoiceField(
+        required=False,
+        choices=[
+            ('title', 'Title'),
+            ('description', 'Description'),
+            ('comments', 'Comments'),
+        ],
+        initial=['title', 'description'],
+        widget=forms.CheckboxSelectMultiple(attrs={'class': 'form-check-input'})
+    )
+    sort_by = forms.ChoiceField(
+        required=False,
+        choices=[
+            ('-created_at', 'Newest First'),
+            ('created_at', 'Oldest First'),
+            ('due_date', 'Due Date (ascending)'),
+            ('-due_date', 'Due Date (descending)'),
+            ('priority', 'Priority (low to high)'),
+            ('-priority', 'Priority (high to low)'),
+            ('title', 'Title (A-Z)'),
+            ('-title', 'Title (Z-A)'),
+        ],
+        initial='-created_at',
+        widget=forms.Select(attrs={'class': 'form-select'})
+    )
 
 class TimeEntryForm(forms.ModelForm):
     """Form for creating and updating time entries."""

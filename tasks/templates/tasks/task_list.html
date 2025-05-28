@@ -248,48 +248,40 @@
         <input type="hidden" name="action" id="bulk-action-type">
     </form>
     
-    <!-- Header and Actions -->
+    <!-- View Toggle for list/kanban view -->
     <div class="row mb-4">
-        <div class="col-md-6">
-            <h1 class="h3 mb-0">My Tasks</h1>
-            <p class="text-muted">Manage and track your tasks</p>
-        </div>
-        <div class="col-md-6 d-flex justify-content-end align-items-center">
-            <div class="view-toggle btn-group me-3">
-                <button type="button" class="btn btn-outline-primary active" id="list-view-btn">
-                    <i class="bi bi-list"></i> List
-                </button>
-                <button type="button" class="btn btn-outline-primary" id="kanban-view-btn">
-                    <i class="bi bi-kanban"></i> Kanban
-                </button>
-            </div>
-            <a href="{% url 'tasks:task_create' %}" class="btn btn-primary">
-                <i class="bi bi-plus-lg"></i> Create Task
-            </a>
-        </div>
-    </div>
-
-    <!-- Task Actions Button Group (New) -->
-    <div class="row mb-3">
-        <div class="col-12">
+        <div class="col-auto">
             <div class="action-button-group">
-                <button type="button" class="action-button complete-btn bulk-action" data-action="complete" disabled>
-                    <i class="bi bi-check-circle"></i> Mark Complete
+                <button class="action-button" type="button" onclick="location.href='{% url 'tasks:task_create' %}'">
+                    <i class="bi bi-plus-circle"></i> New Task
+                </button>
+                <button class="action-button complete-btn" id="bulk-complete-btn" disabled>
+                    <i class="bi bi-check-circle"></i> Complete
                     <span class="badge-counter" id="complete-counter">0</span>
                 </button>
-                <button type="button" class="action-button archive-btn bulk-action" data-action="archive" disabled>
+                <button class="action-button archive-btn" id="bulk-archive-btn" disabled>
                     <i class="bi bi-archive"></i> Archive
                     <span class="badge-counter" id="archive-counter">0</span>
                 </button>
-                <button type="button" class="action-button delete-btn bulk-action" data-action="delete" disabled>
+                <button class="action-button delete-btn" id="bulk-delete-btn" disabled>
                     <i class="bi bi-trash"></i> Delete
                     <span class="badge-counter" id="delete-counter">0</span>
                 </button>
             </div>
         </div>
+        <div class="col-auto ms-auto">
+            <div class="view-toggle btn-group" role="group" aria-label="View toggle">
+                <button type="button" class="btn btn-outline-primary active" id="list-view-btn" data-bs-toggle="tab" data-bs-target="#list-view" data-view="list">
+                    <i class="bi bi-list-ul"></i> List
+                </button>
+                <button type="button" class="btn btn-outline-primary" id="kanban-view-btn" data-bs-toggle="tab" data-bs-target="#kanban-view" data-view="kanban">
+                    <i class="bi bi-kanban"></i> Kanban
+                </button>
+            </div>
+        </div>
     </div>
-
-    <!-- Task Statistics -->
+    
+    <!-- Task Stats -->
     <div class="row mb-4">
         <div class="col-12">
             <div class="task-stats">
@@ -329,54 +321,156 @@
             <div class="card filter-card">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h5 class="card-title mb-0">Filter Tasks</h5>
-                    <button class="btn btn-sm btn-link" type="button" data-bs-toggle="collapse" data-bs-target="#filterCollapse">
-                        <i class="bi bi-chevron-down"></i>
-                    </button>
+                    <div>
+                        <button class="btn btn-sm btn-outline-primary me-2" type="button" id="advancedSearchToggle" data-bs-toggle="collapse" data-bs-target="#advancedSearch" aria-expanded="false">
+                            <i class="bi bi-sliders"></i> Advanced
+                        </button>
+                        <button class="btn btn-sm btn-link" type="button" data-bs-toggle="collapse" data-bs-target="#filterCollapse">
+                            <i class="bi bi-chevron-down"></i>
+                        </button>
+                    </div>
                 </div>
                 <div class="collapse show" id="filterCollapse">
                     <div class="card-body">
-                        <form method="get" class="row g-3">
-                            <div class="col-md-3">
-                                <div class="input-group">
-                                    <span class="input-group-text"><i class="bi bi-search"></i></span>
-                                    <input type="text" name="search" class="form-control" placeholder="Search tasks..." value="{{ request.GET.search }}">
+                        <form method="get" id="task-filter-form">
+                            <div class="row g-3 mb-3">
+                                <!-- Basic Filters -->
+                                <div class="col-md-4">
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="bi bi-search"></i></span>
+                                        <input type="text" name="search" class="form-control" placeholder="Search tasks..." value="{{ form.search.value|default_if_none:'' }}">
+                                    </div>
+                                </div>
+                                <div class="col-md-2">
+                                    {{ form.status }}
+                                </div>
+                                <div class="col-md-2">
+                                    {{ form.priority }}
+                                </div>
+                                <div class="col-md-2">
+                                    {{ form.due_date }}
+                                </div>
+                                <div class="col-md-2">
+                                    <button type="submit" class="btn btn-primary w-100">Search</button>
                                 </div>
                             </div>
-                            <div class="col-md-2">
-                                <select name="status" class="form-select">
-                                    <option value="">All Statuses</option>
-                                    {% for status in status_choices %}
-                                    <option value="{{ status.0 }}" {% if request.GET.status == status.0 %}selected{% endif %}>{{ status.1 }}</option>
-                                    {% endfor %}
-                                </select>
-                            </div>
-                            <div class="col-md-2">
-                                <select name="priority" class="form-select">
-                                    <option value="">All Priorities</option>
-                                    {% for priority in priority_choices %}
-                                    <option value="{{ priority.0 }}" {% if request.GET.priority == priority.0 %}selected{% endif %}>{{ priority.1 }}</option>
-                                    {% endfor %}
-                                </select>
-                            </div>
-                            <div class="col-md-2">
-                                <select name="due" class="form-select">
-                                    <option value="">All Due Dates</option>
-                                    <option value="today" {% if request.GET.due == 'today' %}selected{% endif %}>Due Today</option>
-                                    <option value="week" {% if request.GET.due == 'week' %}selected{% endif %}>Due This Week</option>
-                                    <option value="overdue" {% if request.GET.due == 'overdue' %}selected{% endif %}>Overdue</option>
-                                    <option value="no_date" {% if request.GET.due == 'no_date' %}selected{% endif %}>No Due Date</option>
-                                </select>
-                            </div>
-                            <div class="col-md-2">
-                                <select name="project" class="form-select">
-                                    <option value="">All Projects</option>
-                                    {% for project in projects %}
-                                    <option value="{{ project.id }}" {% if request.GET.project == project.id|stringformat:"s" %}selected{% endif %}>{{ project.name }}</option>
-                                    {% endfor %}
-                                </select>
-                            </div>
-                            <div class="col-md-1">
-                                <button type="submit" class="btn btn-primary w-100">Filter</button>
+                            
+                            <!-- Advanced Search Options - Collapsed by default -->
+                            <div class="collapse" id="advancedSearch">
+                                <div class="row g-3 mt-2">
+                                    <div class="col-12">
+                                        <h6 class="text-muted mb-3">Advanced Filters</h6>
+                                    </div>
+                                    
+                                    <!-- Row 1 -->
+                                    <div class="col-md-3">
+                                        <label class="form-label small">Project</label>
+                                        {{ form.project }}
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label small">Assignee</label>
+                                        {{ form.assignee }}
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label small">Created By</label>
+                                        {{ form.created_by }}
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label small">Creation Date</label>
+                                        {{ form.created_date }}
+                                    </div>
+                                    
+                                    <!-- Row 2 -->
+                                    <div class="col-md-6">
+                                        <label class="form-label small">Tags</label>
+                                        <select name="tags" multiple class="form-select select2-multiple">
+                                            {% for tag in tags %}
+                                                <option value="{{ tag.id }}" {% if tag.id in form.tags.value %}selected{% endif %}>
+                                                    {{ tag.name }}
+                                                </option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label small">Sort By</label>
+                                        {{ form.sort_by }}
+                                    </div>
+                                    
+                                    <!-- Row 3 -->
+                                    <div class="col-md-6">
+                                        <label class="form-label small">Estimated Hours</label>
+                                        <div class="row">
+                                            <div class="col-6">
+                                                <div class="input-group">
+                                                    <span class="input-group-text">Min</span>
+                                                    {{ form.estimated_hours_min }}
+                                                </div>
+                                            </div>
+                                            <div class="col-6">
+                                                <div class="input-group">
+                                                    <span class="input-group-text">Max</span>
+                                                    {{ form.estimated_hours_max }}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label small">Search In</label>
+                                        <div class="d-flex">
+                                            {% for value, text in form.search_in.field.choices %}
+                                            <div class="form-check me-3">
+                                                <input class="form-check-input" type="checkbox" name="search_in" value="{{ value }}" id="search_in_{{ value }}" 
+                                                    {% if value in form.search_in.value|default:form.search_in.initial %}checked{% endif %}>
+                                                <label class="form-check-label" for="search_in_{{ value }}">{{ text }}</label>
+                                            </div>
+                                            {% endfor %}
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Row 4 - Checkboxes -->
+                                    <div class="col-12">
+                                        <div class="row mt-2">
+                                            <div class="col-md-3">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" id="is_ai_generated" name="is_ai_generated" value="1" {% if form.is_ai_generated.value %}checked{% endif %}>
+                                                    <label class="form-check-label" for="is_ai_generated">AI Generated</label>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" id="has_attachments" name="has_attachments" value="1" {% if form.has_attachments.value %}checked{% endif %}>
+                                                    <label class="form-check-label" for="has_attachments">Has Attachments</label>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" id="has_comments" name="has_comments" value="1" {% if form.has_comments.value %}checked{% endif %}>
+                                                    <label class="form-check-label" for="has_comments">Has Comments</label>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" id="is_subtask" name="is_subtask" value="1" {% if form.is_subtask.value %}checked{% endif %}>
+                                                    <label class="form-check-label" for="is_subtask">Is Subtask</label>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" id="show_archived" name="show_archived" value="1" {% if show_archived %}checked{% endif %}>
+                                                    <label class="form-check-label" for="show_archived">Show Archived</label>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Action Buttons -->
+                                    <div class="col-12 mt-3">
+                                        <div class="d-flex justify-content-end">
+                                            <button type="reset" class="btn btn-outline-secondary me-2" id="reset-filters">Reset Filters</button>
+                                            <button type="submit" class="btn btn-primary">Apply Filters</button>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </form>
                     </div>
@@ -486,7 +580,7 @@
                         <span class="badge bg-secondary">{{ todo_tasks.count }}</span>
                     </div>
                     
-                    {% if todo_tasks %}
+                    {% if todo_tasks.count %}
                         {% for task in todo_tasks %}
                         <div class="card task-card todo mb-2">
                             <div class="card-body p-3">
@@ -541,7 +635,7 @@
                         <span class="badge bg-primary">{{ in_progress_tasks.count }}</span>
                     </div>
                     
-                    {% if in_progress_tasks %}
+                    {% if in_progress_tasks.count %}
                         {% for task in in_progress_tasks %}
                         <div class="card task-card in_progress mb-2">
                             <div class="card-body p-3">
@@ -596,7 +690,7 @@
                         <span class="badge bg-success">{{ completed_tasks.count }}</span>
                     </div>
                     
-                    {% if completed_tasks %}
+                    {% if completed_tasks.count %}
                         {% for task in completed_tasks %}
                         <div class="card task-card completed mb-2">
                             <div class="card-body p-3">
@@ -642,31 +736,37 @@
     {% if is_paginated %}
     <div class="row mt-4">
         <div class="col">
-            <nav aria-label="Page navigation">
+            <nav>
                 <ul class="pagination justify-content-center">
                     {% if page_obj.has_previous %}
                     <li class="page-item">
-                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" aria-label="Previous">
-                            <span aria-hidden="true">&laquo;</span>
-                        </a>
+                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}&{{ query_params }}">Previous</a>
+                    </li>
+                    {% else %}
+                    <li class="page-item disabled">
+                        <span class="page-link">Previous</span>
                     </li>
                     {% endif %}
 
                     {% for num in page_obj.paginator.page_range %}
                         {% if page_obj.number == num %}
-                        <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+                        <li class="page-item active">
+                            <span class="page-link">{{ num }}</span>
+                        </li>
                         {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
                         <li class="page-item">
-                            <a class="page-link" href="?page={{ num }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">{{ num }}</a>
+                            <a class="page-link" href="?page={{ num }}&{{ query_params }}">{{ num }}</a>
                         </li>
                         {% endif %}
                     {% endfor %}
 
                     {% if page_obj.has_next %}
                     <li class="page-item">
-                        <a class="page-link" href="?page={{ page_obj.next_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" aria-label="Next">
-                            <span aria-hidden="true">&raquo;</span>
-                        </a>
+                        <a class="page-link" href="?page={{ page_obj.next_page_number }}&{{ query_params }}">Next</a>
+                    </li>
+                    {% else %}
+                    <li class="page-item disabled">
+                        <span class="page-link">Next</span>
                     </li>
                     {% endif %}
                 </ul>
@@ -814,6 +914,101 @@
                 form.submit();
             });
         });
+    });
+</script>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize Select2 for tags if available
+        if (typeof $.fn.select2 !== 'undefined') {
+            $('.select2-multiple').select2({
+                placeholder: "Select tags",
+                allowClear: true,
+                theme: "bootstrap-5"
+            });
+        }
+        
+        // Handle filter form reset
+        const resetButton = document.getElementById('reset-filters');
+        if (resetButton) {
+            resetButton.addEventListener('click', function(e) {
+                e.preventDefault();
+                
+                // Clear all inputs except the CSRF token
+                const form = document.getElementById('task-filter-form');
+                const inputs = form.querySelectorAll('input, select, textarea');
+                
+                inputs.forEach(input => {
+                    if (input.type === 'checkbox' || input.type === 'radio') {
+                        input.checked = false;
+                    } else if (input.tagName === 'SELECT') {
+                        if (input.multiple) {
+                            Array.from(input.options).forEach(option => {
+                                option.selected = false;
+                            });
+                            // Trigger change for Select2
+                            if (typeof $.fn.select2 !== 'undefined' && $(input).hasClass('select2-multiple')) {
+                                $(input).trigger('change');
+                            }
+                        } else {
+                            input.selectedIndex = 0;
+                        }
+                    } else if (input.name !== 'csrfmiddlewaretoken') {
+                        input.value = '';
+                    }
+                });
+                
+                // Submit the form with cleared values
+                form.submit();
+            });
+        }
+        
+        // Show advanced search if any advanced filters are active
+        const advancedSearch = document.getElementById('advancedSearch');
+        const advancedToggle = document.getElementById('advancedSearchToggle');
+        // Use a boolean from Django context to indicate if any advanced filters are active
+        const hasAdvancedFilters = '{{ has_advanced_filters|yesno:"true,false" }}' === 'true';
+        // Expand advanced filters if there are any active
+        if (advancedSearch && advancedToggle && hasAdvancedFilters) {
+            new bootstrap.Collapse(advancedSearch).show();
+            advancedToggle.setAttribute('aria-expanded', 'true');
+        }
+        
+        // Save filter preferences to localStorage
+        const form = document.getElementById('task-filter-form');
+        if (form) {
+            form.addEventListener('submit', function() {
+                // Get current view preference (list vs kanban)
+                const activeView = document.querySelector('.view-toggle .btn.active')?.dataset.view || 'list';
+                
+                // Save to localStorage
+                localStorage.setItem('taskViewPreference', activeView);
+            });
+            
+            // Restore view preference
+            const savedViewPref = localStorage.getItem('taskViewPreference');
+            if (savedViewPref) {
+                const viewButtons = document.querySelectorAll('.view-toggle .btn');
+                viewButtons.forEach(btn => {
+                    if (btn.dataset.view === savedViewPref) {
+                        btn.classList.add('active');
+                    } else {
+                        btn.classList.remove('active');
+                    }
+                });
+                
+                const viewPanes = document.querySelectorAll('.view-pane');
+                viewPanes.forEach(pane => {
+                    if (pane.id === `${savedViewPref}-view`) {
+                        pane.classList.add('active', 'show');
+                    } else {
+                        pane.classList.remove('active', 'show');
+                    }
+                });
+            }
+        }
     });
 </script>
 {% endblock %}

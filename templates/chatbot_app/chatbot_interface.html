@@ -4,8 +4,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Task Manager AI Chatbot</title>
+    <title>TaskBuddy - Your AI Assistant</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
     <style>
         body {
             background-color: #f8f9fa;
@@ -31,6 +32,29 @@
         }
         .chat-header-left {
             flex: 1;
+            display: flex;
+            align-items: center;
+        }
+        .chat-avatar {
+            width: 40px;
+            height: 40px;
+            background-color: #ffffff;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-right: 12px;
+            font-size: 20px;
+            color: #4a6bdf;
+        }
+        .chat-title {
+            font-weight: 600;
+            margin: 0;
+        }
+        .chat-subtitle {
+            font-size: 0.9rem;
+            margin: 0;
+            opacity: 0.9;
         }
         .chat-header-controls {
             display: flex;
@@ -121,6 +145,55 @@
         .btn-send:hover {
             background-color: #385dc9;
             color: white;
+        }
+        
+        /* Enhanced message styling */
+        .bot-message {
+            background-color: #f0f8ff;
+            border-left: 3px solid #4a6bdf;
+        }
+        
+        .user-message {
+            background-color: #f1f5ff;
+            border-right: 3px solid #4a6bdf;
+        }
+        
+        .message-time {
+            font-size: 0.75rem;
+            color: #888;
+            margin-top: 5px;
+        }
+        
+        .message-sender {
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+        
+        .bot-name {
+            color: #4a6bdf;
+        }
+        
+        /* Suggestion buttons */
+        .suggestion-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 16px;
+        }
+        
+        .suggestion-btn {
+            background-color: #fff;
+            color: #4a6bdf;
+            border: 1px solid #4a6bdf;
+            border-radius: 16px;
+            padding: 6px 12px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .suggestion-btn:hover {
+            background-color: #e9f0ff;
         }
         
         /* Enhanced task list styling */
@@ -235,280 +308,576 @@
             background-color: #d1fae5;
             color: #065f46;
         }
+        
+        /* Chatbot capabilities styling */
+        .capabilities-container {
+            background-color: #f8f9fe;
+            border-radius: 12px;
+            padding: 15px;
+            margin: 10px 0;
+            border-left: 3px solid #4a6bdf;
+        }
+        
+        .capabilities-section {
+            margin-bottom: 15px;
+        }
+        
+        .capabilities-section h5 {
+            display: flex;
+            align-items: center;
+            font-weight: 600;
+            color: #4a6bdf;
+        }
+        
+        .capabilities-section ul {
+            list-style-type: none;
+            padding-left: 10px;
+        }
+        
+        .capabilities-section ul li {
+            margin-bottom: 8px;
+            position: relative;
+            padding-left: 15px;
+        }
+        
+        .capabilities-section ul li:before {
+            content: "•";
+            color: #4a6bdf;
+            position: absolute;
+            left: 0;
+        }
+        
+        .command-example {
+            font-family: monospace;
+            background-color: #f1f5ff;
+            padding: 2px 6px;
+            border-radius: 4px;
+            color: #444;
+            font-size: 90%;
+        }
+        
+        .row {
+            display: flex;
+            flex-wrap: wrap;
+            margin-right: -15px;
+            margin-left: -15px;
+        }
+        
+        .col-md-6 {
+            position: relative;
+            width: 100%;
+            padding-right: 15px;
+            padding-left: 15px;
+        }
+        
+        @media (min-width: 768px) {
+            .col-md-6 {
+                flex: 0 0 50%;
+                max-width: 50%;
+            }
+        }
     </style>
 </head>
 <body>
-    <div class="container">
+    <div class="container-fluid">
         <div class="chat-container">
             <div class="chat-header">
                 <div class="chat-header-left">
-                    <h3 class="m-0">Task Manager Assistant</h3>
-                    <p class="m-0">I'm here to help you find information about your tasks</p>
+                    <div class="chat-avatar">
+                        <i class="bi bi-robot"></i>
+                    </div>
+                    <div>
+                        <h5 class="chat-title">TaskBuddy</h5>
+                        <p class="chat-subtitle">Your friendly AI task assistant</p>
+                    </div>
                 </div>
                 <div class="chat-header-controls">
-                    <button class="chat-control-btn" id="toggleSizeBtn" title="Expand/Collapse">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrows-angle-expand" viewBox="0 0 16 16">
-                            <path fill-rule="evenodd" d="M5.828 10.172a.5.5 0 0 0-.707 0l-4.096 4.096V11.5a.5.5 0 0 0-1 0v3.975a.5.5 0 0 0 .5.5H4.5a.5.5 0 0 0 0-1H1.732l4.096-4.096a.5.5 0 0 0 0-.707zm4.344-4.344a.5.5 0 0 0 .707 0l4.096-4.096V4.5a.5.5 0 1 0 1 0V.525a.5.5 0 0 0-.5-.5H11.5a.5.5 0 0 0 0 1h2.768l-4.096 4.096a.5.5 0 0 0 0 .707z"/>
-                        </svg>
+                    <button class="chat-control-btn" id="refresh-btn" title="Refresh conversation">
+                        <i class="bi bi-arrow-repeat"></i>
+                    </button>
+                    <button class="chat-control-btn" id="minimize-btn" title="Minimize chat">
+                        <i class="bi bi-dash-lg"></i>
                     </button>
                 </div>
             </div>
+            
             <div class="chat-messages" id="chat-messages">
-                <div class="message bot-message">
-                    Hello! I'm your task management assistant. I can help you find information about your tasks and projects. What would you like to know?
-                </div>
+                <!-- Messages will be added here -->
                 <div class="typing-indicator" id="typing-indicator">
                     <span class="dot"></span>
                     <span class="dot"></span>
                     <span class="dot"></span>
                 </div>
             </div>
+            
             <div class="chat-input">
                 <form id="chat-form">
                     <div class="input-group">
-                        <input type="text" id="user-input" class="form-control" 
-                               placeholder="Type your message here..." autocomplete="off">
-                        <button type="submit" class="btn btn-send">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" 
-                                 fill="currentColor" class="bi bi-send" viewBox="0 0 16 16">
-                                <path d="M15.854.146a.5.5 0 0 1 .11.54l-5.819 14.547a.5.5 0 0 1-.95-.38l2.204-5.51L5.5 7.163a.5.5 0 0 1-.046-.715.5.5 0 0 1 .103-.1l14-6a.5.5 0 0 1 .744.555l-.227.536.863.855.227-.536.032-.066a.5.5 0 0 1 .782.103l-5.819 14.547a.5.5 0 0 1-.95-.38l2.204-5.51L5.5 7.163a.5.5 0 0 1-.046-.715.5.5 0 0 1 .103-.1l14-6a.5.5 0 0 1 .744.555l-.227.536.863.855.227-.536.032-.066a.5.5 0 0 1 .782.103l-5.819 14.547a.5.5 0 0 1-.95-.38l2.204-5.51">
-                                </path>
-                            </svg>
+                        <input type="text" id="user-input" class="form-control" placeholder="Ask TaskBuddy for help with your tasks..." aria-label="Type your message">
+                        <button class="btn btn-send" type="submit">
+                            <i class="bi bi-send"></i>
                         </button>
                     </div>
                 </form>
+                
+                <div class="suggestion-buttons mt-2">
+                    <button class="suggestion-btn" data-message="Show my tasks">My Tasks</button>
+                    <button class="suggestion-btn" data-message="What's due today?">Due Today</button>
+                    <button class="suggestion-btn" data-message="How am I doing?">My Progress</button>
+                    <button class="suggestion-btn" data-message="What should I work on next?">Suggestions</button>
+                </div>
             </div>
         </div>
     </div>
 
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script>
-    // Global function to handle task actions from UI
-    function handleTaskAction(action, taskTitle) {
-        if (action === 'mark') {
-            const chatForm = $('#chat-form');
-            if (chatForm.length) {
-                $('#user-input').val(`Mark task ${taskTitle} as completed`);
-                chatForm.submit();
-            }
-        } else if (action === 'view') {
-            const chatForm = $('#chat-form');
-            if (chatForm.length) {
-                $('#user-input').val(`Find task ${taskTitle}`);
-                chatForm.submit();
-            }
-        }
-    }
-    
-    $(document).ready(function() {
-        // Toggle chat size functionality
-        let isExpanded = false;
-        const toggleSizeBtn = document.getElementById('toggleSizeBtn');
+    document.addEventListener('DOMContentLoaded', function() {
         const chatMessages = document.getElementById('chat-messages');
-        const defaultHeight = 400; // Default height in pixels
-        const expandedHeight = 800; // Expanded height in pixels
-        const collapsedHeight = 200; // Collapsed height in pixels
+        const chatForm = document.getElementById('chat-form');
+        const userInput = document.getElementById('user-input');
+        const typingIndicator = document.getElementById('typing-indicator');
+        const refreshBtn = document.getElementById('refresh-btn');
+        const minimizeBtn = document.getElementById('minimize-btn');
+        const suggestionBtns = document.querySelectorAll('.suggestion-btn');
         
-        // Store original height
-        const originalHeight = chatMessages.offsetHeight;
-        console.log("Original chat height:", originalHeight);
+        let isMinimized = false;
+        let messageHistory = [];
         
-        toggleSizeBtn.addEventListener('click', function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            console.log("Toggle button clicked");
-            
-            isExpanded = !isExpanded;
-            
-            if (isExpanded) {
-                // Direct style manipulation with !important to override any conflicting styles
-                chatMessages.style.cssText = `height: ${expandedHeight}px !important; transition: height 0.3s ease !important;`;
-                toggleSizeBtn.innerHTML = `
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrows-angle-contract" viewBox="0 0 16 16">
-                        <path fill-rule="evenodd" d="M.172 15.828a.5.5 0 0 0 .707 0l4.096-4.096V14.5a.5.5 0 1 0 1 0v-3.975a.5.5 0 0 0-.5-.5H1.5a.5.5 0 0 0 0 1h2.768L.172 15.121a.5.5 0 0 0 0 .707zM15.828.172a.5.5 0 0 0-.707 0l-4.096 4.096V1.5a.5.5 0 1 0-1 0v3.975a.5.5 0 0 0 .5.5H14.5a.5.5 0 0 0 0-1h-2.768L15.828.879a.5.5 0 0 0 0-.707z"/>
-                    </svg>
-                `;
-                toggleSizeBtn.title = "Collapse";
-                console.log("Expanded chat window to", expandedHeight + "px");
-            } else {
-                // Direct style manipulation with !important to override any conflicting styles
-                chatMessages.style.cssText = `height: ${collapsedHeight}px !important; transition: height 0.3s ease !important;`;
-                toggleSizeBtn.innerHTML = `
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrows-angle-expand" viewBox="0 0 16 16">
-                        <path fill-rule="evenodd" d="M5.828 10.172a.5.5 0 0 0-.707 0l-4.096 4.096V11.5a.5.5 0 0 0-1 0v3.975a.5.5 0 0 0 .5.5H4.5a.5.5 0 0 0 0-1H1.732l4.096-4.096a.5.5 0 0 0 0-.707zm4.344-4.344a.5.5 0 0 0 .707 0l4.096-4.096V4.5a.5.5 0 1 0 1 0V.525a.5.5 0 0 0-.5-.5H11.5a.5.5 0 0 0 0 1h2.768l-4.096 4.096a.5.5 0 0 0 0 .707z"/>
-                    </svg>
-                `;
-                toggleSizeBtn.title = "Expand";
-                console.log("Collapsed chat window to", collapsedHeight + "px");
-            }
-            
-            // Scroll to bottom after resize with delay for transition
-            setTimeout(scrollToBottom, 300);
-        });
-
-        // Make sure the button is visible and styled properly
-        toggleSizeBtn.style.cursor = 'pointer';
-        toggleSizeBtn.style.zIndex = '1000';
-        toggleSizeBtn.style.position = 'relative';
-
-        // Function to scroll to bottom of chat
-        function scrollToBottom() {
-            const chatMessages = document.getElementById('chat-messages');
-            chatMessages.scrollTop = chatMessages.scrollHeight;
-        }
-
-        // Format message text with markdown-like syntax
-        function formatMessageText(text) {
-            // Convert line breaks to <br>
-            text = text.replace(/\n/g, '<br>');
-            
-            // Bold text
-            text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-            
-            // Italic text
-            text = text.replace(/\*(.*?)\*/g, '<em>$1</em>');
-            
-            // Enhanced task list formatting with regex patterns
-            if (text.includes('• ')) {
-                // First, identify if it's a task list
-                if (text.includes('tasks:') || text.includes('Tasks:') || 
-                    text.includes('projects:') || text.includes('Projects:') ||
-                    text.includes('overdue') || text.includes('priority')) {
-                    
-                    // Extract the intro text (everything before the first bullet point)
-                    const parts = text.split('• ');
-                    const introText = parts.shift();
-                    
-                    // Format individual task items with styling
-                    const taskItems = parts.filter(Boolean).map(item => {
-                        // Handle priority indicators
-                        let priorityClass = '';
-                        let priorityBadge = '';
-                        
-                        if (item.includes('high priority') || item.includes('High priority') || item.includes('[Priority: High]')) {
-                            priorityClass = 'high-priority';
-                            priorityBadge = '<span class="priority-badge high">High</span>';
-                        } else if (item.includes('medium priority') || item.includes('Medium priority') || item.includes('[Priority: Medium]')) {
-                            priorityClass = 'medium-priority';
-                            priorityBadge = '<span class="priority-badge medium">Medium</span>';
-                        } else if (item.includes('low priority') || item.includes('Low priority') || item.includes('[Priority: Low]')) {
-                            priorityClass = 'low-priority';
-                            priorityBadge = '<span class="priority-badge low">Low</span>';
-                        }
-                        
-                        // Extract due date if present (simple pattern matching)
-                        let dueDate = '';
-                        const dueDateMatch = item.match(/\(Due:? ([^)]+)\)/i) || item.match(/\(due ([^)]+)\)/i) || item.match(/due on ([^,]+)/i) || item.match(/due ([^,]+)/i);
-                        if (dueDateMatch) {
-                            dueDate = `<span class="task-due-date">${dueDateMatch[1]}</span>`;
-                        }
-                        
-                        // Extract status if present
-                        let statusBadge = '';
-                        if (item.includes('Status: Completed') || item.includes('status: completed')) {
-                            statusBadge = '<span class="status-badge completed">Completed</span>';
-                        } else if (item.includes('Status: In Progress') || item.includes('status: in progress')) {
-                            statusBadge = '<span class="status-badge in-progress">In Progress</span>';
-                        } else if (item.includes('Status: To Do') || item.includes('status: to do')) {
-                            statusBadge = '<span class="status-badge todo">To Do</span>';
-                        }
-                        
-                        // Format the main task title - assuming it's the first part of the text before any details
-                        let taskTitle = item;
-                        // Remove status part if present
-                        taskTitle = taskTitle.replace(/- Status: .+$/, '');
-                        // Remove priority part if present
-                        taskTitle = taskTitle.replace(/\[Priority: .+?\]/, '');
-                        // Remove due date if present
-                        taskTitle = taskTitle.replace(/\(Due:? [^)]+\)/, '');
-                        
-                        // Clean up whitespace
-                        taskTitle = taskTitle.trim();
-                        
-                        // Assemble the formatted task item
-                        return `<li class="task-item ${priorityClass}">
-                            <div class="task-title">${taskTitle}</div>
-                            <div class="task-details">
-                                ${dueDate}
-                                ${priorityBadge}
-                                ${statusBadge}
-                            </div>
-                            <div class="task-actions">
-                                <button class="task-action-btn mark-complete" onclick="handleTaskAction('mark', '${taskTitle}')">Mark Complete</button>
-                            </div>
-                        </li>`;
-                    }).join('');
-                    
-                    // Put it all together
-                    return `${introText}<ul class="enhanced-task-list">${taskItems}</ul>`;
-                } else {
-                    // Standard bullet list formatting (non-task items)
-                    return '<ul>' + text.split('• ').filter(Boolean).map(item => `<li>${item.trim()}</li>`).join('') + '</ul>';
-                }
-            }
-            
-            return text;
-        }
-
-        // Form submission
-        $(document).on('submit', '#chat-form', function(e) {
-            e.preventDefault();
-            const userInput = $('#user-input').val() ? $('#user-input').val().trim() : '';
-            if (userInput === '') return;
-
-            $('#chat-messages').append(
-                `<div class="message user-message">${userInput}</div>`
-            );
-            $('#user-input').val('');
-            $('#typing-indicator').show();
-            scrollToBottom();
-
-            sendToBackend(userInput);
-        });
-
-        // Send message to backend and handle response
-        function sendToBackend(message) {
-            $.ajax({
-                url: '/chatbot/message/',
-                type: 'POST',
-                contentType: 'application/json',
-                data: JSON.stringify({ message: message }),
-                success: function(data) {
-                    console.log('Response received:', data);
-                    $('#typing-indicator').hide();
-
-                    let responseText;
-                    
-                    // Handle different response formats
-                    if (typeof data === 'string') {
-                        responseText = data;
-                    } else if (data.response) {
-                        responseText = data.response;
-                    } else if (data.message) {
-                        responseText = data.message;
-                    } else {
-                        responseText = "I received your message but I'm not sure how to respond.";
+        // Display welcome message
+        addBotMessage("Hi there! I'm TaskBuddy, your personal task assistant. How can I help you today?");
+        
+        // Load message history
+        loadMessageHistory();
+        
+        // Handle refresh button click
+        refreshBtn.addEventListener('click', function() {
+            if (confirm('Are you sure you want to clear this conversation?')) {
+                chatMessages.innerHTML = '';
+                // Add typing indicator back
+                chatMessages.appendChild(typingIndicator);
+                // Show welcome message again
+                addBotMessage("Hi there! I'm TaskBuddy, your personal task assistant. How can I help you today?");
+                messageHistory = [];
+                fetch('/chatbot/clear-history/', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': getCookie('csrftoken'),
+                        'Content-Type': 'application/json'
                     }
-
-                    // Format the response text
-                    responseText = formatMessageText(responseText);
-
-                    // Add the bot's response to the chat
-                        $('#chat-messages').append(
-                        `<div class="message bot-message">${responseText}</div>`
-                        );
-                    
-                    scrollToBottom();
-                },
-                error: function(xhr, status, error) {
-                    console.error('Error:', error);
-                    $('#typing-indicator').hide();
-                    $('#chat-messages').append(
-                        `<div class="message bot-message">Sorry, I encountered an error. Please try again later.</div>`
-                    );
-                    scrollToBottom();
-                }
+                });
+            }
+        });
+        
+        // Handle minimize button click
+        minimizeBtn.addEventListener('click', function() {
+            const chatContainer = document.querySelector('.chat-container');
+            if (isMinimized) {
+                chatMessages.style.height = '400px';
+                minimizeBtn.innerHTML = '<i class="bi bi-dash-lg"></i>';
+                minimizeBtn.title = "Minimize chat";
+            } else {
+                chatMessages.style.height = '0';
+                minimizeBtn.innerHTML = '<i class="bi bi-plus-lg"></i>';
+                minimizeBtn.title = "Expand chat";
+            }
+            isMinimized = !isMinimized;
+        });
+        
+        // Handle suggestion button clicks
+        suggestionBtns.forEach(btn => {
+            btn.addEventListener('click', function() {
+                const message = this.getAttribute('data-message');
+                userInput.value = message;
+                
+                // Submit the form
+                const event = new Event('submit');
+                chatForm.dispatchEvent(event);
             });
+        });
+        
+        chatForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const message = userInput.value.trim();
+            if (message) {
+                // Add user message to chat
+                addUserMessage(message);
+                
+                // Clear input
+                userInput.value = '';
+                
+                // Show typing indicator
+                typingIndicator.style.display = 'flex';
+                
+                // Scroll to bottom
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+                
+                // Send message to backend
+                fetch('/chatbot/message/', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': getCookie('csrftoken'),
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        message: message
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    // Hide typing indicator
+                    typingIndicator.style.display = 'none';
+                    
+                    // Check if we have a single message or multiple messages
+                    if (data.messages) {
+                        // Multiple messages
+                        data.messages.forEach(msg => {
+                            addBotMessage(msg.message);
+                        });
+                    } else if (data.message) {
+                        // Single message
+                        addBotMessage(data.message);
+                    } else if (data.error) {
+                        // Error message
+                        addErrorMessage(data.error);
+                    }
+                    
+                    // Scroll to bottom
+                    chatMessages.scrollTop = chatMessages.scrollHeight;
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    typingIndicator.style.display = 'none';
+                    addErrorMessage("Sorry, I'm having trouble connecting right now. Please try again later.");
+                    chatMessages.scrollTop = chatMessages.scrollHeight;
+                });
+            }
+        });
+        
+        function addUserMessage(message) {
+            const messageElement = document.createElement('div');
+            messageElement.classList.add('message', 'user-message');
+            
+            // Add sender name
+            const senderElement = document.createElement('div');
+            senderElement.classList.add('message-sender');
+            senderElement.textContent = 'You';
+            
+            // Add message content
+            const contentElement = document.createElement('div');
+            contentElement.classList.add('message-content');
+            contentElement.textContent = message;
+            
+            // Add timestamp
+            const timeElement = document.createElement('div');
+            timeElement.classList.add('message-time');
+            timeElement.textContent = formatTime(new Date());
+            
+            // Assemble message
+            messageElement.appendChild(senderElement);
+            messageElement.appendChild(contentElement);
+            messageElement.appendChild(timeElement);
+            
+            // Insert before typing indicator
+            chatMessages.insertBefore(messageElement, typingIndicator);
+            
+            // Add to history
+            messageHistory.push({
+                sender: 'user',
+                content: message,
+                timestamp: new Date().toISOString()
+            });
+        }
+        
+        function addBotMessage(message) {
+            const messageElement = document.createElement('div');
+            messageElement.classList.add('message', 'bot-message');
+            
+            // Format message with Markdown-like syntax
+            message = formatTaskList(message);
+            
+            // Add sender name
+            const senderElement = document.createElement('div');
+            senderElement.classList.add('message-sender', 'bot-name');
+            senderElement.textContent = 'TaskBuddy';
+            
+            // Add message content
+            const contentElement = document.createElement('div');
+            contentElement.classList.add('message-content');
+            contentElement.innerHTML = formatMessage(message);
+            
+            // Add timestamp
+            const timeElement = document.createElement('div');
+            timeElement.classList.add('message-time');
+            timeElement.textContent = formatTime(new Date());
+            
+            // Assemble message
+            messageElement.appendChild(senderElement);
+            messageElement.appendChild(contentElement);
+            messageElement.appendChild(timeElement);
+            
+            // Insert before typing indicator
+            chatMessages.insertBefore(messageElement, typingIndicator);
+            
+            // Add to history
+            messageHistory.push({
+                sender: 'bot',
+                content: message,
+                timestamp: new Date().toISOString()
+            });
+        }
+        
+        function addErrorMessage(message) {
+            const messageElement = document.createElement('div');
+            messageElement.classList.add('message', 'bot-message', 'error-message');
+            messageElement.style.borderColor = '#dc3545';
+            
+            // Add sender name
+            const senderElement = document.createElement('div');
+            senderElement.classList.add('message-sender', 'bot-name');
+            senderElement.textContent = 'TaskBuddy';
+            
+            // Add message content
+            const contentElement = document.createElement('div');
+            contentElement.classList.add('message-content');
+            contentElement.textContent = message;
+            
+            // Add timestamp
+            const timeElement = document.createElement('div');
+            timeElement.classList.add('message-time');
+            timeElement.textContent = formatTime(new Date());
+            
+            // Assemble message
+            messageElement.appendChild(senderElement);
+            messageElement.appendChild(contentElement);
+            messageElement.appendChild(timeElement);
+            
+            // Insert before typing indicator
+            chatMessages.insertBefore(messageElement, typingIndicator);
+        }
+        
+        function loadMessageHistory() {
+            fetch('/chatbot/history/')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.messages && data.messages.length > 0) {
+                        // Remove welcome message
+                        chatMessages.innerHTML = '';
+                        chatMessages.appendChild(typingIndicator);
+                        
+                        // Add messages from history
+                        data.messages.forEach(msg => {
+                            if (msg.sender === 'user') {
+                                addUserMessage(msg.content);
+                            } else {
+                                addBotMessage(msg.content);
+                            }
+                        });
+                        
+                        // Scroll to bottom
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading history:', error);
+                });
+        }
+        
+        function formatMessage(message) {
+            // Check if this is the capabilities help message
+            if (message.includes('TaskBuddy Capabilities')) {
+                return formatCapabilitiesMessage(message);
+            }
+            
+            // Regular message formatting
+            // Convert line breaks to <br>
+            message = message.replace(/\n/g, '<br>');
+            
+            // Format markdown-style headers
+            message = message.replace(/^# (.*?)$/gm, '<h3 class="mb-3 mt-2" style="color: #4a6bdf; font-weight: 600;">$1</h3>');
+            message = message.replace(/^## (.*?)$/gm, '<h5 class="mb-2 mt-3" style="color: #4a6bdf; font-weight: 600;">$1</h5>');
+            message = message.replace(/^### (.*?)$/gm, '<h6 class="mb-2 mt-2" style="font-weight: 600;">$1</h6>');
+            
+            // Format lists
+            message = message.replace(/^\* (.*?)$/gm, '<li style="margin-left: 20px; margin-bottom: 5px;">$1</li>');
+            
+            // Group list items
+            message = message.replace(/<\/li><br><li/g, '</li><li');
+            message = message.replace(/<li(.*?)<\/li>/gs, function(match) {
+                return '<ul class="chatbot-list" style="margin-bottom: 10px; padding-left: 15px;">' + match + '</ul>';
+            });
+            
+            // Remove empty lines between lists
+            message = message.replace(/<\/ul><br><ul/g, '</ul><ul');
+            
+            // Bold text between asterisks
+            message = message.replace(/\*\*(.*?)\*\*/g, '<strong style="color: #333;">$1</strong>');
+            
+            // Italic text between single asterisks
+            message = message.replace(/\*(.*?)\*/g, '<em>$1</em>');
+            
+            // Format command examples with quotes
+            message = message.replace(/"([^"]+)"/g, '<span class="command-example">$1</span>');
+            
+            // Highlight key phrases
+            const highlightPhrases = [
+                'high priority', 'medium priority', 'low priority',
+                'due today', 'overdue', 'completed',
+                'most productive', 'task creation', 'task management',
+                'productivity insights', 'smart reminders'
+            ];
+            
+            highlightPhrases.forEach(phrase => {
+                const regex = new RegExp(`\\b${phrase}\\b`, 'gi');
+                message = message.replace(regex, match => {
+                    let color = '#4a6bdf'; // Default blue
+                    
+                    if (match.toLowerCase().includes('high priority') || match.toLowerCase().includes('overdue')) {
+                        color = '#dc3545'; // Red for high priority/overdue
+                    } else if (match.toLowerCase().includes('medium priority')) {
+                        color = '#fd7e14'; // Orange for medium
+                    } else if (match.toLowerCase().includes('low priority')) {
+                        color = '#28a745'; // Green for low priority
+                    } else if (match.toLowerCase().includes('completed')) {
+                        color = '#28a745'; // Green for completed
+                    }
+                    
+                    return `<span style="color: ${color}; font-weight: 500;">${match}</span>`;
+                });
+            });
+            
+            return message;
+        }
+        
+        function formatCapabilitiesMessage(message) {
+            // Split the message into sections
+            const sections = message.split('##');
+            
+            // Process the header section
+            let intro = sections[0].replace('# TaskBuddy Capabilities', '').trim();
+            
+            // Build the HTML with special styling
+            let html = `
+            <div class="capabilities-container">
+                <h3 style="color: #4a6bdf; font-weight: 600; margin-bottom: 15px;">TaskBuddy Capabilities</h3>
+                <p>${intro}</p>
+                
+                <div class="row">`;
+            
+            // Process each capability section
+            for (let i = 1; i < sections.length; i++) {
+                const section = sections[i].trim();
+                const sectionLines = section.split('\n');
+                const sectionTitle = sectionLines[0].trim();
+                
+                // Extract emoji and title
+                const emojiMatch = sectionTitle.match(/^(.) (.*?)$/);
+                const emoji = emojiMatch ? emojiMatch[1] : '';
+                const title = emojiMatch ? emojiMatch[2] : sectionTitle;
+                
+                html += `
+                    <div class="col-md-6 capabilities-section">
+                        <h5>${emoji} ${title}</h5>
+                        <ul>`;
+                
+                // Process bullet points
+                let inSubList = false;
+                for (let j = 1; j < sectionLines.length; j++) {
+                    const line = sectionLines[j].trim();
+                    
+                    // Skip empty lines
+                    if (!line) continue;
+                    
+                    if (line.startsWith('* **')) {
+                        // Main bullet point with bold text
+                        const boldText = line.match(/\*\* (.*?) \*\*/)[1];
+                        html += `<li><strong>${boldText}</strong></li>`;
+                        inSubList = true;
+                    } else if (line.startsWith('  * "')) {
+                        // Example command with quotes
+                        const example = line.match(/"(.*?)"/)[1];
+                        if (inSubList) {
+                            html += `<ul style="list-style-type: none; margin-left: -10px;"><li><span class="command-example">${example}</span></li></ul>`;
+                        }
+                    } else if (line.startsWith('  * ')) {
+                        // Regular sub-bullet
+                        const text = line.replace('  * ', '');
+                        if (inSubList) {
+                            html += `<ul style="list-style-type: none; margin-left: -10px;"><li>${text}</li></ul>`;
+                        }
+                    }
+                }
+                
+                html += `
+                        </ul>
+                    </div>`;
+                
+                // Create a new row every 2 sections
+                if (i % 2 === 0 && i < sections.length - 1) {
+                    html += `
+                            </div>
+                <div class="row">`;
+                }
+            }
+            
+            // Add the closing tags and final call to action
+            html += `
+                </div>
+            </div>
+            <p>What would you like help with today?</p>`;
+            
+            return html;
+        }
+        
+        function formatTaskList(message) {
+            // Example: "1. Task title, due Jun 15, 2023, high priority"
+            const taskListRegex = /(\d+\.\s+)(.*?)(,\s+due\s+[\w\s,]+)?(,\s+(?:high|medium|low)\s+priority)?/g;
+            
+            return message.replace(taskListRegex, function(match, number, title, dueDate, priority) {
+                let priorityClass = '';
+                if (priority) {
+                    if (priority.includes('high')) priorityClass = 'high-priority';
+                    else if (priority.includes('medium')) priorityClass = 'medium-priority';
+                    else if (priority.includes('low')) priorityClass = 'low-priority';
+                }
+                
+                let formattedTask = `<div class="task-item ${priorityClass}">
+                    <div class="task-title">${title.trim()}</div>
+                    <div class="task-details">`;
+                
+                if (dueDate) {
+                    formattedTask += `<span class="task-due-date">${dueDate.replace(',', '').trim()}</span>`;
+                }
+                
+                if (priority) {
+                    const priorityValue = priority.includes('high') ? 'high' : 
+                                         priority.includes('medium') ? 'medium' : 'low';
+                    formattedTask += `<span class="priority-badge ${priorityValue}">${priority.replace(',', '').trim()}</span>`;
+                }
+                
+                formattedTask += `</div></div>`;
+                
+                return formattedTask;
+            });
+        }
+        
+        function formatTime(date) {
+            return date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+        }
+        
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
         }
     });
     </script>

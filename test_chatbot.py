@@ -74,6 +74,22 @@ if __name__ == "__main__":
                 "list my projects",
                 "project status"
             ],
+            "Completed Tasks": [
+                "show me my completed tasks",
+                "what completed tasks do I have",
+                "list completed tasks",
+                "any completed tasks",
+                "what are my completed tasks"
+            ],
+            "Thank You Responses": [
+                "thanks",
+                "thank you",
+                "thanks buddy",
+                "ty",
+                "thx",
+                "I appreciate your help",
+                "thank you so much"
+            ],
             "Unclear Queries": [
                 "test",
                 "???",

@@ -2,7 +2,7 @@ import os
 import json
 import re
 import httpx
-from .utils import get_user_tasks, format_task_list, process_context_with_query
+from .utils import get_user_tasks, format_task_list, process_context_with_query, get_user_context_data
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
@@ -240,6 +240,25 @@ def generate_bot_response(user, conversation, user_message):
     """Generate a response from the chatbot based on user input."""
     logger.info(f"Received message from user {user.id} in conversation {conversation.id}: '{user_message}'")
     try:
+        # Check for simple thanks messages first
+        user_message_lower = user_message.lower().strip()
+        if (user_message_lower.startswith('thank') or 
+            user_message_lower.startswith('thanks') or 
+            user_message_lower == 'ty' or 
+            user_message_lower == 'thx' or 
+            'appreciate' in user_message_lower or
+            user_message_lower in ['thanks', 'thank you', 'thanks a lot', 'thanks buddy', 'thank you so much']):
+            
+            # Return a friendly thank you response
+            thanks_responses = [
+                "You're welcome! Is there anything else I can help you with?",
+                "Glad I could help! Feel free to ask if you need anything else.",
+                "Happy to assist! Let me know if you need help with any other tasks.",
+                "No problem at all! Would you like me to show you your current tasks?",
+                "Anytime! I'm here to help with your tasks and projects."
+            ]
+            return random.choice(thanks_responses)
+            
         # Get recent conversation history (last 5 exchanges) for context
         conversation_context = conversation.get_recent_messages(count=5)
         
@@ -258,51 +277,64 @@ def generate_bot_response(user, conversation, user_message):
         # Add some debug logging to help diagnose pattern issues
         logger.debug(f"Processing message: '{user_message}' (lower: '{user_message.lower()}')")
         
-        # Update the greeting patterns
-        greeting_patterns = [
-            r"^(?:hello|hi|hey|howdy|greetings|good\s(?:morning|afternoon|evening|day))(?:\s|$|!|\.)",
-            r"^(?:hello|hi|hey|howdy|greetings)(?:\s|$|!|\.)(?:there|assistant|bot|chatbot|nexus)",
-            r"^(?:morning|afternoon|evening)(?:\s|$|!|\.)",
-            r"^(?:yo|sup|hiya|heya)(?:\s|$|!|\.)",
-            r"^(?:what's up|how are you|how's it going|how are things|how you doing|whats up|wassup)(?:\s|$|\?|!|\.)",
-            r"^(?:nice to see you|good to see you)(?:\s|$|!|\.)",
-            r"^(?:hope you'?re doing well|hope you'?re good)(?:\s|$|!|\.)"
-        ]
-
-        # Special handler for "how are you" type questions
-        if re.search(r"^(?:how are you|how'?s it going|how you doing|how'?s things|how'?s your day|how have you been)(?:\s|$|\?|!|\.)", user_message):
-            return get_how_are_you_response()
-
-        for pattern in greeting_patterns:
-            if re.search(pattern, user_message.lower()):
-                logger.debug(f"Greeting pattern matched: {pattern}")
-                
-                # Check if this is a casual greeting like "hey", "yo", etc.
-                is_casual = re.search(r"^(?:hey|hi|yo|sup|hiya|heya)(?:\s|$|!|\.)", user_message.lower())
-                
-                # Get appropriate greeting
-                if is_casual:
-                    greeting_response = get_casual_greeting_response()
-                else:
-                    greeting_response = get_greeting_response()
-                
-                # Add task summary if user has pending tasks
-                pending_count = (Task.objects.filter(owner=user) | Task.objects.filter(assignees=user)).filter(~models.Q(status='completed')).distinct().count()
-                
-                if pending_count > 0:
-                    due_today = (Task.objects.filter(owner=user) | Task.objects.filter(assignees=user)).filter(
-                        ~models.Q(status='completed'),
-                        due_date__date=timezone.now().date()
-                    ).distinct().count()
+        # Handle various user intents
+        try:
+            # Special handler for "how are you" type questions
+            if re.search(r"^(?:how are you|how'?s it going|how you doing|how'?s things|how'?s your day|how have you been)(?:\s|$|\?|!|\.)", user_message):
+                return get_how_are_you_response()
+            
+            # Check for greeting patterns
+            greeting_patterns = [
+                r"^(?:hello|hi|hey|howdy|greetings|good\s(?:morning|afternoon|evening|day))(?:\s|$|!|\.)",
+                r"^(?:hello|hi|hey|howdy|greetings)(?:\s|$|!|\.)(?:there|assistant|bot|chatbot|nexus)",
+                r"^(?:morning|afternoon|evening)(?:\s|$|!|\.)",
+                r"^(?:yo|sup|hiya|heya)(?:\s|$|!|\.)",
+                r"^(?:what's up|how are you|how's it going|how are things|how you doing|whats up|wassup)(?:\s|$|\?|!|\.)",
+                r"^(?:nice to see you|good to see you)(?:\s|$|!|\.)",
+                r"^(?:hope you'?re doing well|hope you'?re good)(?:\s|$|!|\.)"
+            ]
+            
+            for pattern in greeting_patterns:
+                if re.search(pattern, user_message.lower()):
+                    logger.debug(f"Greeting pattern matched: {pattern}")
                     
-                    if due_today > 0:
-                        greeting_response += f" You have {due_today} tasks due today."
-                    elif pending_count == 1:
-                        greeting_response += f" You have 1 pending task."
+                    # Check if this is a casual greeting like "hey", "yo", etc.
+                    is_casual = re.search(r"^(?:hey|hi|yo|sup|hiya|heya)(?:\s|$|!|\.)", user_message.lower())
+                    
+                    # Get appropriate greeting
+                    if is_casual:
+                        greeting_response = get_casual_greeting_response()
                     else:
-                        greeting_response += f" You have {pending_count} pending tasks."
-                
-                return greeting_response
+                        greeting_response = get_greeting_response()
+                    
+                    # Import Task model inside the handler
+                    from tasks.models import Task
+                    
+                    # Add task summary if user has pending tasks
+                    pending_count = (Task.objects.filter(owner=user) | Task.objects.filter(assignees=user)).filter(~models.Q(status='completed')).distinct().count()
+                    
+                    if pending_count > 0:
+                        due_today = (Task.objects.filter(owner=user) | Task.objects.filter(assignees=user)).filter(
+                            ~models.Q(status='completed'),
+                            due_date__date=timezone.now().date()
+                        ).distinct().count()
+                        
+                        if due_today > 0:
+                            greeting_response += f" You have {due_today} tasks due today."
+                        elif pending_count == 1:
+                            greeting_response += f" You have 1 pending task."
+                        else:
+                            greeting_response += f" You have {pending_count} pending tasks."
+                    
+                    return greeting_response
+        except Exception as e:
+            logger.error(f"Error generating response: {str(e)}")
+            
+            # Handle different types of errors more gracefully
+            if "cannot access local variable 'Task'" in str(e):
+                return "Hello! I'm your task management assistant. How can I help you today?"
+            else:
+                return "I apologize, but I'm having trouble processing your request. Please try asking in a simpler way or check with an administrator if the problem persists."
         
         # Add farewell detection after the greeting detection
         farewell_patterns = [
@@ -924,29 +956,83 @@ def generate_bot_response(user, conversation, user_message):
         
         # For other inquiries, use the conversational AI but with a more structured system prompt
         try:
+            # Get relevant user context data for this query
+            from .utils import get_user_context_data
+            
+            # Add specific handling for completed tasks queries
+            user_message_lower = user_message.lower()
+            try:
+                if any(phrase in user_message_lower for phrase in ['completed task', 'completed tasks', 'finished task', 'finished tasks', 'done tasks']):
+                    # Import models here to avoid scope issues
+                    from tasks.models import Task
+                    
+                    # Force include all completed tasks in the context
+                    completed_tasks = Task.objects.filter(
+                        assignees=user,
+                        status='completed',
+                        is_archived=False
+                    ).order_by('-completed_at')[:10]
+                    
+                    completed_tasks_context = "RECENTLY COMPLETED TASKS:\n"
+                    if completed_tasks.exists():
+                        for i, task in enumerate(completed_tasks, 1):
+                            completed_info = f", completed {task.completed_at.strftime('%b %d')}" if task.completed_at else ""
+                            completed_tasks_context += f"{i}. {task.title}{completed_info}\n"
+                    else:
+                        completed_tasks_context += "You don't have any completed tasks yet.\n"
+                    
+                    # Get regular context data
+                    user_context_data = get_user_context_data(user=user, query=user_message)
+                    
+                    # Ensure completed tasks are always included
+                    if "RECENTLY COMPLETED TASKS:" not in user_context_data:
+                        user_context_data = completed_tasks_context + "\n" + user_context_data
+                else:
+                    # Regular query, get standard context
+                    user_context_data = get_user_context_data(user=user, query=user_message)
+            except Exception as e:
+                logger.error(f"Error in task listing: {str(e)}")
+                # Fall back to standard context data
+                user_context_data = get_user_context_data(user=user, query=user_message)
+            
+            # Create a more comprehensive system message with user data
             system_message = {
                 "role": "system",
-                "content": """You are a helpful, friendly task management assistant. Your goal is to be supportive, positive, and solution-oriented.
+                "content": f"""You are a helpful, friendly task management assistant called TaskBuddy. Your goal is to be supportive, positive, and solution-oriented.
 
-I can help with a variety of task-related needs, including:
-1. Providing statistics and insights about your tasks and projects
+Your capabilities:
+1. Providing statistics and insights about the user's tasks and projects
 2. Showing lists of tasks and projects with different filters
-3. Helping you mark tasks as completed
+3. Helping the user mark tasks as completed
 4. Answering questions about task management best practices
 
-My communication style:
-- I'm professional but warm and conversational
-- I celebrate your accomplishments when you complete tasks
-- I provide clear, actionable information
-- I'm encouraging and supportive of your productivity goals
+IMPORTANT RULES:
+1. You CANNOT create new tasks - always inform the user that they need to use the "Add Task" button
+2. You CANNOT update tasks - always inform the user that they need to edit the task directly
+3. For ANY acknowledgment like "thank you" or "thanks", respond positively (e.g., "You're welcome! How else can I help?")
+4. NEVER say you don't have access to task data - all the user's data is provided below
+5. ALWAYS give the SPECIFIC information the user asks for, referencing the context below
+6. ALWAYS be friendly and personable, but primarily focused on the task at hand
+7. For any ambiguous queries, ask clarifying questions instead of saying you cannot help
+
+===== USER CONTEXT DATA =====
+{user_context_data}
+===== END USER CONTEXT DATA =====
+
+Communication style:
+- Professional but warm and conversational
+- Celebrate accomplishments when tasks are completed
+- Provide clear, actionable information
+- Be encouraging and supportive of productivity goals
 
 When responding:
 - Start with a brief acknowledgment of the user's request
-- Provide the requested information clearly and concisely
+- Provide the requested information clearly and concisely using the context data
 - Add a small personal or encouraging touch when appropriate
-- If I can't perform an action, I'll suggest helpful alternatives
+- For simple acknowledgments or thanks, respond warmly and ask how else you can help
+- If you can't perform an action due to the rules, suggest appropriate alternatives
 
-I aim to be your trusted productivity partner!
+You are the user's trusted productivity partner!
 """
             }
             
@@ -988,9 +1074,14 @@ I aim to be your trusted productivity partner!
             payload = {
                 "model": "mistral-small-latest",  # Or other preferred Mistral model
                 "messages": complete_messages,
-                "max_tokens": 300,
-                "temperature": 0.5,
+                "max_tokens": 400,  # Increased to allow for more detailed responses
+                "temperature": 0.7,  # Slightly increased for more varied responses
             }
+            
+            # Log the query and context (without complete history to avoid too much logging)
+            log_payload = payload.copy()
+            log_payload["messages"] = [system_message] + [{"role": "user", "content": user_message}]
+            logger.debug(f"Sending to Mistral AI: {json.dumps(log_payload)}")
             
             try:
                 with httpx.Client(timeout=30.0) as client: # Added timeout
@@ -1004,6 +1095,13 @@ I aim to be your trusted productivity partner!
                 if not bot_response:
                     logger.error(f"Mistral API returned empty content. Response: {response_data}")
                     return "I received an empty response from the AI. Please try again."
+                    
+                # Special handling for acknowledgements/thanks
+                if user_message.lower() in ['thanks', 'thank you', 'thanks a lot', 'thank you so much', 'thx', 'ty']:
+                    # If the response seems generic, use a friendlier version
+                    if "don't have" in bot_response.lower() or "cannot" in bot_response.lower() or "unable" in bot_response.lower():
+                        return "You're welcome! Is there anything else I can help you with regarding your tasks or projects?"
+                
                 return bot_response
             
             except httpx.HTTPStatusError as e:

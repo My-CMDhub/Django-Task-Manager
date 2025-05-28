@@ -32,6 +32,9 @@ logger = logging.getLogger(__name__)
 @login_required
 def task_list(request):
     """View to list all tasks for the logged-in user."""
+    # Initialize the search form
+    form = TaskSearchForm(request.GET)
+    
     # Default filter for tasks where user is either owner or assignee
     tasks = Task.objects.filter(
         Q(owner=request.user) | Q(assignees=request.user)
@@ -42,58 +45,134 @@ def task_list(request):
     if not show_archived:
         tasks = tasks.filter(is_archived=False)
     
-    # Filter by project if provided
-    project_id = request.GET.get('project')
-    if project_id:
-        tasks = tasks.filter(project_id=project_id)
-    
-    # Get choices for dropdown filters
-    status_choices = Task.STATUS_CHOICES
-    priority_choices = Task.PRIORITY_CHOICES
-    
-    # Filter by status if provided
-    status = request.GET.get('status')
-    if status:
-        tasks = tasks.filter(status=status)
-    
-    # Filter by priority if provided
-    priority = request.GET.get('priority')
-    if priority:
-        tasks = tasks.filter(priority=priority)
-    
-    # Filter by search term if provided
-    search = request.GET.get('search')
-    if search:
-        tasks = tasks.filter(
-            Q(title__icontains=search) | 
-            Q(description__icontains=search)
-        )
-    
-    # Filter by due date range
-    due_date_filter = request.GET.get('due')
-    if due_date_filter:
-        today = timezone.now().date()
-        if due_date_filter == 'today':
-            tasks = tasks.filter(due_date__date=today)
-        elif due_date_filter == 'tomorrow':
-            tomorrow = today + timezone.timedelta(days=1)
-            tasks = tasks.filter(due_date__date=tomorrow)
-        elif due_date_filter == 'week':
-            end_of_week = today + timezone.timedelta(days=7)
-            tasks = tasks.filter(due_date__date__range=[today, end_of_week])
-        elif due_date_filter == 'overdue':
-            tasks = tasks.filter(due_date__lt=timezone.now(), status__in=['todo', 'in_progress'])
-        elif due_date_filter == 'none':
-            tasks = tasks.filter(due_date__isnull=True)
-    
-    # Order by position or created date
-    order_by = request.GET.get('order_by', '-created_at')
-    tasks = tasks.order_by(order_by)
+    # Apply filters based on form data
+    if form.is_valid():
+        # Filter by project
+        project = form.cleaned_data.get('project')
+        if project:
+            tasks = tasks.filter(project=project)
+        
+        # Filter by status
+        status = form.cleaned_data.get('status')
+        if status:
+            tasks = tasks.filter(status=status)
+        
+        # Filter by priority
+        priority = form.cleaned_data.get('priority')
+        if priority:
+            tasks = tasks.filter(priority=priority)
+        
+        # Filter by search term with advanced search options
+        search = form.cleaned_data.get('search')
+        search_in = form.cleaned_data.get('search_in') or ['title', 'description']
+        if search:
+            search_query = Q()
+            if 'title' in search_in:
+                search_query |= Q(title__icontains=search)
+            if 'description' in search_in:
+                search_query |= Q(description__icontains=search)
+            if 'comments' in search_in:
+                search_query |= Q(comments__content__icontains=search)
+            tasks = tasks.filter(search_query).distinct()
+        
+        # Filter by due date range
+        due_date_filter = form.cleaned_data.get('due_date')
+        if due_date_filter:
+            today = timezone.now().date()
+            if due_date_filter == 'today':
+                tasks = tasks.filter(due_date__date=today)
+            elif due_date_filter == 'tomorrow':
+                tomorrow = today + timezone.timedelta(days=1)
+                tasks = tasks.filter(due_date__date=tomorrow)
+            elif due_date_filter == 'week':
+                end_of_week = today + timezone.timedelta(days=7)
+                tasks = tasks.filter(due_date__date__range=[today, end_of_week])
+            elif due_date_filter == 'month':
+                end_of_month = today + timezone.timedelta(days=30)
+                tasks = tasks.filter(due_date__date__range=[today, end_of_month])
+            elif due_date_filter == 'overdue':
+                tasks = tasks.filter(due_date__lt=timezone.now(), status__in=['todo', 'in_progress'])
+            elif due_date_filter == 'none':
+                tasks = tasks.filter(due_date__isnull=True)
+        
+        # Filter by creation date
+        created_date_filter = form.cleaned_data.get('created_date')
+        if created_date_filter:
+            today = timezone.now().date()
+            if created_date_filter == 'today':
+                tasks = tasks.filter(created_at__date=today)
+            elif created_date_filter == 'yesterday':
+                yesterday = today - timezone.timedelta(days=1)
+                tasks = tasks.filter(created_at__date=yesterday)
+            elif created_date_filter == 'week':
+                start_of_week = today - timezone.timedelta(days=today.weekday())
+                tasks = tasks.filter(created_at__date__gte=start_of_week)
+            elif created_date_filter == 'month':
+                start_of_month = today.replace(day=1)
+                tasks = tasks.filter(created_at__date__gte=start_of_month)
+        
+        # Filter by assignee
+        assignee = form.cleaned_data.get('assignee')
+        if assignee:
+            tasks = tasks.filter(assignees=assignee)
+        
+        # Filter by creator
+        created_by = form.cleaned_data.get('created_by')
+        if created_by:
+            tasks = tasks.filter(owner=created_by)
+        
+        # Filter by tags
+        tags = form.cleaned_data.get('tags')
+        if tags:
+            for tag in tags:
+                tasks = tasks.filter(tags=tag)
+        
+        # Filter by AI-generated
+        is_ai_generated = form.cleaned_data.get('is_ai_generated')
+        if is_ai_generated:
+            tasks = tasks.filter(is_ai_generated=True)
+        
+        # Filter by has attachments
+        has_attachments = form.cleaned_data.get('has_attachments')
+        if has_attachments:
+            tasks = tasks.filter(attachments__isnull=False).distinct()
+        
+        # Filter by has comments
+        has_comments = form.cleaned_data.get('has_comments')
+        if has_comments:
+            tasks = tasks.filter(comments__isnull=False).distinct()
+        
+        # Filter by estimated hours range
+        estimated_hours_min = form.cleaned_data.get('estimated_hours_min')
+        if estimated_hours_min is not None:
+            tasks = tasks.filter(estimated_hours__gte=estimated_hours_min)
+        
+        estimated_hours_max = form.cleaned_data.get('estimated_hours_max')
+        if estimated_hours_max is not None:
+            tasks = tasks.filter(estimated_hours__lte=estimated_hours_max)
+        
+        # Filter by subtask status
+        is_subtask = form.cleaned_data.get('is_subtask')
+        if is_subtask is not None:
+            if is_subtask:
+                tasks = tasks.filter(parent_task__isnull=False)
+            else:
+                tasks = tasks.filter(parent_task__isnull=True)
+        
+        # Sort results
+        sort_by = form.cleaned_data.get('sort_by') or '-created_at'
+        tasks = tasks.order_by(sort_by)
+    else:
+        # Default sorting if form is not valid
+        tasks = tasks.order_by('-created_at')
     
     # Get available projects for filtering
     projects = Project.objects.filter(
         Q(owner=request.user) | Q(members=request.user)
     ).filter(is_archived=False).order_by('name')
+    
+    # Get all task tags for this user
+    tags = TaskTag.objects.filter(created_by=request.user).order_by('name')
     
     # Calculate stats before pagination
     # Get all tasks before filtering for stats
@@ -121,40 +200,69 @@ def task_list(request):
     ).count()
     
     # Calculate completion percentage
-    completion_percentage = 0
     if total_tasks > 0:
-        completion_percentage = int((completed_count / total_tasks) * 100)
+        completion_percentage = (completed_count / total_tasks) * 100
+    else:
+        completion_percentage = 0
+    
+    # Get choices for dropdown filters
+    status_choices = Task.STATUS_CHOICES
+    priority_choices = Task.PRIORITY_CHOICES
     
     # Pagination
     paginator = Paginator(tasks, 10)  # Show 10 tasks per page
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
     
+    # Preserve filter parameters for pagination links
+    query_params = request.GET.copy()
+    if 'page' in query_params:
+        del query_params['page']
+    
+    # Kanban columns: filter from the filtered/paginated queryset, not all_tasks
+    kanban_todo_tasks = tasks.filter(status='todo')
+    kanban_in_progress_tasks = tasks.filter(status='in_progress')
+    kanban_completed_tasks = tasks.filter(status='completed')
+
+    # Determine if any advanced filters are active for template JS
+    has_advanced_filters = any([
+        form.cleaned_data.get('project'),
+        form.cleaned_data.get('assignee'),
+        form.cleaned_data.get('created_by'),
+        form.cleaned_data.get('created_date'),
+        form.cleaned_data.get('estimated_hours_min'),
+        form.cleaned_data.get('estimated_hours_max'),
+        form.cleaned_data.get('tags'),
+        form.cleaned_data.get('is_ai_generated'),
+        form.cleaned_data.get('has_attachments'),
+        form.cleaned_data.get('has_comments'),
+        form.cleaned_data.get('is_subtask'),
+    ]) if form.is_valid() else False
+
     context = {
         'tasks': page_obj,
-        'page_obj': page_obj,
-        'is_paginated': page_obj.has_other_pages(),
+        'form': form,
+        'projects': projects,
+        'tags': tags,
         'status_choices': status_choices,
         'priority_choices': priority_choices,
-        'projects': projects,
-        'show_archived': show_archived,
-        'selected_project': project_id,
-        'selected_status': status,
-        'selected_priority': priority,
-        'selected_due_date': due_date_filter,
-        'search': search or '',
-        # Task counts
         'total_tasks': total_tasks,
         'todo_count': todo_count,
         'in_progress_count': in_progress_count,
         'completed_count': completed_count,
         'overdue_count': overdue_count,
         'completion_percentage': completion_percentage,
-        # Kanban view tasks
-        'todo_tasks': todo_tasks,
-        'in_progress_tasks': in_progress_tasks,
-        'completed_tasks': completed_tasks,
+        'show_archived': show_archived,
+        'page_obj': page_obj,
+        'is_paginated': page_obj.has_other_pages(),
+        'query_params': query_params.urlencode(),
+        # Add Kanban columns for filtered tasks
+        'todo_tasks': kanban_todo_tasks,
+        'in_progress_tasks': kanban_in_progress_tasks,
+        'completed_tasks': kanban_completed_tasks,
+        'has_advanced_filters': has_advanced_filters,
     }
+    
     return render(request, 'tasks/task_list.html', context)
 
 @login_required
