@@ -122,49 +122,50 @@ _supabase_admin_client = None  # For admin operations
 def get_supabase_client():
     """Get or initialize a Supabase client instance"""
     global _supabase_client
-    if BYPASS_SUPABASE or SupabaseClient is None:
-        if BYPASS_SUPABASE:
-            print("Supabase client is BYPASSED via settings.BYPASS_SUPABASE")
-        if SupabaseClient is None and not BYPASS_SUPABASE:
-            print("Supabase client could not be imported, bypassing.")
+    if BYPASS_SUPABASE:
+        print("Supabase client is BYPASSED via settings.BYPASS_SUPABASE")
         return None
     try:
         if _supabase_client is None:
             if not SUPABASE_URL:
                 print("Missing Supabase URL")
                 return None
+            
+            # Use SUPABASE_ANON_KEY first, then fall back to SUPABASE_KEY if needed
             anon_key = SUPABASE_ANON_KEY or SUPABASE_KEY
             if not anon_key:
                 print("Missing Supabase API key")
                 return None
-            print(f"Creating new Supabase client with URL: {SUPABASE_URL} (from base settings)")
-            _supabase_client = SupabaseClient(SUPABASE_URL, anon_key)
-            print("Supabase client created successfully (from base settings)")
+                
+            print(f"Creating new Supabase client with URL: {SUPABASE_URL}")
+            _supabase_client = create_client(SUPABASE_URL, anon_key)
+            print("Supabase client created successfully")
+            
         return _supabase_client
     except Exception as e:
-        print(f"Error initializing Supabase client (from base settings): {str(e)}")
+        print(f"Error initializing Supabase client: {str(e)}")
+        # Fall back to None, which will cause the code to use Django-only mode
         return None
 
 def get_supabase_admin_client():
     """Get or initialize a Supabase client with admin privileges"""
     global _supabase_admin_client
-    if BYPASS_SUPABASE or SupabaseClient is None:
-        if BYPASS_SUPABASE:
-            print("Supabase admin client is BYPASSED via settings.BYPASS_SUPABASE")
-        if SupabaseClient is None and not BYPASS_SUPABASE:
-            print("Supabase admin client could not be imported, bypassing.")
+    if BYPASS_SUPABASE:
+        print("Supabase admin client is BYPASSED via settings.BYPASS_SUPABASE")
         return None
     try:
         if _supabase_admin_client is None:
             if not SUPABASE_URL or not SUPABASE_SERVICE_KEY:
                 print("Missing Supabase admin credentials")
                 return None
-            print(f"Creating new Supabase admin client with URL: {SUPABASE_URL} (from base settings)")
-            _supabase_admin_client = SupabaseClient(SUPABASE_URL, SUPABASE_SERVICE_KEY)
-            print("Supabase admin client created successfully (from base settings)")
+                
+            print(f"Creating new Supabase admin client with URL: {SUPABASE_URL}")
+            _supabase_admin_client = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
+            print("Supabase admin client created successfully")
+            
         return _supabase_admin_client
     except Exception as e:
-        print(f"Error creating Supabase admin client (from base settings): {e}")
+        print(f"Error initializing Supabase admin client: {str(e)}")
         return None
 
 # Authentication settings

@@ -51,4 +51,7 @@ urlpatterns = [
     # Task stats
     path('tasks/stats/', views.task_stats, name='task_stats'),
     path('tasks_list/', TaskListView.as_view(), name='task-list'),
+    
+    # Public share link
+    path('share/<uuid:token>/', views.shared_resource_view, name='shared_resource_view'),
 ] 

@@ -1,0 +1,13 @@
+{% extends 'base.html' %}
+
+{% block title %}Share Link Error{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="alert alert-danger text-center">
+        <h4 class="mb-3">Share Link Error</h4>
+        <p>{{ error_message }}</p>
+        <a href="/" class="btn btn-primary mt-3">Go to Home</a>
+    </div>
+</div>
+{% endblock %} 

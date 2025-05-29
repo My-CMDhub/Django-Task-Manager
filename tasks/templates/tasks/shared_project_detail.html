@@ -1,0 +1,47 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ resource.name }} | Shared Project{% endblock %}
+
+{% block content %}
+<div class="project-header">
+    {% if guest_banner %}
+    <div class="alert alert-info text-center mb-4">
+        <strong>You are viewing this as a guest via a share link.</strong>
+        {% if not can_edit %}<br>This is a read-only view. Log in to request edit access if available.{% endif %}
+    </div>
+    {% endif %}
+    <div class="project-title">{{ resource.name }}</div>
+    <div class="project-description">{{ resource.description|linebreaksbr }}</div>
+    <div class="mb-3">
+        <strong>Owner:</strong> {{ resource.owner.username }}<br>
+        <strong>Created:</strong> {{ resource.created_at|date:'Y-m-d H:i' }}<br>
+        <strong>Last Updated:</strong> {{ resource.updated_at|date:'Y-m-d H:i' }}
+    </div>
+    <div class="mb-3">
+        <strong>Members:</strong>
+        {% for user in resource.members.all %}
+            <span class="badge bg-secondary">{{ user.username }}</span>
+        {% empty %}
+            <span class="text-muted">None</span>
+        {% endfor %}
+    </div>
+    {% if can_edit %}
+    <div class="mt-4">
+        <a href="{% url 'tasks:project_update' resource.id %}" class="btn btn-primary">Edit Project</a>
+    </div>
+    {% endif %}
+</div>
+<div class="mt-4">
+    <h4>Tasks in this Project</h4>
+    <ul class="list-group">
+        {% for task in resource.tasks.all %}
+        <li class="list-group-item">
+            <strong>{{ task.title }}</strong> - {{ task.get_status_display }}
+            <span class="badge badge-{{ task.priority|lower }}">{{ task.get_priority_display }}</span>
+        </li>
+        {% empty %}
+        <li class="list-group-item text-muted">No tasks in this project.</li>
+        {% endfor %}
+    </ul>
+</div>
+{% endblock %} 

@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ resource.title }} | Shared Task{% endblock %}
+
+{% block content %}
+<div class="task-detail-container">
+    {% if guest_banner %}
+    <div class="alert alert-info text-center mb-4">
+        <strong>You are viewing this as a guest via a share link.</strong>
+        {% if not can_edit %}<br>This is a read-only view. Log in to request edit access if available.{% endif %}
+    </div>
+    {% endif %}
+    <div class="task-header">
+        <div class="task-title">{{ resource.title }}</div>
+        <span class="badge badge-{{ resource.status|lower }}">{{ resource.get_status_display }}</span>
+        <span class="badge badge-{{ resource.priority|lower }}">{{ resource.get_priority_display }}</span>
+        {% for tag in resource.tags.all %}
+            <span class="badge tag-badge" style="--tag-color: {{ tag.color }};">{{ tag.name }}</span>
+        {% endfor %}
+    </div>
+    <div class="task-description">
+        {{ resource.description|linebreaksbr }}
+    </div>
+    <div class="mt-4">
+        <strong>Due Date:</strong> {{ resource.due_date|date:'Y-m-d H:i' }}<br>
+        <strong>Owner:</strong> {{ resource.owner.username }}
+    </div>
+    <div class="mt-4">
+        <strong>Assignees:</strong>
+        {% for user in resource.assignees.all %}
+            <span class="badge bg-secondary">{{ user.username }}</span>
+        {% empty %}
+            <span class="text-muted">None</span>
+        {% endfor %}
+    </div>
+    <div class="mt-4">
+        <strong>Created:</strong> {{ resource.created_at|date:'Y-m-d H:i' }}<br>
+        <strong>Last Updated:</strong> {{ resource.updated_at|date:'Y-m-d H:i' }}
+    </div>
+    {% if can_edit %}
+    <div class="mt-4">
+        <a href="{% url 'tasks:task_update' resource.id %}" class="btn btn-primary">Edit Task</a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %} 

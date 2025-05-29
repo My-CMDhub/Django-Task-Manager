@@ -553,6 +553,7 @@ def logout(request):
 def send_custom_verification_email(request, user, verification_token=None, raw_supabase_link=None):
     """
     Send a custom verification email to the user with a Django verification token or a raw Supabase link.
+    Optimized: Improved SMTP error handling and logging.
     """
     try:
         current_site = get_current_site(request)
@@ -612,21 +613,28 @@ def send_custom_verification_email(request, user, verification_token=None, raw_s
         text_email = render_to_string('emails/verification_email_text.html', context)
         
         logger.info(f"Sending '{email_subject_type}' email to {user.email}")
-        
-        send_mail(
-            f'Please Verify Your Email - {site_name} {email_subject_type}',
-            text_email,
-            f'{site_name} <{settings.DEFAULT_FROM_EMAIL}>',
-            [user.email],
-            html_message=html_email,
-            fail_silently=False,
-            # headers=headers # headers arg might not be available in older Django send_mail
-        )
-        logger.info(f"Verification email ('{email_subject_type}') sent successfully to {user.email}")
-        return True
-    except smtplib.SMTPException as e:
-        logger.error(f"SMTP error sending custom verification email to {user.email}: {str(e)}")
-        return False
+        try:
+            send_mail(
+                f'Please Verify Your Email - {site_name} {email_subject_type}',
+                text_email,
+                f'{site_name} <{settings.DEFAULT_FROM_EMAIL}>',
+                [user.email],
+                html_message=html_email,
+                fail_silently=False,
+                # headers=headers # headers arg might not be available in older Django send_mail
+            )
+            logger.info(f"Verification email ('{email_subject_type}') sent successfully to {user.email}")
+            return True
+        except smtplib.SMTPException as e:
+            logger.error(f"SMTP error sending custom verification email to {user.email}: {str(e)}. This may be a network or configuration issue. Please check your SMTP settings and connectivity.")
+            return False
+        except TimeoutError as e:
+            logger.error(f"SMTP timeout sending custom verification email to {user.email}: {str(e)}. Consider checking your SMTP server/network or reducing the timeout.")
+            return False
+        except Exception as e:
+            logger.error(f"General error in send_custom_verification_email for {user.email}: {str(e)}")
+            logger.error(traceback.format_exc()) # Log full traceback
+            return False
     except Exception as e:
         logger.error(f"Error in send_custom_verification_email for {user.email}: {str(e)}")
         logger.error(traceback.format_exc()) # Log full traceback
@@ -636,6 +644,7 @@ def send_verification_email(request, user):
     """
     Send a verification email to the user.
     Tries Supabase link generation first, then falls back to Django token email.
+    Optimized: Use correct argument signature for generate_link and robust error handling.
     """
     logger.info(f"Initiating verification email process for {user.email}")
     try:
@@ -643,14 +652,13 @@ def send_verification_email(request, user):
         if supabase_admin_client and user.supabase_id and getattr(settings, 'SUPABASE_SEND_VERIFICATION_EMAIL', True):
             logger.info(f"Attempting to generate Supabase verification link for {user.email} (Supabase ID: {user.supabase_id})")
             try:
-                # Generate a 'signup' type link for new user verification from Supabase
-                # This link is usually sent by Supabase itself when a user signs up with email confirmation required.
-                # If user is already created via admin API, this generates a link that can be sent.
-                response = supabase_admin_client.auth.admin.generate_link(
-                    type="signup", # For new user initial verification
-                    email=user.email
-                )
-                
+                # Correct usage: pass a single dict as params
+                params = {
+                    "type": "signup",
+                    "email": user.email
+                }
+                response = supabase_admin_client.auth.admin.generate_link(params)
+
                 verification_link = None
                 # Supabase-py v1.x.x often returns a model with action_link
                 if hasattr(response, 'action_link') and response.action_link:
@@ -671,7 +679,7 @@ def send_verification_email(request, user):
                     return send_custom_verification_email(request, user)
 
             except Exception as supabase_error:
-                logger.error(f"Error generating Supabase 'signup' verification link for {user.email}: {supabase_error}. Falling back.")
+                logger.warning(f"Supabase 'signup' verification link generation failed for {user.email}: {supabase_error}. Falling back to Django token.")
                 # Fallback to Django's default token mechanism
                 return send_custom_verification_email(request, user)
         else:
@@ -681,10 +689,8 @@ def send_verification_email(request, user):
                 logger.warning(f"User {user.email} has no supabase_id. ")
             elif not getattr(settings, 'SUPABASE_SEND_VERIFICATION_EMAIL', True):
                 logger.info("SUPABASE_SEND_VERIFICATION_EMAIL is False in settings.")
-            
             logger.info(f"Falling back to Django token-based verification for {user.email}.")
             return send_custom_verification_email(request, user)
-            
     except Exception as e:
         logger.error(f"Unexpected error in send_verification_email process for {user.email}: {str(e)}")
         logger.error(traceback.format_exc()) # Log full traceback
@@ -1052,27 +1058,53 @@ def register(request):
                 
             logger.info(f"Creating user in Supabase: {email}")
             
-            # Create user with Supabase
-            auth_response = supabase_client.auth.admin.create_user({
-                "email": email,
-                "password": password1,
-                "email_confirm": True,
-                "user_metadata": {
-                    "username": username,
-                    "registered_via": "django_app"
-                }
-            })
+            # Prepare metadata
+            user_metadata = {
+                "username": username,
+                "app_registration_date": datetime.now().isoformat(),
+                "registration_source": "website"
+            }
             
-            # Process the response
-            if hasattr(auth_response, 'user'):
-                supabase_user = auth_response.user
-                supabase_user_id = getattr(supabase_user, 'id', None)
+            # Register in Supabase using sign_up instead of admin.create_user
+            logger.info(f"Attempting to register user in Supabase: {email}")
+            supabase_response = None
+            supabase_user = None
+            supabase_id = None
+            
+            try:
+                supabase_response = supabase_client.auth.sign_up({
+                    "email": email,
+                    "password": password1,
+                    "options": {
+                        "data": user_metadata
+                    }
+                })
                 
-                logger.info(f"Supabase user created: {supabase_user_id}")
-            else:
-                # Handle unexpected response format
-                logger.error(f"Unexpected Supabase response: {auth_response}")
-                raise Exception("Unexpected response from authentication service.")
+                # Check if registration was successful
+                if supabase_response and supabase_response.user:
+                    supabase_user = supabase_response.user
+                    supabase_id = supabase_user.id
+                    logger.info(f"User created in Supabase: {email} (ID: {supabase_id})")
+                else:
+                    logger.warning(f"Supabase registration response was empty or missing user: {supabase_response}")
+            except Exception as supabase_error:
+                logger.error(f"Supabase registration error for {email}: {str(supabase_error)}")
+                # Check if the error indicates user already exists
+                error_message = str(supabase_error).lower()
+                
+                if "already registered" in error_message or "already exists" in error_message:
+                    messages.warning(request, 
+                        "An account with this email already exists. Please login instead or use the reset account option."
+                    )
+                    return render(request, 'auth/register.html', {
+                        'email': email,
+                        'username': username,
+                        'show_force_clean': True,
+                        'show_direct': True
+                    })
+                
+                # If other error, continue with Django registration anyway - could be temporary issue
+                logger.info(f"Proceeding with Django registration despite Supabase error for {email}")
             
             # Create Django user linked to Supabase
             try:
@@ -1082,7 +1114,7 @@ def register(request):
                     username=username,
                     email=email,
                     password=password1,
-                    supabase_id=supabase_user_id,
+                    supabase_id=supabase_id,
                     email_verified=False  # Will be updated by webhook when verified
                 )
                 

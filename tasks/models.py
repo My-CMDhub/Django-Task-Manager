@@ -4,6 +4,8 @@ from django.utils import timezone
 from django.core.exceptions import ValidationError
 import uuid
 from auth_app.models import User
+from django.contrib.contenttypes.fields import GenericForeignKey
+from django.contrib.contenttypes.models import ContentType
 
 # Create your models here.
 class Category(models.Model):
@@ -490,3 +492,42 @@ class CustomFieldValue(models.Model):
         unique_together = ['task', 'field']
         verbose_name = 'Custom Field Value'
         verbose_name_plural = 'Custom Field Values'
+
+class ShareLink(models.Model):
+    """
+    Model for sharing tasks or projects via a direct link.
+    Supports view/edit permissions, revocation, and references either Task or Project.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    token = models.UUIDField(default=uuid.uuid4, unique=True, editable=False, db_index=True)
+    # Generic relation to Task or Project
+    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
+    object_id = models.UUIDField()
+    content_object = GenericForeignKey('content_type', 'object_id')
+    
+    created_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='share_links')
+    PERMISSION_CHOICES = [
+        ('view', 'View'),
+        ('edit', 'Edit (requires login)')
+    ]
+    permission = models.CharField(max_length=10, choices=PERMISSION_CHOICES, default='view')
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=['token']),
+        ]
+        verbose_name = 'Share Link'
+        verbose_name_plural = 'Share Links'
+
+    def __str__(self):
+        return f"ShareLink({self.content_object}, {self.permission}, active={self.is_active})"
+
+    def revoke(self):
+        self.is_active = False
+        self.save(update_fields=['is_active'])
+
+    def is_expired(self):
+        return self.expires_at and timezone.now() > self.expires_at

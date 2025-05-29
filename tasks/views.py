@@ -8,7 +8,7 @@ from django.views.decorators.http import require_POST
 from django.core.paginator import Paginator
 from .models import (
     Task, TaskAttachment, TaskReminder, TaskTag, TaskComment, 
-    TaskActivity, Project, TimeEntry, CustomField, CustomFieldValue
+    TaskActivity, Project, TimeEntry, CustomField, CustomFieldValue, ShareLink
 )
 from .forms import (
     TaskForm, TaskAttachmentForm, TaskReminderForm, 
@@ -18,7 +18,7 @@ from .forms import (
 from auth_app.models import User
 import json
 import logging
-from django.views.decorators.csrf import csrf_protect
+from django.views.decorators.csrf import csrf_protect, csrf_exempt
 from django.core.management import call_command
 from django.db import transaction
 import io
@@ -26,6 +26,9 @@ import uuid
 from rest_framework import generics
 from .models import Task
 from .serializers import TaskSerializer
+from django.contrib.contenttypes.models import ContentType
+from django.urls import reverse
+from django.views.decorators.http import require_http_methods
 
 logger = logging.getLogger(__name__)
 
@@ -1231,3 +1234,151 @@ def task_stats(request):
 class TaskListView(generics.ListAPIView):
     queryset = Task.objects.all()
     serializer_class = TaskSerializer
+
+def shared_resource_view(request, token):
+    """
+    Public view for shared tasks or projects via direct link.
+    Guests can view, authenticated users can edit if allowed.
+    """
+    try:
+        share_link = ShareLink.objects.select_related('content_type').get(token=token)
+    except ShareLink.DoesNotExist:
+        return render(request, 'tasks/share_link_error.html', {
+            'error_message': 'This share link is invalid or does not exist.'
+        })
+    if not share_link.is_active:
+        return render(request, 'tasks/share_link_error.html', {
+            'error_message': 'This share link has been revoked by the owner.'
+        })
+    if share_link.is_expired():
+        return render(request, 'tasks/share_link_error.html', {
+            'error_message': 'This share link has expired.'
+        })
+    resource = share_link.content_object
+    is_task = isinstance(resource, Task)
+    is_project = isinstance(resource, Project)
+    can_edit = False
+    if share_link.permission == 'edit' and request.user.is_authenticated:
+        # Only allow edit if user is logged in
+        can_edit = True
+    context = {
+        'resource': resource,
+        'share_link': share_link,
+        'can_edit': can_edit,
+        'is_task': is_task,
+        'is_project': is_project,
+        'guest_banner': True,
+    }
+    if is_task:
+        template = 'tasks/shared_task_detail.html'
+    elif is_project:
+        template = 'tasks/shared_project_detail.html'
+    else:
+        return render(request, 'tasks/share_link_error.html', {
+            'error_message': 'This share link does not point to a valid resource.'
+        })
+    return render(request, template, context)
+
+def get_or_create_active_share_link(resource, permission):
+    """
+    Utility to get or create an active share link for a resource.
+    """
+    content_type = ContentType.objects.get_for_model(resource)
+    existing = ShareLink.objects.filter(
+        content_type=content_type,
+        object_id=resource.id,
+        is_active=True
+    ).first()
+    if existing:
+        return existing, False
+    link = ShareLink.objects.create(
+        content_type=content_type,
+        object_id=resource.id,
+        permission=permission,
+        is_active=True
+    )
+    return link, True
+
+@login_required
+@require_http_methods(["POST"])
+@csrf_protect
+def create_share_link(request, resource_type, resource_id):
+    """
+    Create a share link for a task or project. Only owner can create. AJAX or normal POST.
+    If 'check_only' is set in POST, only return the existing link (do not create).
+    """
+    logger.debug(f"[create_share_link] Called with resource_type={resource_type}, resource_id={resource_id}, POST={request.POST}")
+    permission = request.POST.get('permission', 'view')
+    check_only = request.POST.get('check_only')
+    if resource_type == 'task':
+        resource = get_object_or_404(Task, id=resource_id, owner=request.user)
+    elif resource_type == 'project':
+        resource = get_object_or_404(Project, id=resource_id, owner=request.user)
+    else:
+        logger.error(f"[create_share_link] Invalid resource type: {resource_type}")
+        return JsonResponse({'error': 'Invalid resource type'}, status=400)
+    content_type = ContentType.objects.get_for_model(resource)
+    link = ShareLink.objects.filter(
+        content_type=content_type,
+        object_id=resource.id,
+        is_active=True
+    ).first()
+    if check_only:
+        logger.debug(f"[create_share_link] check_only: {check_only}, found link: {link}")
+        if link:
+            url = request.build_absolute_uri(
+                reverse('tasks:shared_resource_view', args=[str(link.token)])
+            )
+            logger.debug(f"[create_share_link] Returning existing link: {url}, permission: {link.permission}")
+            return JsonResponse({'url': url, 'permission': link.permission, 'created': False})
+        else:
+            logger.debug(f"[create_share_link] No active share link found.")
+            return JsonResponse({'error': 'No active share link.'}, status=404)
+    # Not check_only: create if not exists
+    if not link:
+        link = ShareLink.objects.create(
+            content_type=content_type,
+            object_id=resource.id,
+            permission=permission,
+            is_active=True
+        )
+        created = True
+        logger.debug(f"[create_share_link] Created new share link: {link}")
+    else:
+        created = False
+        logger.debug(f"[create_share_link] Found existing share link: {link}")
+    url = request.build_absolute_uri(
+        reverse('tasks:shared_resource_view', args=[str(link.token)])
+    )
+    logger.debug(f"[create_share_link] Returning link: {url}, permission: {link.permission}, created: {created}")
+    return JsonResponse({'url': url, 'permission': link.permission, 'created': created})
+
+@login_required
+@require_http_methods(["POST"])
+@csrf_protect
+def revoke_share_link(request, resource_type, resource_id):
+    """
+    Revoke (deactivate) the share link for a task or project. Only owner can revoke.
+    """
+    if resource_type == 'task':
+        resource = get_object_or_404(Task, id=resource_id, owner=request.user)
+    elif resource_type == 'project':
+        resource = get_object_or_404(Project, id=resource_id, owner=request.user)
+    else:
+        return JsonResponse({'error': 'Invalid resource type'}, status=400)
+    content_type = ContentType.objects.get_for_model(resource)
+    link = ShareLink.objects.filter(
+        content_type=content_type,
+        object_id=resource.id,
+        is_active=True
+    ).first()
+    if link:
+        link.is_active = False
+        link.save()
+        revoked = True
+    else:
+        revoked = False
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return JsonResponse({'revoked': revoked})
+    messages.success(request, 'Share link revoked.' if revoked else 'No active share link to revoke.')
+    return redirect(resource.get_absolute_url())
