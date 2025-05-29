@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nexus AI Chatbot</title>
+    <title>Task Manager AI Chatbot</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         body {
@@ -17,7 +17,6 @@
             box-shadow: 0 5px 15px rgba(0,0,0,0.1);
             background-color: white;
             overflow: hidden;
-            transition: height 0.3s ease;
         }
         .chat-header {
             background-color: #4a6bdf;
@@ -25,34 +24,6 @@
             padding: 1.5rem;
             border-top-left-radius: 12px;
             border-top-right-radius: 12px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .chat-header-left {
-            flex: 1;
-        }
-        .chat-header-controls {
-            display: flex;
-            gap: 10px;
-        }
-        .chat-control-btn {
-            background: none;
-            border: none;
-            color: white;
-            cursor: pointer;
-            width: 32px;
-            height: 32px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 50%;
-            transition: background-color 0.2s;
-            position: relative;
-            z-index: 100;
-        }
-        .chat-control-btn:hover {
-            background-color: rgba(255, 255, 255, 0.2);
         }
         .chat-messages {
             height: 400px;
@@ -60,7 +31,6 @@
             padding: 1.5rem;
             display: flex;
             flex-direction: column;
-            transition: all 0.3s ease;
         }
         .chat-input {
             padding: 1.5rem;
@@ -243,17 +213,8 @@
     <div class="container">
         <div class="chat-container">
             <div class="chat-header">
-                <div class="chat-header-left">
-                    <h3 class="m-0">Nexus Assistant</h3>
-                    <p class="m-0">I'm here to help you find information about your tasks</p>
-                </div>
-                <div class="chat-header-controls">
-                    <button class="chat-control-btn" id="toggleSizeBtn" title="Expand/Collapse">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrows-angle-expand" viewBox="0 0 16 16">
-                            <path fill-rule="evenodd" d="M5.828 10.172a.5.5 0 0 0-.707 0l-4.096 4.096V11.5a.5.5 0 0 0-1 0v3.975a.5.5 0 0 0 .5.5H4.5a.5.5 0 0 0 0-1H1.732l4.096-4.096a.5.5 0 0 0 0-.707zm4.344-4.344a.5.5 0 0 0 .707 0l4.096-4.096V4.5a.5.5 0 1 0 1 0V.525a.5.5 0 0 0-.5-.5H11.5a.5.5 0 0 0 0 1h2.768l-4.096 4.096a.5.5 0 0 0 0 .707z"/>
-                        </svg>
-                    </button>
-                </div>
+                <h3 class="m-0">Task Manager Assistant</h3>
+                <p class="m-0">I'm here to help you find information about your tasks</p>
             </div>
             <div class="chat-messages" id="chat-messages">
                 <div class="message bot-message">
@@ -303,56 +264,6 @@
     }
     
     $(document).ready(function() {
-        // Toggle chat size functionality
-        let isExpanded = false;
-        const toggleSizeBtn = document.getElementById('toggleSizeBtn');
-        const chatMessages = document.getElementById('chat-messages');
-        const defaultHeight = 400; // Default height in pixels
-        const expandedHeight = 800; // Expanded height in pixels
-        const collapsedHeight = 200; // Collapsed height in pixels
-        
-        // Store original height
-        const originalHeight = chatMessages.offsetHeight;
-        console.log("Original chat height:", originalHeight);
-        
-        toggleSizeBtn.addEventListener('click', function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            console.log("Toggle button clicked");
-            
-            isExpanded = !isExpanded;
-            
-            if (isExpanded) {
-                // Direct style manipulation with !important to override any conflicting styles
-                chatMessages.style.cssText = `height: ${expandedHeight}px !important; transition: height 0.3s ease !important;`;
-                toggleSizeBtn.innerHTML = `
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrows-angle-contract" viewBox="0 0 16 16">
-                        <path fill-rule="evenodd" d="M.172 15.828a.5.5 0 0 0 .707 0l4.096-4.096V14.5a.5.5 0 1 0 1 0v-3.975a.5.5 0 0 0-.5-.5H1.5a.5.5 0 0 0 0 1h2.768L.172 15.121a.5.5 0 0 0 0 .707zM15.828.172a.5.5 0 0 0-.707 0l-4.096 4.096V1.5a.5.5 0 1 0-1 0v3.975a.5.5 0 0 0 .5.5H14.5a.5.5 0 0 0 0-1h-2.768L15.828.879a.5.5 0 0 0 0-.707z"/>
-                    </svg>
-                `;
-                toggleSizeBtn.title = "Collapse";
-                console.log("Expanded chat window to", expandedHeight + "px");
-            } else {
-                // Direct style manipulation with !important to override any conflicting styles
-                chatMessages.style.cssText = `height: ${collapsedHeight}px !important; transition: height 0.3s ease !important;`;
-                toggleSizeBtn.innerHTML = `
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrows-angle-expand" viewBox="0 0 16 16">
-                        <path fill-rule="evenodd" d="M5.828 10.172a.5.5 0 0 0-.707 0l-4.096 4.096V11.5a.5.5 0 0 0-1 0v3.975a.5.5 0 0 0 .5.5H4.5a.5.5 0 0 0 0-1H1.732l4.096-4.096a.5.5 0 0 0 0-.707zm4.344-4.344a.5.5 0 0 0 .707 0l4.096-4.096V4.5a.5.5 0 1 0 1 0V.525a.5.5 0 0 0-.5-.5H11.5a.5.5 0 0 0 0 1h2.768l-4.096 4.096a.5.5 0 0 0 0 .707z"/>
-                    </svg>
-                `;
-                toggleSizeBtn.title = "Expand";
-                console.log("Collapsed chat window to", collapsedHeight + "px");
-            }
-            
-            // Scroll to bottom after resize with delay for transition
-            setTimeout(scrollToBottom, 300);
-        });
-
-        // Make sure the button is visible and styled properly
-        toggleSizeBtn.style.cursor = 'pointer';
-        toggleSizeBtn.style.zIndex = '1000';
-        toggleSizeBtn.style.position = 'relative';
-
         // Function to scroll to bottom of chat
         function scrollToBottom() {
             const chatMessages = document.getElementById('chat-messages');

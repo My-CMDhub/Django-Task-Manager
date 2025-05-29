@@ -17,32 +17,6 @@ class Conversation(models.Model):
     
     def __str__(self):
         return f"Conversation {self.id}"
-    
-    def get_recent_messages(self, count=5):
-        """
-        Gets the most recent messages in the conversation to provide context.
-        
-        Args:
-            count (int): Number of recent message pairs to retrieve
-            
-        Returns:
-            list: List of dictionaries with message content and role
-        """
-        # Get the most recent messages, ordered by timestamp
-        recent_messages = self.messages.order_by('-timestamp')[:count*2]
-        
-        # Re-order them from oldest to newest for context
-        recent_messages = reversed(list(recent_messages))
-        
-        # Format the messages
-        context = []
-        for message in recent_messages:
-            context.append({
-                'role': 'user' if message.is_user else 'assistant',
-                'content': message.content
-            })
-            
-        return context
 
 class Message(models.Model):
     """A message within a conversation."""

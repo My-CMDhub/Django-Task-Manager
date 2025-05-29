@@ -7,7 +7,7 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument('--urls', nargs='+', type=str, help='List of URLs to scrape')
-        parser.add_argument('--api-key', type=str, help='Mistral API key (optional, will use env var if not provided)')
+        parser.add_argument('--api-key', type=str, help='OpenAI API key (optional, will use env var if not provided)')
 
     def handle(self, *args, **options):
         urls = options['urls']
@@ -25,9 +25,9 @@ class Command(BaseCommand):
         
         # Use provided API key or get from environment
         if not api_key:
-            api_key = os.getenv('MISTRAL_API_KEY')
+            api_key = os.getenv('OPENAI_API_KEY')
             if not api_key:
-                raise CommandError('No Mistral API key provided or found in environment')
+                raise CommandError('No OpenAI API key provided or found in environment')
         
         # Initialize the index
         try:
