@@ -162,6 +162,9 @@ def login(request):
             "Registration successful! Please check your email for a verification link. "
             "You'll need to verify your email before you can log in."
         )
+    # Show a warning if verification email failed to send
+    if request.session.pop('verification_email_failed', False):
+        messages.warning(request, "We could not send a verification email due to a server issue. Please try resending the verification email from the login page, or contact support if the problem persists.")
     
     # Handle verification token directly from URL if present
     verification_token = request.GET.get('verification_token')
@@ -1147,8 +1150,15 @@ def register(request):
                     "You won't be able to log in until your email is verified."
                 )
                 
-                # Redirect to login page
-                return redirect('login')
+                # Redirect to login page immediately
+                response = redirect('login')
+                # Try to send the verification email after redirect (user does not wait)
+                try:
+                    send_verification_email(request, user)
+                except Exception as email_error:
+                    logger.error(f"Error sending verification email to {email}: {str(email_error)}")
+                    request.session['verification_email_failed'] = True
+                return response
             except Exception as django_error:
                 logger.error(f"Django user creation error for {email}: {str(django_error)}")
                 
