@@ -27,6 +27,9 @@ urlpatterns = [
     path('verify-email/<str:token>/', verify_email, name='verify_email'),
     path('verify-email/', verify_email, name='verify_email_query'),  # For query string token
     
+    # URL for Django token-based email verification (used as fallback)
+    path('verify-email-token/<slug:uidb64>/<slug:token>/', views.verify_email_with_token, name='verify_email_with_token'),
+    
     # Additional routes for handling Supabase callbacks
     path('callback/', verify_email, name='auth_callback'),  # For Supabase callbacks with access_token
     

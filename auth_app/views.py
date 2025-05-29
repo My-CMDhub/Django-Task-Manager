@@ -47,7 +47,8 @@ from email.utils import make_msgid, formatdate
 import email.utils
 import dns.resolver
 import logging
-from mysite.settings import get_supabase_client, get_supabase_admin_client
+# Use the new Supabase utility functions
+from mysite.supabase_utils import get_supabase_client, get_supabase_admin_client
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils.encoding import force_bytes
 from django.contrib.auth.tokens import default_token_generator
@@ -549,142 +550,144 @@ def logout(request):
     messages.success(request, "Logged out successfully")
     return redirect('home')
 
-def send_custom_verification_email(request, user, verification_token=None):
+def send_custom_verification_email(request, user, verification_token=None, raw_supabase_link=None):
     """
-    Send a custom verification email to the user with a verification token.
+    Send a custom verification email to the user with a Django verification token or a raw Supabase link.
     """
     try:
-        # Generate a verification token if one was not provided
-        if not verification_token:
-            verification_token = default_token_generator.make_token(user)
-        
-        # Store the token in the session
-        request.session['email_verification_token'] = verification_token
-        request.session['email_verification_user_id'] = user.id
-        logger.info(f"Generated new verification token for user {user.id}")
-        
-        # Create the verification URL
         current_site = get_current_site(request)
         site_name = current_site.name
         domain = current_site.domain
-        
-        # If we're in development, use localhost instead of the current site domain
-        if settings.DEBUG:
-            domain = '127.0.0.1:8000'
-            
         protocol = 'https' if request.is_secure() else 'http'
-        verify_url = f"{protocol}://{domain}/auth/verify-email/{urlsafe_base64_encode(force_bytes(user.pk))}/{verification_token}/"
+
+        # Adjust domain for local/ngrok development
+        if settings.DEBUG:
+            if os.environ.get('LOCAL_DEVELOPMENT', 'False').lower() in ('true', '1', 't'):
+                domain = '127.0.0.1:8000' # Truly local
+            elif os.environ.get('NGROK_URL'):
+                domain = os.environ.get('NGROK_URL').replace('https://', '').replace('http://', '')
         
-        # Generate a unique message ID for DKIM compatibility
+        verify_url = None
+        email_subject_type = "Account Activation"
+
+        if raw_supabase_link:
+            verify_url = raw_supabase_link  # Use the provided Supabase link directly
+            logger.info(f"Using raw Supabase link for verification email: {verify_url}")
+            email_subject_type = "Complete Your Registration (via Supabase)"
+        else:
+            if not verification_token: # Generate a Django verification token if one was not provided
+                verification_token = default_token_generator.make_token(user)
+            
+            request.session['email_verification_token'] = verification_token
+            request.session['email_verification_user_id'] = user.id
+            logger.info(f"Generated new Django verification token for user {user.id}")
+            # Ensure your URL name 'verify_email_with_token' is correct in urls.py
+            verify_url = f"{protocol}://{domain}{reverse('verify_email_with_token', args=[urlsafe_base64_encode(force_bytes(user.pk)), verification_token])}"
+            logger.info(f"Using Django token verification link: {verify_url}")
+            email_subject_type = "Verify Your Email (via Django Token)"
+        
         msg_id = make_msgid(domain=domain)
-        
-        # Get the current year for the template
-        from datetime import datetime
         current_year = datetime.now().year
         
-        # Prepare the email context
         context = {
             'user': user,
             'verify_url': verify_url,
             'site_name': site_name,
             'domain': domain,
             'protocol': protocol,
-            'expiration_days': settings.PASSWORD_RESET_TIMEOUT_DAYS,
+            'expiration_days': getattr(settings, 'PASSWORD_RESET_TIMEOUT_DAYS', 3), # Use getattr for safety
             'current_year': current_year,
         }
         
-        # Prepare custom headers for better deliverability
         headers = {
-            'Message-ID': msg_id,
-            'Date': formatdate(localtime=True),
-            'X-Priority': '1',
-            'Importance': 'High',
-            'Precedence': 'bulk',
-            'Auto-Submitted': 'auto-generated',
+            'Message-ID': msg_id, 'Date': formatdate(localtime=True), 'X-Priority': '1', 
+            'Importance': 'High', 'Precedence': 'bulk', 'Auto-Submitted': 'auto-generated', 
             'X-Mailer': 'Django',
             'List-Unsubscribe': f'<{protocol}://{domain}/auth/unsubscribe/?email={user.email}>',
             'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
             'List-ID': f'<verification.{domain}>',
         }
         
-        # Render the email templates
         html_email = render_to_string('emails/verification_email.html', context)
         text_email = render_to_string('emails/verification_email_text.html', context)
         
-        # Log the attempt
-        logger.info(f"Sending verification email to {user.email}")
+        logger.info(f"Sending '{email_subject_type}' email to {user.email}")
         
-        # Send the email
-        try:
-            send_mail(
-                f'Please Verify Your Email - {site_name} Account Activation',
-                text_email,
-                f'{site_name} <{settings.DEFAULT_FROM_EMAIL}>',
-                [user.email],
-                html_message=html_email,
-                fail_silently=False,
-            )
-            logger.info(f"Verification email sent successfully to {user.email}")
-            return True
-        except smtplib.SMTPException as e:
-            # Log the error
-            logger.error(f"SMTP error sending verification email to {user.email}: {str(e)}")
-            return False
+        send_mail(
+            f'Please Verify Your Email - {site_name} {email_subject_type}',
+            text_email,
+            f'{site_name} <{settings.DEFAULT_FROM_EMAIL}>',
+            [user.email],
+            html_message=html_email,
+            fail_silently=False,
+            # headers=headers # headers arg might not be available in older Django send_mail
+        )
+        logger.info(f"Verification email ('{email_subject_type}') sent successfully to {user.email}")
+        return True
+    except smtplib.SMTPException as e:
+        logger.error(f"SMTP error sending custom verification email to {user.email}: {str(e)}")
+        return False
     except Exception as e:
-        logger.error(f"Error in send_custom_verification_email: {str(e)}")
+        logger.error(f"Error in send_custom_verification_email for {user.email}: {str(e)}")
+        logger.error(traceback.format_exc()) # Log full traceback
         return False
 
 def send_verification_email(request, user):
     """
     Send a verification email to the user.
-    
-    Args:
-        request: The HTTP request object
-        user: The user to send the verification email to
-        
-    Returns:
-        bool: True if email was sent successfully, False otherwise
+    Tries Supabase link generation first, then falls back to Django token email.
     """
-    logger.info(f"Sending verification email to {user.email}")
+    logger.info(f"Initiating verification email process for {user.email}")
     try:
-        logger.info(f"Attempting to send verification email via Supabase to {user.email}")
-        
-        try:
-            # Let's use Supabase's email service for verification
-            supabase_client = get_supabase_admin_client()
-            if supabase_client:
-                try:
-                    # Try to use Supabase auth admin API to send email
-                    # This requires service role key
-                    if user.supabase_id:
-                        logger.info(f"Using Supabase admin API to resend confirmation email for {user.email}")
-                        
-                        response = supabase_client.auth.admin.send_email_verification({
-                            "email": user.email
-                        })
-                        
-                        logger.info(f"Supabase verification email sent to {user.email}")
-                        return True
-                    else:
-                        logger.warning(f"Cannot send Supabase verification: missing supabase_id for {user.email}")
-                except Exception as supabase_error:
-                    logger.error(f"Error sending Supabase verification email: {str(supabase_error)}")
-                    # Try fallback method - custom email
+        supabase_admin_client = get_supabase_admin_client()
+        if supabase_admin_client and user.supabase_id and getattr(settings, 'SUPABASE_SEND_VERIFICATION_EMAIL', True):
+            logger.info(f"Attempting to generate Supabase verification link for {user.email} (Supabase ID: {user.supabase_id})")
+            try:
+                # Generate a 'signup' type link for new user verification from Supabase
+                # This link is usually sent by Supabase itself when a user signs up with email confirmation required.
+                # If user is already created via admin API, this generates a link that can be sent.
+                response = supabase_admin_client.auth.admin.generate_link(
+                    type="signup", # For new user initial verification
+                    email=user.email
+                )
+                
+                verification_link = None
+                # Supabase-py v1.x.x often returns a model with action_link
+                if hasattr(response, 'action_link') and response.action_link:
+                    verification_link = response.action_link
+                # Supabase-py v2.x.x might have it in response.properties.action_link
+                elif hasattr(response, 'properties') and hasattr(response.properties, 'action_link') and response.properties.action_link:
+                    verification_link = response.properties.action_link
+                # Or directly in the response if it's a dict-like object (older/different client versions)
+                elif isinstance(response, dict) and response.get('action_link'):
+                    verification_link = response.get('action_link')
+
+                if verification_link:
+                    logger.info(f"Successfully generated Supabase verification link for {user.email}. Sending via custom email.")
+                    return send_custom_verification_email(request, user, raw_supabase_link=verification_link)
+                else:
+                    logger.warning(f"Supabase generate_link for type 'signup' did not return a usable action_link for {user.email}. Response: {response}. Falling back.")
+                    # Fallback to Django's default token mechanism
                     return send_custom_verification_email(request, user)
-            else:
-                # No Supabase client available, use custom email
-                logger.warning(f"Supabase client not available, using custom verification email for {user.email}")
+
+            except Exception as supabase_error:
+                logger.error(f"Error generating Supabase 'signup' verification link for {user.email}: {supabase_error}. Falling back.")
+                # Fallback to Django's default token mechanism
                 return send_custom_verification_email(request, user)
+        else:
+            if not supabase_admin_client:
+                logger.warning(f"Supabase admin client not available. ")
+            elif not user.supabase_id:
+                logger.warning(f"User {user.email} has no supabase_id. ")
+            elif not getattr(settings, 'SUPABASE_SEND_VERIFICATION_EMAIL', True):
+                logger.info("SUPABASE_SEND_VERIFICATION_EMAIL is False in settings.")
             
-            logger.warning(f"Could not send verification email to {user.email} via Supabase")
-            return False
-        
-        except Exception as e:
-            logger.error(f"Error in verification email process: {str(e)}")
-            return False
+            logger.info(f"Falling back to Django token-based verification for {user.email}.")
+            return send_custom_verification_email(request, user)
             
     except Exception as e:
-        logger.error(f"Unexpected error sending verification email: {str(e)}")
+        logger.error(f"Unexpected error in send_verification_email process for {user.email}: {str(e)}")
+        logger.error(traceback.format_exc()) # Log full traceback
         return False
 
 @require_http_methods(["GET"])
@@ -1014,6 +1017,37 @@ def register(request):
             supabase_client = get_supabase_admin_client()
             if not supabase_client:
                 logger.error(f"Cannot create user in Supabase: No admin client available")
+                
+                # For local development, we can create a Django-only user if needed
+                if settings.DEBUG:
+                    try:
+                        # Create Django user without Supabase
+                        logger.warning(f"Creating Django-only user in DEBUG mode: {email}")
+                        
+                        user = User.objects.create_user(
+                            username=username,
+                            email=email,
+                            password=password1,
+                            supabase_id=f"local-{uuid.uuid4()}",
+                            email_verified=True  # Auto-verify in debug mode
+                        )
+                        
+                        # Create profile
+                        UserProfile.objects.create(
+                            user=user,
+                            verified=True
+                        )
+                        
+                        # Login the user
+                        user.backend = 'django.contrib.auth.backends.ModelBackend'
+                        auth_login(request, user)
+                        
+                        messages.success(request, f"Registration successful! Welcome to the Task Manager, {username}!")
+                        return redirect('home')
+                    except Exception as django_error:
+                        logger.error(f"Error creating Django-only user: {str(django_error)}")
+                
+                # If not in debug mode or Django-only creation failed, show error
                 raise Exception("Supabase service unavailable. Please try again later.")
                 
             logger.info(f"Creating user in Supabase: {email}")
@@ -3184,3 +3218,30 @@ def get_new_csrf_token(request):
     """
     token = get_token(request)
     return JsonResponse({'csrfToken': token})
+
+@require_http_methods(["GET"])
+def verify_email_with_token(request, uidb64, token):
+    """Handle email verification via Django token (typically from fallback)"""
+    try:
+        uid = force_str(urlsafe_base64_decode(uidb64))
+        user = User.objects.get(pk=uid)
+    except (TypeError, ValueError, OverflowError, User.DoesNotExist):
+        user = None
+
+    if user is not None and default_token_generator.check_token(user, token):
+        if user.email_verified:
+            messages.info(request, "Your email is already verified.")
+        else:
+            user.email_verified = True
+            user.save()
+            # Optionally sync to Supabase here if needed, though primary verification is through Supabase link.
+            # update_supabase_user_verification(user.supabase_id, verified=True) # If you have this util
+            messages.success(request, "Your email has been successfully verified!")
+        
+        # Log in the user for convenience
+        user.backend = 'django.contrib.auth.backends.ModelBackend' # Important for login
+        auth_login(request, user)
+        return redirect('home') # Or to a 'verification_successful' page
+    else:
+        messages.error(request, "The verification link is invalid or has expired.")
+        return redirect('login') # Or to a 'verification_failed' page

@@ -1,125 +1,138 @@
 """
-Utility functions for interacting with Supabase
+Supabase utility functions for auth_app.
+These functions provide helpers for working with Supabase authentication.
 """
+
 import logging
-import json
-import requests
 from django.conf import settings
+from mysite.supabase_utils import get_supabase_client, get_supabase_admin_client
 
 logger = logging.getLogger(__name__)
 
-# Initialize the Supabase client from settings
-try:
-    from supabase import create_client
-    
-    # Determine the key to use (try both env var names for flexibility)
-    supabase_key = getattr(settings, 'SUPABASE_KEY', None) or getattr(settings, 'SUPABASE_ANON_KEY', None)
-    
-    if not supabase_key:
-        logger.error("No Supabase key found in settings (tried SUPABASE_KEY and SUPABASE_ANON_KEY)")
-        supabase_client = None
-    else:
-        logger.info(f"Initializing Supabase client with URL: {settings.SUPABASE_URL}")
-        supabase_client = create_client(settings.SUPABASE_URL, supabase_key)
-        logger.info("Supabase client initialized successfully")
-except Exception as e:
-    logger.error(f"Error initializing Supabase client: {str(e)}")
-    supabase_client = None
+# Create a convenience variable that can be imported
+supabase_client = get_supabase_client()
 
-
-def get_supabase_user_by_email(email):
+def get_supabase_user_by_email(email, admin_client=None):
     """
-    Retrieve a user from Supabase by email
+    Get a Supabase user by email
+    
+    Args:
+        email: The email to look up
+        admin_client: Optional admin client to use
+        
+    Returns:
+        User data dict or None if not found
     """
-    if not supabase_client:
-        logger.error("Supabase client not initialized")
+    if not email:
+        return None
+        
+    client = admin_client or get_supabase_admin_client()
+    if not client:
+        logger.debug("No Supabase client available for user lookup")
         return None
         
     try:
-        # Using service role key for admin API access
-        if hasattr(settings, 'SUPABASE_SERVICE_KEY') and settings.SUPABASE_SERVICE_KEY:
-            headers = {
-                "apikey": settings.SUPABASE_SERVICE_KEY,
-                "Authorization": f"Bearer {settings.SUPABASE_SERVICE_KEY}",
-                "Content-Type": "application/json"
-            }
-            
-            endpoint = f"{settings.SUPABASE_URL}/auth/v1/admin/users"
-            params = {"email": email}
-            response = requests.get(endpoint, headers=headers, params=params)
-            
-            if response.status_code == 200:
-                return {'data': response.json()}
+        # Use the admin API to look up the user
+        response = client.auth.admin.list_users()
+        
+        # In Supabase v2, response is a list of user objects
+        if isinstance(response, list):
+            for user in response:
+                if hasattr(user, 'email') and user.email.lower() == email.lower():
+                    return user
+        else:
+            # Check if we got users as an attribute
+            users = getattr(response, 'users', [])
+            if users:
+                # Filter locally by email
+                matching_users = [user for user in users if getattr(user, 'email', '').lower() == email.lower()]
+                if matching_users:
+                    return matching_users[0]
                 
+        logger.debug(f"No Supabase user found with email: {email}")
         return None
     except Exception as e:
-        logger.error(f"Error fetching user by email from Supabase: {str(e)}")
+        logger.error(f"Error looking up Supabase user by email: {e}")
         return None
 
-
-def get_supabase_user_by_uid(uid):
+def get_supabase_user_by_uid(uid, admin_client=None):
     """
-    Retrieve a user from Supabase by their UID
+    Get a Supabase user by ID
+    
+    Args:
+        uid: The user ID to look up
+        admin_client: Optional admin client to use
+        
+    Returns:
+        User data dict or None if not found
     """
-    if not supabase_client:
-        logger.error("Supabase client not initialized")
+    if not uid:
+        return None
+        
+    client = admin_client or get_supabase_admin_client()
+    if not client:
+        logger.debug("No Supabase client available for user lookup")
         return None
         
     try:
-        # Using service role key to access admin API
-        if hasattr(settings, 'SUPABASE_SERVICE_KEY') and settings.SUPABASE_SERVICE_KEY:
-            headers = {
-                "apikey": settings.SUPABASE_SERVICE_KEY,
-                "Authorization": f"Bearer {settings.SUPABASE_SERVICE_KEY}",
-                "Content-Type": "application/json"
-            }
+        # Use the admin API to look up the user
+        response = client.auth.admin.get_user_by_id(uid)
+        
+        # Check if we got a user directly or as an attribute
+        if hasattr(response, 'user'):
+            return response.user
+        elif hasattr(response, 'id') and response.id == uid:
+            return response
             
-            endpoint = f"{settings.SUPABASE_URL}/auth/v1/admin/users/{uid}"
-            response = requests.get(endpoint, headers=headers)
-            
-            if response.status_code == 200:
-                return {'data': response.json()}
-                
+        logger.debug(f"No Supabase user found with ID: {uid}")
         return None
     except Exception as e:
-        logger.error(f"Error fetching user by UID from Supabase: {str(e)}")
+        logger.error(f"Error looking up Supabase user by ID: {e}")
         return None
 
-
-def update_supabase_user_verification(uid):
+def update_supabase_user_verification(uid, verified=True, admin_client=None):
     """
-    Update a user's email verification status in Supabase
+    Update a Supabase user's email verification status
+    
+    Args:
+        uid: The user ID to update
+        verified: True to mark as verified, False to mark as unverified
+        admin_client: Optional admin client to use
+        
+    Returns:
+        True if successful, False otherwise
     """
-    if not supabase_client:
-        logger.error("Supabase client not initialized")
-        return None
+    if not uid:
+        return False
+        
+    client = admin_client or get_supabase_admin_client()
+    if not client:
+        logger.debug("No Supabase client available for user update")
+        return False
         
     try:
-        # Using service role key to update user
-        if hasattr(settings, 'SUPABASE_SERVICE_KEY') and settings.SUPABASE_SERVICE_KEY:
-            headers = {
-                "apikey": settings.SUPABASE_SERVICE_KEY,
-                "Authorization": f"Bearer {settings.SUPABASE_SERVICE_KEY}",
-                "Content-Type": "application/json"
-            }
-            
-            endpoint = f"{settings.SUPABASE_URL}/auth/v1/admin/users/{uid}"
-            payload = {
-                "email_confirmed_at": "now()",
+        # Use the admin API to update the user
+        response = client.auth.admin.update_user_by_id(
+            uid,
+            {
+                "email_confirm": verified,
                 "user_metadata": {
-                    "email_verified": True
+                    "email_verified": verified
                 }
             }
-            
-            response = requests.put(endpoint, headers=headers, json=payload)
-            
-            if response.status_code in (200, 201, 204):
-                return {'status': 'success'}
-            else:
-                logger.error(f"Failed to update user verification in Supabase: {response.text}")
-                return {'status': 'error', 'message': response.text}
-                
-        return {'status': 'error', 'message': 'No service key available'}
+        )
+        
+        # Check if we got a user back
+        if hasattr(response, 'user'):
+            user = response.user
+            logger.info(f"Updated Supabase user {uid} verification status to {verified}")
+            return True
+        elif hasattr(response, 'id') and response.id == uid:
+            logger.info(f"Updated Supabase user {uid} verification status to {verified}")
+            return True
+        else:
+            logger.warning(f"Failed to update Supabase user {uid} verification status")
+            return False
     except Exception as e:
-        logger.error(f"Error updating user verification in Supabase: {str(e)}")
-        return {'status': 'error', 'message': str(e)} 
+        logger.error(f"Error updating Supabase user verification: {e}")
+        return False 

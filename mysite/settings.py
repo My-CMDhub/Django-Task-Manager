@@ -333,6 +333,22 @@ if not os.environ.get('SUPABASE_SITE_URL'):
     os.environ['SUPABASE_SITE_URL'] = SITE_URL
     print(f"Setting SUPABASE_SITE_URL to {SITE_URL}")
 
+# Django Allauth settings (if you choose to use it later)
+ACCOUNT_EMAIL_REQUIRED = True
+ACCOUNT_USERNAME_REQUIRED = False
+ACCOUNT_AUTHENTICATION_METHOD = 'email'
+ACCOUNT_EMAIL_VERIFICATION = 'mandatory' # Can be 'optional' or 'none'
+LOGIN_REDIRECT_URL = '/'
+ACCOUNT_LOGOUT_REDIRECT_URL = '/'
+
+# Default token timeout for password resets (and potentially other tokens)
+# Django's default is 3 days (259200 seconds)
+PASSWORD_RESET_TIMEOUT_DAYS = int(os.environ.get('PASSWORD_RESET_TIMEOUT_DAYS', 3))
+# The actual timeout in seconds is derived from this in Django's token generator.
+
+# Control whether to attempt sending verification email via Supabase
+SUPABASE_SEND_VERIFICATION_EMAIL = os.environ.get('SUPABASE_SEND_VERIFICATION_EMAIL', 'True').lower() in ('true', '1', 't')
+
 # Enhance logging for webhook events
 LOGGING = {
     'version': 1,

@@ -25,36 +25,115 @@ DEBUG = False
 # Updated allowed hosts
 ALLOWED_HOSTS = [
     'nexuss-baf9e168e5c4.herokuapp.com',
-    'taskmanager-mztm.onrender.com', # Your Render app domain
-    '.onrender.com', # Allow any Render subdomain for flexibility
-] 
-# Add other production hosts if needed
+    'taskmanager-mztm.onrender.com',
+    'localhost',
+    '127.0.0.1',
+]
+
+# Database configuration
+# Use SQLite for now, change to PostgreSQL with environment variable later
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
+    }
+}
+
+# Look for DATABASE_URL environment variable (used by Render and Heroku)
+if 'DATABASE_URL' in os.environ:
+    DATABASES['default'] = dj_database_url.config(
+        conn_max_age=600,
+        conn_health_checks=True,
+    )
+    print(f"Using database URL from environment: {os.environ['DATABASE_URL'][:10]}...") 
+else:
+    print("WARNING: No DATABASE_URL environment variable set, and so no databases setup")
+
+# Static files (CSS, JavaScript, Images)
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+
+# Security settings
+# Conditionally set SECURE_SSL_REDIRECT for local development
+LOCAL_DEVELOPMENT = os.environ.get('LOCAL_DEVELOPMENT', 'False').lower() in ('true', '1', 't')
+SECURE_SSL_REDIRECT = not LOCAL_DEVELOPMENT
+
+SESSION_COOKIE_SECURE = not LOCAL_DEVELOPMENT
+CSRF_COOKIE_SECURE = not LOCAL_DEVELOPMENT
+
+# Only set HSTS if not in local development and not in DEBUG mode
+if not LOCAL_DEVELOPMENT and not DEBUG:
+    SECURE_HSTS_SECONDS = 31536000  # 1 year
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+else:
+    SECURE_HSTS_SECONDS = 0
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = False
+    SECURE_HSTS_PRELOAD = False
+
+# Supabase settings
+# You MUST set these environment variables for authentication to work
+SUPABASE_URL = os.environ.get('SUPABASE_URL', 'https://***REMOVED***.supabase.co')
+SUPABASE_KEY = os.environ.get('SUPABASE_KEY', '***REMOVED***')
+SUPABASE_SERVICE_KEY = os.environ.get('SUPABASE_SERVICE_KEY', '')
+
+# Default to bypassing Supabase if service key is not set
+BYPASS_SUPABASE = False
+if not SUPABASE_SERVICE_KEY:
+    print("WARNING: SUPABASE_SERVICE_KEY not set, some auth functions will not work!")
+    if DEBUG:
+        print("DEBUG mode enabled, will create local users only")
+
+# Log Supabase configuration status
+print(f"PRODUCTION SETTINGS: Supabase is {'ACTIVE' if not BYPASS_SUPABASE else 'BYPASSED'}. Using URL: {SUPABASE_URL}")
+
+# Additional settings needed in production
+EMAIL_BACKEND = os.environ.get('EMAIL_BACKEND', 'django.core.mail.backends.smtp.EmailBackend')
+EMAIL_HOST = os.environ.get('EMAIL_HOST', 'smtp.gmail.com')
+EMAIL_PORT = int(os.environ.get('EMAIL_PORT', '465'))
+EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
+EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'False').lower() == 'true'
+EMAIL_USE_SSL = os.environ.get('EMAIL_USE_SSL', 'True').lower() == 'true'
+DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', EMAIL_HOST_USER)
+
+# Log when production settings are loaded
+print("PRODUCTION SETTINGS LOADED: BYPASS_SUPABASE is set to", BYPASS_SUPABASE)
 
 # Enable Supabase in production
-BYPASS_SUPABASE = False  # Use Supabase authentication
 BYPASS_SUPABASE_RATE_LIMITS = False  # Use rate limits for security
 
 # Email verification settings 
 AUTO_VERIFY_USERS = os.environ.get('AUTO_VERIFY_USERS', 'False').lower() in ('true', '1', 't', 'yes')
 
+# Override the get_supabase_admin_client function from settings.py
+def get_supabase_admin_client():
+    """Get or initialize a Supabase client with admin privileges for production"""
+    # Import inside the function to avoid circular imports
+    try:
+        from supabase import create_client
+        
+        # Only bypass if explicitly set to True
+        if BYPASS_SUPABASE:
+            print("Supabase admin client is BYPASSED via settings.BYPASS_SUPABASE")
+            return None
+            
+        # Check if credentials are available
+        if not SUPABASE_URL or not SUPABASE_SERVICE_KEY:
+            print("Missing Supabase admin credentials")
+            return None
+            
+        # Create a new client each time to ensure we have the latest settings
+        admin_client = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
+        return admin_client
+    except Exception as e:
+        print(f"Error creating Supabase admin client: {e}")
+        return None
+
 # Mistral AI API key for production
 MISTRAL_API_KEY = os.environ.get('MISTRAL_API_KEY', '')
 
 # Configure Supabase credentials from environment
-SUPABASE_URL = os.environ.get('SUPABASE_URL')
-SUPABASE_KEY = os.environ.get('SUPABASE_KEY') 
 SUPABASE_ANON_KEY = os.environ.get('SUPABASE_ANON_KEY', SUPABASE_KEY)
-SUPABASE_SERVICE_KEY = os.environ.get('SUPABASE_SERVICE_KEY')
-print(f"PRODUCTION SETTINGS: Supabase is ACTIVE. Using URL: {SUPABASE_URL}")
-
-# Stronger security settings
-CSRF_COOKIE_SECURE = True
-SESSION_COOKIE_SECURE = True
-SECURE_SSL_REDIRECT = True # Set to True if your Render setup enforces HTTPS
-SECURE_HSTS_SECONDS = 31536000  # 1 year
-SECURE_HSTS_INCLUDE_SUBDOMAINS = True
-SECURE_HSTS_PRELOAD = True
-SECURE_REFERRER_POLICY = 'same-origin'
 
 # WhiteNoise for static files
 MIDDLEWARE.insert(1, 'whitenoise.middleware.WhiteNoiseMiddleware')  # Add after SecurityMiddleware
@@ -62,7 +141,6 @@ STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # Static files configuration (CSS, JavaScript, Images)
 STATIC_URL = '/static/'
-STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 STATICFILES_DIRS = [] # Updated to remove os.path.join(BASE_DIR, 'static')
 
 # Logging
@@ -96,37 +174,6 @@ LOGGING = {
 
 # Ensure log directory exists - PythonAnywhere might need different permissions
 os.makedirs(os.path.join(BASE_DIR, 'logs'), exist_ok=True)
-
-# Use SQLite in Render's persistent storage location
-DATABASES = {
-    'default': dj_database_url.config(
-        default=os.environ.get('DATABASE_URL')
-    )
-}
-
-# MySQL configuration example (for reference):
-"""
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'yourusername$taskmanager',
-        'USER': 'yourusername',
-        'PASSWORD': os.environ.get('DB_PASSWORD', ''),
-        'HOST': 'yourusername.mysql.pythonanywhere-services.com',
-        'PORT': '',
-    }
-}
-"""
-
-# Email configuration for production
-EMAIL_BACKEND = os.environ.get('EMAIL_BACKEND_PRODUCTION', 'django.core.mail.backends.smtp.EmailBackend')
-EMAIL_HOST = os.environ.get('SMTP_HOST', 'smtp.gmail.com')
-EMAIL_PORT = int(os.environ.get('SMTP_PORT', '465'))
-EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
-EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
-EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'False').lower() == 'true'
-EMAIL_USE_SSL = os.environ.get('EMAIL_USE_SSL', 'True').lower() == 'true'
-EMAIL_TIMEOUT = 30  # Set timeout to 30 seconds to avoid hanging
 
 # Set sender name and email
 SENDER_NAME = os.environ.get('SENDER_NAME', 'Task Manager')
