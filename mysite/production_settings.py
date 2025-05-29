@@ -30,9 +30,9 @@ ALLOWED_HOSTS = [
 ] 
 # Add other production hosts if needed
 
-# Force Supabase bypass in production
-BYPASS_SUPABASE = True  # Always bypass in production, regardless of environment variables
-BYPASS_SUPABASE_RATE_LIMITS = True
+# Enable Supabase in production
+BYPASS_SUPABASE = False  # Use Supabase authentication
+BYPASS_SUPABASE_RATE_LIMITS = False  # Use rate limits for security
 
 # Email verification settings 
 AUTO_VERIFY_USERS = os.environ.get('AUTO_VERIFY_USERS', 'False').lower() in ('true', '1', 't', 'yes')
@@ -40,19 +40,12 @@ AUTO_VERIFY_USERS = os.environ.get('AUTO_VERIFY_USERS', 'False').lower() in ('tr
 # Mistral AI API key for production
 MISTRAL_API_KEY = os.environ.get('MISTRAL_API_KEY', '')
 
-# Nullify Supabase credentials if bypassed to prevent accidental use
-# The client functions in settings.py will already return None if BYPASS_SUPABASE is True
-if BYPASS_SUPABASE:
-    SUPABASE_URL = None
-    SUPABASE_KEY = None
-    SUPABASE_ANON_KEY = None
-    SUPABASE_SERVICE_KEY = None
-    print("PRODUCTION SETTINGS: Supabase is FULLY BYPASSED. Client functions will return None.")
-else:
-    # This block should ideally not be hit in production if BYPASS_SUPABASE is True
-    print("PRODUCTION SETTINGS: Supabase is ACTIVE. Ensure SUPABASE_URL and keys are set in environment.")
-    # SUPABASE_URL = os.environ.get('SUPABASE_URL') # Example if not bypassing
-    # SUPABASE_KEY = os.environ.get('SUPABASE_KEY') # Example if not bypassing
+# Configure Supabase credentials from environment
+SUPABASE_URL = os.environ.get('SUPABASE_URL')
+SUPABASE_KEY = os.environ.get('SUPABASE_KEY') 
+SUPABASE_ANON_KEY = os.environ.get('SUPABASE_ANON_KEY', SUPABASE_KEY)
+SUPABASE_SERVICE_KEY = os.environ.get('SUPABASE_SERVICE_KEY')
+print(f"PRODUCTION SETTINGS: Supabase is ACTIVE. Using URL: {SUPABASE_URL}")
 
 # Stronger security settings
 CSRF_COOKIE_SECURE = True
@@ -136,11 +129,11 @@ EMAIL_USE_SSL = os.environ.get('EMAIL_USE_SSL', 'True').lower() == 'true'
 EMAIL_TIMEOUT = 30  # Set timeout to 30 seconds to avoid hanging
 
 # Set sender name and email
-SENDER_NAME = os.environ.get('SENDER_NAME', 'Nexus')
+SENDER_NAME = os.environ.get('SENDER_NAME', 'Task Manager')
 SENDER_EMAIL = os.environ.get('SENDER_EMAIL', EMAIL_HOST_USER)
 
 # Proper format for email with sender name
-DEFAULT_FROM_EMAIL = f"{SENDER_NAME} <{SENDER_EMAIL}>" if SENDER_NAME and SENDER_EMAIL else os.environ.get('DEFAULT_FROM_EMAIL_PRODUCTION', 'Nexus <noreply@nexuss-baf9e168e5c4.herokuapp.com>')
+DEFAULT_FROM_EMAIL = f"{SENDER_NAME} <{SENDER_EMAIL}>" if SENDER_NAME and SENDER_EMAIL else os.environ.get('DEFAULT_FROM_EMAIL_PRODUCTION', 'Task Manager <noreply@nexuss-baf9e168e5c4.herokuapp.com>')
 SERVER_EMAIL = os.environ.get('SERVER_EMAIL_PRODUCTION', DEFAULT_FROM_EMAIL)
 
 # Supabase site URL for production
@@ -150,10 +143,5 @@ SUPABASE_SITE_URL = os.environ.get('SUPABASE_SITE_URL', 'https://taskmanager-mzt
 SITE_DOMAIN = os.environ.get('SITE_DOMAIN', 'https://nexuss-baf9e168e5c4.herokuapp.com')
 SITE_PROTOCOL = os.environ.get('SITE_PROTOCOL', 'https')
 SITE_URL = f"{SITE_PROTOCOL}://{SITE_DOMAIN}"
-
-# Cache for storing supabase client
-# These are now defined in the base settings.py
-# _supabase_client = None
-# _supabase_admin_client = None 
 
 print(f"PRODUCTION SETTINGS LOADED: BYPASS_SUPABASE is set to {BYPASS_SUPABASE}") 
