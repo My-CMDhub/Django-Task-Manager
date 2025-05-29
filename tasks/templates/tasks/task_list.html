@@ -280,7 +280,7 @@
             </div>
         </div>
     </div>
-    
+
     <!-- Task Stats -->
     <div class="row mb-4">
         <div class="col-12">
@@ -325,9 +325,9 @@
                         <button class="btn btn-sm btn-outline-primary me-2" type="button" id="advancedSearchToggle" data-bs-toggle="collapse" data-bs-target="#advancedSearch" aria-expanded="false">
                             <i class="bi bi-sliders"></i> Advanced
                         </button>
-                        <button class="btn btn-sm btn-link" type="button" data-bs-toggle="collapse" data-bs-target="#filterCollapse">
-                            <i class="bi bi-chevron-down"></i>
-                        </button>
+                    <button class="btn btn-sm btn-link" type="button" data-bs-toggle="collapse" data-bs-target="#filterCollapse">
+                        <i class="bi bi-chevron-down"></i>
+                    </button>
                     </div>
                 </div>
                 <div class="collapse show" id="filterCollapse">
@@ -336,21 +336,21 @@
                             <div class="row g-3 mb-3">
                                 <!-- Basic Filters -->
                                 <div class="col-md-4">
-                                    <div class="input-group">
-                                        <span class="input-group-text"><i class="bi bi-search"></i></span>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="bi bi-search"></i></span>
                                         <input type="text" name="search" class="form-control" placeholder="Search tasks..." value="{{ form.search.value|default_if_none:'' }}">
-                                    </div>
                                 </div>
-                                <div class="col-md-2">
+                            </div>
+                            <div class="col-md-2">
                                     {{ form.status }}
-                                </div>
-                                <div class="col-md-2">
+                            </div>
+                            <div class="col-md-2">
                                     {{ form.priority }}
-                                </div>
-                                <div class="col-md-2">
+                            </div>
+                            <div class="col-md-2">
                                     {{ form.due_date }}
-                                </div>
-                                <div class="col-md-2">
+                            </div>
+                            <div class="col-md-2">
                                     <button type="submit" class="btn btn-primary w-100">Search</button>
                                 </div>
                             </div>
@@ -388,9 +388,9 @@
                                                 <option value="{{ tag.id }}" {% if tag.id in form.tags.value %}selected{% endif %}>
                                                     {{ tag.name }}
                                                 </option>
-                                            {% endfor %}
-                                        </select>
-                                    </div>
+                                    {% endfor %}
+                                </select>
+                            </div>
                                     <div class="col-md-6">
                                         <label class="form-label small">Sort By</label>
                                         {{ form.sort_by }}

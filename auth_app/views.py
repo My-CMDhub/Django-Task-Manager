@@ -132,7 +132,6 @@ def is_valid_email_domain(email):
 @csrf_exempt  # Make login exempt from CSRF to handle direct verification links
 def login(request):
     """Handle user login"""
-    # Redirect if already logged in
     if request.user.is_authenticated:
         messages.info(request, "You are already logged in.")
         return redirect('home')
@@ -433,43 +432,28 @@ def login(request):
             messages.error(request, "Invalid username or password.")
             return render(request, 'auth/login.html')
         
-        # Additional check to ensure email is verified
+        # Block login if not verified, but check Supabase in real time
         if hasattr(user_auth, 'email_verified') and not user_auth.email_verified:
-            # Double-check with Supabase one more time
+            # Real-time Supabase check
             try:
                 supabase_client = get_supabase_admin_client()
                 is_verified = False
-                
-                if supabase_client and user.supabase_id:
-                    is_verified, error_info = check_supabase_verification_status(user.supabase_id, supabase_client)
-                    
+                if supabase_client and user_auth.supabase_id:
+                    is_verified, error_info = check_supabase_verification_status(user_auth.supabase_id, supabase_client)
                     if is_verified:
-                        # User is verified in Supabase but not in Django - fix it
                         user_auth.email_verified = True
                         user_auth.save()
                         logger.info(f"Updated verification status from Supabase for {user_auth.email}")
-                    else:
-                        # Not verified - prevent login
-                        messages.warning(request, 
-                            "Your email address has not been verified yet. Please check your inbox for the verification email or "
-                            "click the 'Resend Verification Email' button below."
-                        )
-                        return render(request, 'auth/login.html', {'email': user_auth.email, 'show_resend': True})
-                else:
-                    # No Supabase client available - still enforce verification
-                    messages.warning(request, 
-                        "Your email address has not been verified yet. Please check your inbox for the verification email or "
-                        "click the 'Resend Verification Email' button below."
-                    )
-                    return render(request, 'auth/login.html', {'email': user_auth.email, 'show_resend': True})
+                        # Allow login now
+                        auth_login(request, user_auth)
+                        messages.success(request, f"Welcome back, {user_auth.username}!")
+                        return redirect('home')
             except Exception as e:
-                logger.error(f"Error in final verification check: {str(e)}")
-                # Prevent login if verification status can't be confirmed
-                messages.warning(request, 
-                    "Your email verification status could not be confirmed. Please verify your email before logging in."
-                )
-                return render(request, 'auth/login.html', {'email': user_auth.email, 'show_resend': True})
-            
+                logger.error(f"Error in real-time Supabase verification: {str(e)}")
+            # If still not verified, show a user-friendly message
+            messages.warning(request, "Your email address has not been verified. If you just clicked the verification link, please wait a few seconds and try again. If you still see this message, click 'Resend Verification Email' or contact support.")
+            return render(request, 'auth/login.html', {'email': user_auth.email, 'show_resend': True})
+        
         # Successful login - reset failed login attempts
         if hasattr(user, 'failed_login_attempts'):
             user.failed_login_attempts = 0
@@ -950,19 +934,15 @@ def sync_with_supabase(email, force_delete=False):
 @csrf_exempt
 def register(request):
     """Handle user registration"""
-    # Redirect to home if already logged in
     if request.user.is_authenticated:
         messages.info(request, "You are already logged in and registered.")
         return redirect('home')
     
     if request.method == 'POST':
-        # Get form data
         email = request.POST.get('email', '').strip().lower()
         password1 = request.POST.get('password1', '')
         password2 = request.POST.get('password2', '')
         username = request.POST.get('username', '').strip()
-        
-        # Basic form validation first
         errors = {}
         
         # Check if email is valid
@@ -1022,68 +1002,41 @@ def register(request):
             
         # Create the user with Supabase integration
         try:
-            # Create user in Supabase first
             supabase_client = get_supabase_admin_client()
             if not supabase_client:
                 logger.error(f"Cannot create user in Supabase: No admin client available")
-                
-                # For local development, we can create a Django-only user if needed
                 if settings.DEBUG:
                     try:
-                        # Create Django user without Supabase
-                        logger.warning(f"Creating Django-only user in DEBUG mode: {email}")
-                        
                         user = User.objects.create_user(
                             username=username,
                             email=email,
                             password=password1,
                             supabase_id=f"local-{uuid.uuid4()}",
-                            email_verified=True  # Auto-verify in debug mode
+                            email_verified=True
                         )
-                        
-                        # Create profile
-                        UserProfile.objects.create(
-                            user=user,
-                            verified=True
-                        )
-                        
-                        # Login the user
+                        UserProfile.objects.create(user=user, verified=True)
                         user.backend = 'django.contrib.auth.backends.ModelBackend'
                         auth_login(request, user)
-                        
                         messages.success(request, f"Registration successful! Welcome to the Task Manager, {username}!")
                         return redirect('home')
                     except Exception as django_error:
                         logger.error(f"Error creating Django-only user: {str(django_error)}")
-                
-                # If not in debug mode or Django-only creation failed, show error
                 raise Exception("Supabase service unavailable. Please try again later.")
-                
             logger.info(f"Creating user in Supabase: {email}")
-            
-            # Prepare metadata
             user_metadata = {
                 "username": username,
                 "app_registration_date": datetime.now().isoformat(),
                 "registration_source": "website"
             }
-            
-            # Register in Supabase using sign_up instead of admin.create_user
-            logger.info(f"Attempting to register user in Supabase: {email}")
             supabase_response = None
             supabase_user = None
             supabase_id = None
-            
             try:
                 supabase_response = supabase_client.auth.sign_up({
                     "email": email,
                     "password": password1,
-                    "options": {
-                        "data": user_metadata
-                    }
+                    "options": {"data": user_metadata}
                 })
-                
-                # Check if registration was successful
                 if supabase_response and supabase_response.user:
                     supabase_user = supabase_response.user
                     supabase_id = supabase_user.id
@@ -1092,103 +1045,44 @@ def register(request):
                     logger.warning(f"Supabase registration response was empty or missing user: {supabase_response}")
             except Exception as supabase_error:
                 logger.error(f"Supabase registration error for {email}: {str(supabase_error)}")
-                # Check if the error indicates user already exists
                 error_message = str(supabase_error).lower()
-                
                 if "already registered" in error_message or "already exists" in error_message:
-                    messages.warning(request, 
-                        "An account with this email already exists. Please login instead or use the reset account option."
-                    )
+                    messages.warning(request, "An account with this email already exists. Please login instead or use the reset account option.")
                     return render(request, 'auth/register.html', {
                         'email': email,
                         'username': username,
                         'show_force_clean': True,
                         'show_direct': True
                     })
-                
-                # If other error, continue with Django registration anyway - could be temporary issue
                 logger.info(f"Proceeding with Django registration despite Supabase error for {email}")
-            
-            # Create Django user linked to Supabase
             try:
-                # To avoid race conditions with webhook, we'll create the user with verified=False initially
-                # The webhook will update it when the Supabase user confirms their email
                 user = User.objects.create_user(
                     username=username,
                     email=email,
                     password=password1,
                     supabase_id=supabase_id,
-                    email_verified=False  # Will be updated by webhook when verified
+                    email_verified=False
                 )
-                
-                # Create user profile
-                UserProfile.objects.create(
-                    user=user,
-                    verified=False
-                )
-                
+                UserProfile.objects.create(user=user, verified=False)
                 logger.info(f"Django user created for Supabase user: {email}")
-                
-                # Send verification email
-                try:
-                    email_sent = send_verification_email(request, user)
-                    if email_sent:
-                        logger.info(f"Verification email sent to: {email}")
-                    else:
-                        logger.warning(f"Failed to send verification email to: {email}")
-                except Exception as email_error:
-                    logger.error(f"Error sending verification email to {email}: {str(email_error)}")
-                
-                # Store registration status in session for improved UX
-                request.session['just_registered'] = True
-                request.session['registered_email'] = email
-                
-                # Always show a positive message since the email often arrives after redirect
-                messages.success(request, 
-                    "Registration successful! We've sent a verification link to your email. "
-                    "Please check your inbox and spam folder to verify your account. "
-                    "You won't be able to log in until your email is verified."
-                )
-                
-                # Redirect to login page immediately
-                response = redirect('login')
-                # Try to send the verification email after redirect (user does not wait)
-                try:
-                    send_verification_email(request, user)
-                except Exception as email_error:
-                    logger.error(f"Error sending verification email to {email}: {str(email_error)}")
-                    request.session['verification_email_failed'] = True
-                return response
+                # --- No local verification email sent. Supabase handles all verification. ---
+                messages.success(request, "Registration successful! Please check your email for a verification link from Nexus. You won't be able to log in until your email is verified.")
+                return redirect('login')
             except Exception as django_error:
                 logger.error(f"Django user creation error for {email}: {str(django_error)}")
-                
-                # Check if we can see the user in Django now (in case the error was during profile creation)
                 django_user = User.objects.filter(email__iexact=email).first()
                 if django_user:
-                    messages.success(request, 
-                        "Your account was created! Please check your email to verify your account. "
-                        "If you don't receive an email, you can request a new verification link after logging in."
-                    )
+                    messages.success(request, "Your account was created! Please check your email to verify your account. If you don't receive an email, you can request a new verification link after logging in.")
                     return redirect('login')
-                
-                # Otherwise show error
-                messages.error(request, 
-                    f"Registration error: {str(django_error)}. Please try again later."
-                )
+                messages.error(request, f"Registration error: {str(django_error)}. Please try again later.")
                 return render(request, 'auth/register.html', {
                     'email': email, 
                     'username': username,
                     'show_force_clean': True
                 })
         except Exception as e:
-            # Log the error for debugging
             logger.error(f"Supabase registration error: {str(e)}")
-            
-            # User-friendly error message
-            messages.error(request, 
-                f"An error occurred during registration: {str(e)}. Please try again later."
-            )
-            
+            messages.error(request, f"An error occurred during registration: {str(e)}. Please try again later.")
             return render(request, 'auth/register.html', {
                 'email': email,
                 'username': username

@@ -36,7 +36,7 @@ if not cursor.fetchone():
     # Insert default site
     cursor.execute('''
     INSERT INTO django_site (id, domain, name)
-    VALUES (1, 'example.com', 'example.com');
+    VALUES (1, 'Nexus', 'Nexus');
     ''')
     
     print("Default site created")
