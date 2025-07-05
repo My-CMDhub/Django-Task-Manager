@@ -2,7 +2,7 @@ from django import forms
 from django.utils import timezone
 from .models import (
     Task, TaskAttachment, TaskReminder, TaskTag, TaskComment,
-    Project, TimeEntry, CustomField, CustomFieldValue
+    Project, ProjectTag, ProjectAttachment, TimeEntry, CustomField, CustomFieldValue
 )
 from django.contrib.auth import get_user_model
 from django.utils.translation import gettext_lazy as _
@@ -16,26 +16,74 @@ class DatePickerInput(forms.DateTimeInput):
 
 class ProjectForm(forms.ModelForm):
     """Form for creating and updating projects."""
-    
+    start_date = forms.DateField(
+        required=False,
+        widget=forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+        help_text="Project start date (optional)"
+    )
+    end_date = forms.DateField(
+        required=False,
+        widget=forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+        help_text="Project end date (optional, must be after start date)"
+    )
+    status = forms.ChoiceField(
+        choices=Project.STATUS_CHOICES,
+        widget=forms.Select(attrs={'class': 'form-select'}),
+        initial='active',
+        help_text="Project status"
+    )
+    tags = forms.ModelMultipleChoiceField(
+        queryset=ProjectTag.objects.all(),
+        required=False,
+        widget=forms.SelectMultiple(attrs={'class': 'select2 form-control'}),
+        help_text="Add tags/labels for this project"
+    )
+    color = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={'type': 'color', 'class': 'form-control form-control-color', 'style': 'width: 3rem; padding: 0;'}),
+        help_text="Pick a color for this project (optional)"
+    )
+    icon = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g. 🚀 or fa-project-diagram'}),
+        help_text="Icon or emoji for this project (optional)"
+    )
+    attachments = forms.FileField(
+        required=False,
+        widget=forms.ClearableFileInput(attrs={'multiple': True, 'class': 'form-control'}),
+        help_text="Attach files (optional)",
+    )
+    invite_emails = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Invite team by email, comma-separated'}),
+        help_text="Invite team members by email (comma-separated)"
+    )
     class Meta:
         model = Project
-        fields = ['name', 'description', 'members']
+        fields = ['name', 'description', 'members', 'start_date', 'end_date', 'status', 'tags', 'color', 'icon']
         widgets = {
             'name': forms.TextInput(attrs={'class': 'form-control'}),
             'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 4}),
             'members': forms.SelectMultiple(attrs={'class': 'select2 form-control'}),
         }
-    
     def __init__(self, *args, **kwargs):
         user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
-        
-        # Set owner to the current user
         if user:
             self.instance.owner = user
-        
-        # Filter members to only include active users
-        self.fields['members'].queryset = User.objects.filter(is_active=True)
+            self.fields['members'].queryset = User.objects.filter(is_active=True)
+            self.fields['tags'].queryset = ProjectTag.objects.filter(created_by=user)
+    def clean(self):
+        cleaned = super().clean()
+        start = cleaned.get('start_date')
+        end = cleaned.get('end_date')
+        if start and end and end < start:
+            self.add_error('end_date', "End date must be after start date.")
+        # Unique project name for this user
+        name = cleaned.get('name')
+        if name and Project.objects.filter(name=name, owner=self.instance.owner).exclude(pk=self.instance.pk).exists():
+            self.add_error('name', "You already have a project with this name.")
+        return cleaned
 
 class TaskForm(forms.ModelForm):
     """Form for creating and updating tasks."""

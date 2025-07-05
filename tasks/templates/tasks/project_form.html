@@ -143,7 +143,7 @@
             <p class="header-subtitle">Define your project details</p>
         </div>
         <div class="card-body p-4">
-            <form method="post" novalidate>
+            <form method="post" novalidate enctype="multipart/form-data">
                 {% csrf_token %}
                 
                 {% if form.non_field_errors %}
@@ -197,6 +197,81 @@
                         </div>
                         {% endif %}
                         <div class="form-text">Select team members who will have access to this project.</div>
+                    </div>
+                </div>
+                
+                <div class="form-section">
+                    <h3 class="form-section-title">Project Details</h3>
+                    <div class="row">
+                        <div class="col-md-6 mb-4">
+                            <label for="{{ form.start_date.id_for_label }}" class="form-label">Start Date</label>
+                            {{ form.start_date }}
+                            {% if form.start_date.errors %}
+                            <div class="text-danger mt-1">{% for error in form.start_date.errors %}{{ error }}{% endfor %}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6 mb-4">
+                            <label for="{{ form.end_date.id_for_label }}" class="form-label">End Date</label>
+                            {{ form.end_date }}
+                            {% if form.end_date.errors %}
+                            <div class="text-danger mt-1">{% for error in form.end_date.errors %}{{ error }}{% endfor %}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-4">
+                            <label for="{{ form.status.id_for_label }}" class="form-label">Status</label>
+                            {{ form.status }}
+                            {% if form.status.errors %}
+                            <div class="text-danger mt-1">{% for error in form.status.errors %}{{ error }}{% endfor %}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6 mb-4">
+                            <label for="{{ form.tags.id_for_label }}" class="form-label">Tags/Labels</label>
+                            {{ form.tags }}
+                            {% if form.tags.errors %}
+                            <div class="text-danger mt-1">{% for error in form.tags.errors %}{{ error }}{% endfor %}</div>
+                            {% endif %}
+                            <div class="form-text">Add tags to help categorize this project.</div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-4">
+                            <label for="{{ form.color.id_for_label }}" class="form-label">Project Color</label>
+                            {{ form.color }}
+                            {% if form.color.errors %}
+                            <div class="text-danger mt-1">{% for error in form.color.errors %}{{ error }}{% endfor %}</div>
+                            {% endif %}
+                            <div class="form-text">Pick a color for easy identification.</div>
+                        </div>
+                        <div class="col-md-6 mb-4">
+                            <label for="{{ form.icon.id_for_label }}" class="form-label">Project Icon/Emoji</label>
+                            {{ form.icon }}
+                            {% if form.icon.errors %}
+                            <div class="text-danger mt-1">{% for error in form.icon.errors %}{{ error }}{% endfor %}</div>
+                            {% endif %}
+                            <div class="form-text">Choose an icon or emoji for this project.</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-section">
+                    <h3 class="form-section-title">Attachments & Invitations</h3>
+                    <div class="mb-4">
+                        <label for="{{ form.attachments.id_for_label }}" class="form-label">Attachments</label>
+                        {{ form.attachments }}
+                        {% if form.attachments.errors %}
+                        <div class="text-danger mt-1">{% for error in form.attachments.errors %}{{ error }}{% endfor %}</div>
+                        {% endif %}
+                        <div class="form-text">Upload files (project brief, images, etc.). You can select multiple files.</div>
+                    </div>
+                    <div class="mb-4">
+                        <label for="{{ form.invite_emails.id_for_label }}" class="form-label">Invite Team by Email</label>
+                        {{ form.invite_emails }}
+                        {% if form.invite_emails.errors %}
+                        <div class="text-danger mt-1">{% for error in form.invite_emails.errors %}{{ error }}{% endfor %}</div>
+                        {% endif %}
+                        <div class="form-text">Enter email addresses, separated by commas. Users will be added or invited.</div>
                     </div>
                 </div>
                 

@@ -1162,6 +1162,23 @@ def account_settings(request):
         if form_type == 'profile':
             # Update profile info
             name = request.POST.get('name')
+            username = request.POST.get('username', '').strip()
+            username_valid = True
+            username_error = None
+            if username and username != request.user.username:
+                import re
+                if not re.match(r'^[a-zA-Z0-9_]{3,20}$', username):
+                    username_valid = False
+                    username_error = "Username must be 3-20 characters long and contain only letters, numbers, and underscores."
+                elif User.objects.filter(username=username).exclude(pk=request.user.pk).exists():
+                    username_valid = False
+                    username_error = "This username is already taken. Please choose another."
+                if username_valid:
+                    request.user.username = username
+                    request.user.save()
+                    messages.success(request, "Username updated successfully.")
+                else:
+                    messages.error(request, username_error)
             if name:
                 first_name, *last_name = name.split(' ', 1)
                 request.user.first_name = first_name

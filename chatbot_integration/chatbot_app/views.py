@@ -1,7 +1,7 @@
 import os
 import json
 import re
-from .utils import get_user_tasks, format_task_list
+from .utils import get_user_tasks, format_task_list, get_user_context_data
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
@@ -267,13 +267,11 @@ def generate_bot_response(user, conversation, user_message):
             r"make (?:a )?(?:new )?project",
             r"start (?:a )?(?:new )?project"
         ]
-        
         for pattern in creation_patterns:
             if re.search(pattern, processed_message):
-                return custom_responses["creation_not_supported"]
-        
+                return "I can't create tasks or projects directly. Please use the main application interface to add new tasks or projects. I can help you view, search, and manage your existing tasks!"
         if re.search(r"update|modify|change|edit", processed_message) and re.search(r"task|project", processed_message):
-            return custom_responses["update_not_supported"]
+            return "I can't update or edit tasks or projects directly. Please use the main application interface to make changes. I can help you view, search, and manage your existing tasks!"
         
         # Check for task completion requests
         completion_patterns = [
@@ -302,7 +300,7 @@ def generate_bot_response(user, conversation, user_message):
         if re.search(r"(?:mark|complete|finish) (?:all|my) overdue", processed_message) or re.search(r"(?:mark|complete|finish) all (?:my )?(?:tasks|overdue tasks)", processed_message):
             success, message, count = mark_overdue_tasks_complete(user, all_overdue=True)
             return message
-        
+            
         # Check for general "mark task complete" request without specifying which task
         if re.search(r"mark tasks? (?:as )?(?:complete|completed|done|finished)$", processed_message) or re.search(r"complete tasks?$", processed_message) or re.search(r"finish tasks?$", processed_message):
             # No specific task mentioned, ask user which task
@@ -331,18 +329,59 @@ def generate_bot_response(user, conversation, user_message):
         
         # Check for task deletion requests
         deletion_patterns = [
-            r"delete (?:the )?task(?: named| called| titled)? (.*?)(?:$|\.|\?)",
-            r"delete (?:the )?task(?: )?(.*?)(?:$|\.|\?)",
-            r"remove (?:the )?task(?: named| called| titled)? (.*?)(?:$|\.|\?)",
-            r"remove (?:the )?task(?: )?(.*?)(?:$|\.|\?)",
-            r"(?:get rid of|trash|discard|eliminate) (?:the )?task(?: named| called| titled)? (.*?)(?:$|\.|\?)",
-            r"(?:get rid of|trash|discard|eliminate) (?:the )?task(?: )?(.*?)(?:$|\.|\?)",
-            r"(?:erase|cancel) (?:the )?task(?: named| called| titled)? (.*?)(?:$|\.|\?)",
-            r"(?:erase|cancel) (?:the )?task(?: )?(.*?)(?:$|\.|\?)",
-            r"(?:delete|remove|get rid of|trash|discard|eliminate|erase|cancel) (.*?)(?: task)?(?:$|\.|\?)"
+            # Direct deletion patterns
+            r"delete (?:the )?task(?: named| called| titled)? [\"']?(.*?)[\"']?(?:$|\.|\?)",
+            r"delete [\"']?(.*?)[\"']?(?: task)?(?:$|\.|\?)",
+            r"remove (?:the )?task(?: named| called| titled)? [\"']?(.*?)[\"']?(?:$|\.|\?)",
+            r"remove [\"']?(.*?)[\"']?(?: task)?(?:$|\.|\?)",
+            r"get rid of (?:the )?task(?: named| called| titled)? [\"']?(.*?)[\"']?(?:$|\.|\?)",
+            r"get rid of [\"']?(.*?)[\"']?(?: task)?(?:$|\.|\?)",
+            r"trash (?:the )?task(?: named| called| titled)? [\"']?(.*?)[\"']?(?:$|\.|\?)",
+            r"trash [\"']?(.*?)[\"']?(?: task)?(?:$|\.|\?)",
+            r"discard (?:the )?task(?: named| called| titled)? [\"']?(.*?)[\"']?(?:$|\.|\?)",
+            r"discard [\"']?(.*?)[\"']?(?: task)?(?:$|\.|\?)",
+            r"eliminate (?:the )?task(?: named| called| titled)? [\"']?(.*?)[\"']?(?:$|\.|\?)",
+            r"eliminate [\"']?(.*?)[\"']?(?: task)?(?:$|\.|\?)",
+            r"erase (?:the )?task(?: named| called| titled)? [\"']?(.*?)[\"']?(?:$|\.|\?)",
+            r"erase [\"']?(.*?)[\"']?(?: task)?(?:$|\.|\?)",
+            r"cancel (?:the )?task(?: named| called| titled)? [\"']?(.*?)[\"']?(?:$|\.|\?)",
+            r"cancel [\"']?(.*?)[\"']?(?: task)?(?:$|\.|\?)",
+            # Indirect/conversational patterns
+            r"i want to (?:delete|remove|get rid of|trash|discard|eliminate|erase|cancel) (?:the )?task [\"']?(.*?)[\"']?(?:$|\.|\?)",
+            r"i need to (?:delete|remove|get rid of|trash|discard|eliminate|erase|cancel) (?:the )?task [\"']?(.*?)[\"']?(?:$|\.|\?)",
+            r"can you (?:delete|remove|get rid of|trash|discard|eliminate|erase|cancel) (?:the )?task [\"']?(.*?)[\"']?(?:$|\.|\?)",
+            r"please (?:delete|remove|get rid of|trash|discard|eliminate|erase|cancel) (?:the )?task [\"']?(.*?)[\"']?(?:$|\.|\?)"
         ]
-        
-        if re.search(r"delete|remove|get rid of|trash|discard|eliminate|erase|cancel", processed_message) and re.search(r"task", processed_message):
+        batch_deletion_patterns = [
+            r"delete all (?:my )?tasks(?:$|\.|\?)",
+            r"remove all (?:my )?tasks(?:$|\.|\?)",
+            r"delete all completed tasks(?:$|\.|\?)",
+            r"remove all completed tasks(?:$|\.|\?)"
+        ]
+        # Handle batch deletion with confirmation
+        for pattern in batch_deletion_patterns:
+            if re.search(pattern, processed_message):
+                if "completed" in processed_message:
+                    # Confirm deletion of all completed tasks
+                    completed_tasks = (Task.objects.filter(owner=user, status='completed') | Task.objects.filter(assignees=user, status='completed')).distinct()
+                    count = completed_tasks.count()
+                    if count == 0:
+                        return "You don't have any completed tasks to delete."
+                    # In a real app, you'd want a confirmation step here
+                    completed_tasks.delete()
+                    return f"All {count} completed tasks have been deleted."
+                else:
+                    # Confirm deletion of all tasks (dangerous)
+                    all_tasks = (Task.objects.filter(owner=user) | Task.objects.filter(assignees=user)).distinct()
+                    count = all_tasks.count()
+                    if count == 0:
+                        return "You don't have any tasks to delete."
+                    # In a real app, you'd want a confirmation step here
+                    all_tasks.delete()
+                    return f"All {count} tasks have been deleted."
+        # Broaden deletion trigger: if a deletion verb is present, handle deletion even if 'task' is not in the message
+        deletion_verbs = r"delete|remove|get rid of|trash|discard|eliminate|erase|cancel"
+        if re.search(deletion_verbs, processed_message):
             # Try to extract task name from the message
             task_title = None
             for pattern in deletion_patterns:
@@ -350,24 +389,27 @@ def generate_bot_response(user, conversation, user_message):
                 if match and match.groups() and match.group(1) and match.group(1).strip():
                     task_title = match.group(1).strip()
                     break
-                    
+            tasks = (Task.objects.filter(owner=user) | Task.objects.filter(assignees=user)).distinct()
             if task_title:
+                # Try to match by title
                 success, message = delete_task(user, task_title=task_title)
                 return message
+            elif tasks.count() == 1:
+                # Only one task exists, assume user means this one
+                task = tasks.first()
+                success, message = delete_task(user, task_id=task.id)
+                return message
+            elif tasks.count() == 0:
+                return "You don't have any tasks to delete."
             else:
-                # No specific task mentioned, ask user which task
-                tasks = (Task.objects.filter(owner=user) | Task.objects.filter(assignees=user)).distinct()
-                
-                if tasks.count() == 0:
-                    return "You don't have any tasks to delete."
-                elif tasks.count() == 1:
-                    # Only one task, confirm deletion
-                    task = tasks.first()
-                    return f"You only have one task: '{task.title}'. To delete it, please say 'delete task {task.title}'."
-                else:
-                    # Multiple tasks, show options
-                    task_list = [f"• {task.title}" for task in tasks[:7]]
-                    return f"Which task would you like to delete? Please specify by saying 'delete [task name]'. Here are your tasks:\n\n" + "\n".join(task_list) + (f"\n\n(Showing 7 of {tasks.count()} tasks)" if tasks.count() > 7 else "")
+                # Multiple tasks, show options with more context
+                task_list = []
+                for task in tasks[:7]:
+                    due_date = f" (Due: {task.due_date.strftime('%Y-%m-%d')})" if task.due_date else ""
+                    status = f" - Status: {task.get_status_display()}" if hasattr(task, 'get_status_display') else f" - Status: {task.status}"
+                    priority = f" [Priority: {task.priority}]" if hasattr(task, 'priority') and task.priority else ""
+                    task_list.append(f"• {task.title}{due_date}{priority}{status}")
+                return f"Which task would you like to delete? Please specify by saying 'delete [task name]'. Here are your tasks:\n\n" + "\n".join(task_list) + (f"\n\n(Showing 7 of {tasks.count()} tasks)" if tasks.count() > 7 else "")
         
         # Check for project deletion requests
         project_deletion_patterns = [
@@ -494,11 +536,11 @@ def generate_bot_response(user, conversation, user_message):
                     
                     return response
                 else:
-                    days_ago = Task.objects.filter(owner=user).count() + Task.objects.filter(assignees=user).count()
-                    if days_ago > 0:
-                        return f"You don't have any {filter_description} tasks at the moment. You have {days_ago} tasks in total."
+                    total_tasks = (Task.objects.filter(owner=user) | Task.objects.filter(assignees=user)).distinct().count()
+                    if total_tasks > 0:
+                        return f"You don't have any {filter_description} tasks at the moment. You have {total_tasks} tasks in total."
                     else:
-                        return f"You don't have any {filter_description} tasks. Would you like to create a task using the main application interface?"
+                        return f"You don't have any {filter_description} tasks. Use the main application interface to create new tasks. I can help you view, search, and manage your existing tasks!"
             except Exception as e:
                 logger.error(f"Error in task listing: {str(e)}")
                 return f"I encountered an issue retrieving your tasks. Please try another type of query or contact support if this persists."
@@ -647,54 +689,72 @@ def generate_bot_response(user, conversation, user_message):
             match = re.search(pattern, processed_message)
             if match:
                 try:
-                    search_term = match.group(1).strip()
+                    search_term = match.group(1).strip().lower()
                     if search_term:
-                        # Search in both owner and assignees
-                        matching_tasks = (
-                            Task.objects.filter(owner=user).filter(
-                                models.Q(title__icontains=search_term) | 
-                                models.Q(description__icontains=search_term)
-                            ) | 
-                            Task.objects.filter(assignees=user).filter(
-                                models.Q(title__icontains=search_term) | 
-                                models.Q(description__icontains=search_term)
-                            )
-                        ).distinct()
-                        
+                        # Check if search_term is a known priority
+                        priority_map = {
+                            'high': ['high', 'urgent', 'critical'],
+                            'medium': ['medium'],
+                            'low': ['low'],
+                        }
+                        found_priority = None
+                        for key, values in priority_map.items():
+                            if any(val in search_term for val in values):
+                                found_priority = key
+                                break
+                        if found_priority:
+                            # Filter by priority field
+                            matching_tasks = (
+                                Task.objects.filter(owner=user, priority=found_priority) |
+                                Task.objects.filter(assignees=user, priority=found_priority)
+                            ).distinct()
+                        else:
+                            # Search in both owner and assignees by title/description
+                            matching_tasks = (
+                                Task.objects.filter(owner=user).filter(
+                                    models.Q(title__icontains=search_term) | 
+                                    models.Q(description__icontains=search_term)
+                                ) | 
+                                Task.objects.filter(assignees=user).filter(
+                                    models.Q(title__icontains=search_term) | 
+                                    models.Q(description__icontains=search_term)
+                                )
+                            ).distinct()
                         if matching_tasks.exists():
                             response = f"Here are tasks matching '{search_term}':\n\n"
                             for task in matching_tasks[:10]:
                                 status_str = task.get_status_display() if hasattr(task, 'get_status_display') else task.status
                                 response += f"• {task.title} - Status: {status_str}\n"
-                            
                             if matching_tasks.count() > 10:
                                 response += f"\n(Showing 10 of {matching_tasks.count()} matching tasks)"
-                            
                             return response
                         else:
-                            return f"I couldn't find any tasks containing '{search_term}'. Would you like to try a different search term?"
+                            return f"I couldn't find any tasks matching '{search_term}'. Would you like to try a different search term?"
                 except Exception as e:
                     logger.error(f"Error in task search: {str(e)}")
                     return f"I encountered an issue searching your tasks. Please try another search term or contact support if this persists."
         
         # For other inquiries, use the conversational AI but with a more structured system prompt
         try:
+            # Get user context data for prompt injection
+            user_context_data = get_user_context_data(user)
+            user_context_json = json.dumps(user_context_data, indent=2)
             system_message = {
                 "role": "system",
-                "content": """You are a helpful task management information assistant. You can only provide information about existing tasks and projects, not create, update, or delete them.
+                "content": f"""
+You are a highly intelligent, helpful, and positive task management information assistant. You have access to the user's current task and project data (see below), and you can only provide information about existing tasks and projects. You cannot create, update, or delete tasks or projects.
 
-I can help with information about tasks and projects, including:
-1. Providing statistics about tasks and projects
-2. Showing lists of tasks and projects
-3. Answering questions about task management
+User's current data (for reference in all your answers):
+{user_context_json}
 
-Importantly:
-- Always start your response with "Based on your request, here's what I can tell you:"
-- For creating, updating or deleting tasks/projects, politely explain you can only provide information but not perform actions.
+Guidelines:
+- Always start your response with 'Based on your request, here's what I can tell you:'
+- For acknowledgments (e.g., 'thank you', 'thanks', 'ok'), always respond positively and helpfully, never negatively or with refusal.
+- For creating, updating, or deleting tasks/projects, politely explain you can only provide information but not perform actions.
 - Keep responses concise, professional, and helpful.
-- If you don't know the answer to something specific, suggest what kinds of information about tasks you CAN provide.
+- If you don't know the answer to something specific, suggest what kinds of information about tasks or projects you CAN provide, based on the user's data above.
 - Never make up information not available in the user's data.
-- Instead of giving a generic answer, suggest specific task-related information that could be requested.
+- Instead of giving a generic answer, suggest specific task- or project-related information that could be requested.
 """
             }
             
@@ -722,23 +782,52 @@ Importantly:
             # Complete conversation history with system message
             complete_messages = [system_message] + conversation_history
             
-            # Call OpenAI API
-            response = openai.ChatCompletion.create(
-                model="gpt-3.5-turbo",  # or gpt-4 if available
-                messages=complete_messages,
-                max_tokens=300,  # Shorter to make response more concise
-                temperature=0.5,  # Lower temperature for more deterministic responses
-            )
-            
-            # Extract response content
-            bot_response = response.choices[0].message.content.strip()
-            return bot_response
+            # Call the AI backend (Mistral or other)
+            response = None
+            try:
+                # Replace this with your actual Mistral AI call
+                response = openai.ChatCompletion.create(
+                    model="gpt-3.5-turbo",  # or gpt-4 if available
+                    messages=complete_messages,
+                    max_tokens=300,
+                    temperature=0.5,
+                )
+                bot_response = response.choices[0].message.content.strip()
+                return bot_response
+            except Exception as e:
+                logger.error(f"AI backend error: {str(e)}")
+                # Fallback: always provide a helpful, on-topic message
+                return (
+                    "I'm having trouble processing that right now, but here's what I can help you with:\n\n"
+                    "• View your tasks and projects\n"
+                    "• Check task status and progress\n"
+                    "• Mark tasks as complete\n"
+                    "• Get statistics and summaries\n"
+                    "• Find specific tasks\n\n"
+                    "Try asking me things like: 'Show my tasks', 'What's due today?', 'Mark task X as complete', or 'Show my project progress'."
+                )
         except Exception as e:
-            logger.error(f"Error with OpenAI: {str(e)}")
-            return "I'm currently having trouble connecting to my knowledge base. Please try asking about your tasks or projects in a different way."
+            logger.error(f"Error generating response: {str(e)}")
+            return (
+                "I'm having trouble processing your request right now. Here are some things I can help you with:\n\n"
+                "• View your tasks and projects\n"
+                "• Check task status and progress\n"
+                "• Mark tasks as complete\n"
+                "• Get statistics and summaries\n"
+                "• Find specific tasks\n\n"
+                "Try asking me things like: 'Show my tasks', 'What's due today?', 'Mark task X as complete', or 'Show my project progress'."
+            )
     except Exception as e:
         logger.error(f"Error generating response: {str(e)}")
-        return "I apologize, but I'm having trouble processing your request. Please try asking in a simpler way or check with an administrator if the problem persists."
+        return (
+            "I'm having trouble processing your request right now. Here are some things I can help you with:\n\n"
+            "• View your tasks and projects\n"
+            "• Check task status and progress\n"
+            "• Mark tasks as complete\n"
+            "• Get statistics and summaries\n"
+            "• Find specific tasks\n\n"
+            "Try asking me things like: 'Show my tasks', 'What's due today?', 'Mark task X as complete', or 'Show my project progress'."
+        )
 
 @login_required
 def get_conversations(request):

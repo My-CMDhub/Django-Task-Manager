@@ -316,20 +316,27 @@
                 </div>
             </div>
             <div class="col-md-4 text-md-end task-actions">
-                <div class="btn-group align-items-center" role="group" aria-label="Task Actions">
-                    {% if task.status != 'completed' %}
-                    <form action="{% url 'tasks:task_mark_complete' task.id %}" method="POST" class="d-inline">
-                        {% csrf_token %}
-                        <button type="submit" class="btn btn-success btn-sm rounded-pill me-1" title="Mark as Complete" aria-label="Mark as Complete">
-                            <i class="bi bi-check-lg"></i> <span class="d-none d-md-inline">Complete</span>
+                <div class="btn-toolbar justify-content-end gap-2" role="toolbar" aria-label="Task Actions">
+                    <div class="btn-group me-2" role="group">
+                        {% if task.status != 'completed' %}
+                        <form action="{% url 'tasks:task_mark_complete' task.id %}" method="POST" class="d-inline">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-outline-success btn-sm" data-bs-toggle="tooltip" data-bs-placement="top" title="Mark as Complete" aria-label="Mark as Complete">
+                                <i class="bi bi-check-lg"></i>
+                            </button>
+                        </form>
+                        {% endif %}
+                        <a href="{% url 'tasks:task_update' task.id %}" class="btn btn-outline-primary btn-sm" data-bs-toggle="tooltip" data-bs-placement="top" title="Edit Task" aria-label="Edit Task">
+                            <i class="bi bi-pencil"></i>
+                        </a>
+                        {% if user == task.owner %}
+                        <button class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#shareModal" data-bs-toggle="tooltip" data-bs-placement="top" title="Share Task" aria-label="Share Task">
+                            <i class="bi bi-link-45deg"></i>
                         </button>
-                    </form>
-                    {% endif %}
-                    <a href="{% url 'tasks:task_update' task.id %}" class="btn btn-primary btn-sm rounded-pill me-1" title="Edit Task" aria-label="Edit Task">
-                        <i class="bi bi-pencil"></i> <span class="d-none d-md-inline">Edit</span>
-                    </a>
+                        {% endif %}
+                    </div>
                     <div class="btn-group" role="group">
-                        <button class="btn btn-light btn-sm rounded-pill dropdown-toggle me-1" style="background-color: #f5f6fa;" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="More Actions" aria-label="More Actions">
+                        <button class="btn btn-outline-dark btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="More Actions" aria-label="More Actions">
                             <i class="bi bi-three-dots"></i>
                         </button>
                         <ul class="dropdown-menu dropdown-menu-end">
@@ -361,11 +368,6 @@
                             </li>
                         </ul>
                     </div>
-                    {% if user == task.owner %}
-                    <button class="btn btn-outline-secondary btn-sm rounded-pill" data-bs-toggle="modal" data-bs-target="#shareModal" title="Share Task" aria-label="Share Task">
-                        <i class="bi bi-link-45deg"></i> <span class="d-none d-md-inline">Share</span>
-                    </button>
-                    {% endif %}
                 </div>
             </div>
         </div>

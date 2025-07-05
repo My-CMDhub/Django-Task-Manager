@@ -37,6 +37,12 @@
                                         <input type="text" class="form-control" name="name" value="{{ user.get_full_name }}">
                                     </div>
                                     
+                                    <div class="mb-3">
+                                        <label class="form-label">Username</label>
+                                        <input type="text" class="form-control" name="username" value="{{ user.username }}" required minlength="3" maxlength="20" pattern="^[a-zA-Z0-9_]+$">
+                                        <small class="form-text text-muted">Use only letters, numbers, and underscores. 3-20 characters.</small>
+                                    </div>
+                                    
                                     <button type="submit" class="btn btn-primary">Update Profile</button>
                                 </form>
                             </div>

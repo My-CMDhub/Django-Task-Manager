@@ -255,15 +255,15 @@
                 <button class="action-button" type="button" onclick="location.href='{% url 'tasks:task_create' %}'">
                     <i class="bi bi-plus-circle"></i> New Task
                 </button>
-                <button class="action-button complete-btn" id="bulk-complete-btn" disabled>
+                <button class="action-button complete-btn bulk-action" id="bulk-complete-btn" data-action="complete" disabled>
                     <i class="bi bi-check-circle"></i> Complete
                     <span class="badge-counter" id="complete-counter">0</span>
                 </button>
-                <button class="action-button archive-btn" id="bulk-archive-btn" disabled>
+                <button class="action-button archive-btn bulk-action" id="bulk-archive-btn" data-action="archive" disabled>
                     <i class="bi bi-archive"></i> Archive
                     <span class="badge-counter" id="archive-counter">0</span>
                 </button>
-                <button class="action-button delete-btn" id="bulk-delete-btn" disabled>
+                <button class="action-button delete-btn bulk-action" id="bulk-delete-btn" data-action="delete" disabled>
                     <i class="bi bi-trash"></i> Delete
                     <span class="badge-counter" id="delete-counter">0</span>
                 </button>
@@ -854,9 +854,7 @@
             button.addEventListener('click', function() {
                 const action = this.getAttribute('data-action');
                 const selectedIds = Array.from(document.querySelectorAll('.task-checkbox:checked')).map(cb => cb.value);
-                
                 if (selectedIds.length === 0) return;
-                
                 let confirmMessage = '';
                 if (action === 'complete') {
                     confirmMessage = 'Mark selected tasks as complete?';
@@ -865,27 +863,19 @@
                 } else if (action === 'delete') {
                     confirmMessage = 'Delete selected tasks? This action cannot be undone.';
                 }
-                
                 if (confirm(confirmMessage)) {
-                    // Show loading indicator
                     const originalContent = button.innerHTML;
                     button.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Processing...';
                     button.disabled = true;
-                    
-                    // Use the form submission method for better CSRF handling
                     const form = document.getElementById('bulk-action-form');
                     const taskIdsInput = document.getElementById('bulk-task-ids');
                     const actionInput = document.getElementById('bulk-action-type');
-                    
-                    // Set the form data
                     taskIdsInput.value = JSON.stringify(selectedIds);
                     actionInput.value = action;
-                    
-                    // Set the form action
                     form.action = `/tasks/bulk/${action}/`;
-                    
-                    // Submit the form
+                    // Add error handling for form submission
                     form.submit();
+                    setTimeout(() => { button.innerHTML = originalContent; button.disabled = false; }, 2000);
                 }
             });
         });

@@ -160,4 +160,63 @@ def format_task_list(tasks):
         priority_info = f", {task.priority} priority"
         result.append(f"{i}. {task.title}{due_info}{priority_info}")
     
-    return "\n".join(result) 
+    return "\n".join(result)
+
+def get_user_context_data(user):
+    """
+    Retrieve all relevant tasks and projects for the user, format concisely for prompt injection.
+    Returns a dictionary with 'tasks', 'projects', and 'summary'.
+    """
+    from tasks.models import Task, Project
+    from django.utils import timezone
+    import datetime
+
+    # Get all tasks (owned or assigned)
+    tasks_qs = (Task.objects.filter(owner=user) | Task.objects.filter(assignees=user)).distinct()
+    tasks = []
+    for t in tasks_qs:
+        tasks.append({
+            'id': str(t.id),
+            'title': t.title,
+            'status': t.status,
+            'due_date': t.due_date.strftime('%Y-%m-%d') if t.due_date else None,
+            'priority': getattr(t, 'priority', None),
+            'project': t.project.name if hasattr(t, 'project') and t.project else None,
+        })
+
+    # Get all projects (where user is a member)
+    projects_qs = Project.objects.filter(members=user).distinct()
+    projects = []
+    for p in projects_qs:
+        project_tasks = Task.objects.filter(project=p)
+        completed_count = project_tasks.filter(status='completed').count()
+        projects.append({
+            'id': str(p.id),
+            'name': p.name,
+            'status': getattr(p, 'status', None),
+            'created_at': p.created_at.strftime('%Y-%m-%d') if hasattr(p, 'created_at') and p.created_at else None,
+            'task_count': project_tasks.count(),
+            'completed_task_count': completed_count,
+        })
+
+    # Summary statistics
+    now = timezone.now()
+    overdue_count = tasks_qs.filter(due_date__lt=now).exclude(status='completed').count()
+    completed_count = tasks_qs.filter(status='completed').count()
+    pending_count = tasks_qs.exclude(status='completed').count()
+    total_tasks = tasks_qs.count()
+    total_projects = projects_qs.count()
+
+    summary = {
+        'total_tasks': total_tasks,
+        'completed_tasks': completed_count,
+        'pending_tasks': pending_count,
+        'overdue_tasks': overdue_count,
+        'total_projects': total_projects,
+    }
+
+    return {
+        'tasks': tasks,
+        'projects': projects,
+        'summary': summary,
+    } 

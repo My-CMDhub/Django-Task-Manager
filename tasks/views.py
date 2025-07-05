@@ -8,7 +8,7 @@ from django.views.decorators.http import require_POST
 from django.core.paginator import Paginator
 from .models import (
     Task, TaskAttachment, TaskReminder, TaskTag, TaskComment, 
-    TaskActivity, Project, TimeEntry, CustomField, CustomFieldValue, ShareLink
+    TaskActivity, Project, TimeEntry, CustomField, CustomFieldValue, ShareLink, ProjectAttachment
 )
 from .forms import (
     TaskForm, TaskAttachmentForm, TaskReminderForm, 
@@ -910,34 +910,39 @@ def project_detail(request, project_id):
         ).distinct(), 
         pk=project_id
     )
-    
     # Get tasks for this project
     tasks = Task.objects.filter(project=project).order_by('-created_at')
-    
     # Calculate project stats
     total_tasks = tasks.count()
     completed_tasks = tasks.filter(status='completed').count()
     completion_rate = 0
     if total_tasks > 0:
         completion_rate = int((completed_tasks / total_tasks) * 100)
-    
     # Group tasks by status
     todo_tasks = tasks.filter(status='todo').order_by('position', '-created_at')
     in_progress_tasks = tasks.filter(status='in_progress').order_by('position', '-created_at')
-    completed_tasks = tasks.filter(status='completed').order_by('-completed_at')
-    
+    completed_tasks_list = tasks.filter(status='completed').order_by('-completed_at')
     # Get members
     members = project.members.all()
-    
+    # Get tags, attachments, and new fields
+    tags = project.tags.all()
+    attachments = project.attachments.all()
     context = {
         'project': project,
         'todo_tasks': todo_tasks,
         'in_progress_tasks': in_progress_tasks,
-        'completed_tasks': completed_tasks,
+        'completed_tasks': completed_tasks_list,
         'completion_rate': completion_rate,
         'total_tasks': total_tasks,
         'members': members,
         'is_owner': project.owner == request.user,
+        'tags': tags,
+        'attachments': attachments,
+        'start_date': project.start_date,
+        'end_date': project.end_date,
+        'status': project.get_status_display() if hasattr(project, 'get_status_display') else project.status,
+        'color': project.color,
+        'icon': project.icon,
     }
     return render(request, 'tasks/project_detail.html', context)
 
@@ -945,14 +950,37 @@ def project_detail(request, project_id):
 def project_create(request):
     """View to create a new project."""
     if request.method == 'POST':
-        form = ProjectForm(request.POST, user=request.user)
+        form = ProjectForm(request.POST, request.FILES, user=request.user)
         if form.is_valid():
-            project = form.save()
-            messages.success(request, f'Project "{project.name}" created successfully!')
-            return redirect('tasks:project_detail', project_id=project.id)
+            from django.db import transaction
+            with transaction.atomic():
+                project = form.save(commit=False)
+                project.owner = request.user
+                project.save()
+                form.save_m2m()
+                # Handle attachments
+                files = request.FILES.getlist('attachments')
+                for f in files:
+                    ProjectAttachment.objects.create(
+                        project=project,
+                        file=f,
+                        uploaded_by=request.user
+                    )
+                # Handle invite_emails
+                invite_emails = form.cleaned_data.get('invite_emails', '')
+                if invite_emails:
+                    emails = [e.strip() for e in invite_emails.split(',') if e.strip()]
+                    for email in emails:
+                        user = User.objects.filter(email__iexact=email).first()
+                        if user:
+                            project.members.add(user)
+                        else:
+                            # Placeholder: send invite email logic here
+                            pass
+                messages.success(request, f'Project "{project.name}" created successfully!')
+                return redirect('tasks:project_detail', project_id=project.id)
     else:
         form = ProjectForm(user=request.user)
-    
     context = {
         'form': form,
         'title': 'Create Project'

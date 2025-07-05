@@ -212,7 +212,10 @@
                 <a href="{% url 'tasks:project_list' %}" class="text-decoration-none text-muted mb-3 d-inline-block">
                     <i class="bi bi-arrow-left"></i> Back to Projects
                 </a>
-                <h1 class="project-title">{{ project.name }}</h1>
+                <div class="d-flex align-items-center mb-2">
+                    {% if icon %}<span class="fs-2 me-2" title="Project Icon">{{ icon }}</span>{% endif %}
+                    <span class="project-title" style="{% if color %}border-left: 10px solid {{ color }}; padding-left: 10px;{% endif %}">{{ project.name }}</span>
+                </div>
                 <p class="project-description">
                     {% if project.description %}
                         {{ project.description }}
@@ -220,6 +223,12 @@
                         No description provided
                     {% endif %}
                 </p>
+                <div class="mb-2">
+                    <span class="badge bg-info me-2">Status: {{ status }}</span>
+                    {% if start_date %}<span class="badge bg-light text-dark me-2">Start: {{ start_date }}</span>{% endif %}
+                    {% if end_date %}<span class="badge bg-light text-dark me-2">End: {{ end_date }}</span>{% endif %}
+                    {% for tag in tags %}<span class="badge bg-secondary me-1">#{{ tag.name }}</span>{% endfor %}
+                </div>
                 <div class="d-flex align-items-center">
                     <span class="badge bg-{% if project.is_archived %}secondary{% else %}success{% endif %} me-2">
                         {% if project.is_archived %}Archived{% else %}Active{% endif %}
@@ -228,43 +237,53 @@
                     <span class="mx-2">•</span>
                     <span class="text-muted">By: {{ project.owner.username }}</span>
                 </div>
+                {% if attachments %}
+                <div class="mt-3">
+                    <strong>Attachments:</strong>
+                    <ul class="list-unstyled mb-0">
+                        {% for att in attachments %}
+                            <li><a href="{{ att.file.url }}" target="_blank"><i class="bi bi-paperclip"></i> {{ att.file.name|cut:'project_attachments/' }}</a></li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
             </div>
             <div class="col-md-4 text-md-end">
-                <div class="btn-group">
+                <div class="btn-toolbar justify-content-end gap-2" role="toolbar" aria-label="Project Actions">
+                    <div class="btn-group me-2" role="group">
+                        {% if is_owner %}
+                            <a href="{% url 'tasks:project_update' project.id %}" class="btn btn-outline-primary btn-sm" data-bs-toggle="tooltip" data-bs-placement="top" title="Edit Project" aria-label="Edit Project">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                        {% endif %}
+                        <a href="{% url 'tasks:task_create' %}?project={{ project.id }}" class="btn btn-outline-success btn-sm" data-bs-toggle="tooltip" data-bs-placement="top" title="Add Task" aria-label="Add Task">
+                            <i class="bi bi-plus"></i>
+                        </a>
+                    </div>
                     {% if is_owner %}
-                        <a href="{% url 'tasks:project_update' project.id %}" class="btn btn-primary">
-                            <i class="bi bi-pencil"></i> Edit
-                        </a>
-                        <a href="{% url 'tasks:task_create' %}?project={{ project.id }}" class="btn btn-success">
-                            <i class="bi bi-plus"></i> Add Task
-                        </a>
-                        <div class="dropdown">
-                            <button class="btn btn-light dropdown-toggle" type="button" id="projectActions" data-bs-toggle="dropdown" aria-expanded="false">
-                                <i class="bi bi-three-dots"></i>
-                            </button>
-                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="projectActions">
-                                {% if project.is_archived %}
-                                    <li>
-                                        <form action="{% url 'tasks:project_unarchive' project.id %}" method="post">
-                                            {% csrf_token %}
-                                            <button type="submit" class="dropdown-item">
-                                                <i class="bi bi-archive-fill"></i> Unarchive
-                                            </button>
-                                        </form>
-                                    </li>
-                                {% else %}
-                                    <li>
-                                        <a class="dropdown-item" href="{% url 'tasks:project_archive' project.id %}">
-                                            <i class="bi bi-archive"></i> Archive
-                                        </a>
-                                    </li>
-                                {% endif %}
-                            </ul>
-                        </div>
-                    {% else %}
-                        <a href="{% url 'tasks:task_create' %}?project={{ project.id }}" class="btn btn-success">
-                            <i class="bi bi-plus"></i> Add Task
-                        </a>
+                    <div class="btn-group" role="group">
+                        <button class="btn btn-outline-dark btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="More Actions" aria-label="More Actions">
+                            <i class="bi bi-three-dots"></i>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            {% if project.is_archived %}
+                                <li>
+                                    <form action="{% url 'tasks:project_unarchive' project.id %}" method="post">
+                                        {% csrf_token %}
+                                        <button type="submit" class="dropdown-item">
+                                            <i class="bi bi-archive-fill"></i> Unarchive
+                                        </button>
+                                    </form>
+                                </li>
+                            {% else %}
+                                <li>
+                                    <a class="dropdown-item text-danger" href="{% url 'tasks:project_archive' project.id %}">
+                                        <i class="bi bi-archive"></i> Archive
+                                    </a>
+                                </li>
+                            {% endif %}
+                        </ul>
+                    </div>
                     {% endif %}
                 </div>
             </div>
