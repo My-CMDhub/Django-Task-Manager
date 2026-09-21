@@ -25,16 +25,8 @@ class Command(BaseCommand):
         supabase_url = os.environ.get('SUPABASE_URL', '')
         service_key = os.environ.get('SUPABASE_SERVICE_KEY', '')
         
-        # If environment variables not available, use the hard-coded values
-        # IMPORTANT: These should be used only for development and testing
-        if not supabase_url:
-            supabase_url = "https://***REMOVED***.supabase.co"
-            self.stdout.write(self.style.WARNING(f"Using hard-coded Supabase URL: {supabase_url}"))
-        
-        if not service_key:
-            service_key = "***REMOVED***"
-            self.stdout.write(self.style.WARNING("Using hard-coded service key (for development only)"))
-
+        # No fallbacks here on purpose: this command deletes users with the service_role key,
+        # which bypasses row-level security. It refuses to run rather than reach for a default.
         if not supabase_url or not service_key:
             self.stdout.write(self.style.ERROR("Missing Supabase URL or service role key."))
             return

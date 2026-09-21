@@ -104,3 +104,5 @@ tasks.json
 # rule
 .cursor
 cursor-memory-bank
+staticfiles/
+cookies.txt

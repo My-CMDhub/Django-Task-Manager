@@ -149,7 +149,7 @@ echo -e "${YELLOW}3. Add a new webhook with the following settings:${NC}"
 echo -e "   - Name: ${GREEN}django-sync${NC}"
 echo -e "   - URL: ${GREEN}${NGROK_URL}/auth/webhooks/supabase/${NC}"
 echo -e "   - Events: Select ${GREEN}user.created${NC}, ${GREEN}user.updated${NC}, and ${GREEN}user.deleted${NC}"
-echo -e "   - Secret: ${GREEN}***REMOVED***${NC} (or the value from your SUPABASE_WEBHOOK_SECRET env var)"
+echo -e "   - Secret: ${GREEN}$SUPABASE_WEBHOOK_SECRET${NC} (or the value from your SUPABASE_WEBHOOK_SECRET env var)"
 echo -e "${YELLOW}4. Save the webhook${NC}"
 
 echo -e "\n${BLUE}Testing your setup:${NC}"

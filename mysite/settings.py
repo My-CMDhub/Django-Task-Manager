@@ -77,11 +77,11 @@ ACCOUNT_RATE_LIMITS = {
 # Supabase configuration
 from supabase import create_client
 
-SUPABASE_URL = os.environ.get('SUPABASE_URL', 'https://***REMOVED***.supabase.co')
-SUPABASE_KEY = os.environ.get('SUPABASE_KEY', '***REMOVED***')
+SUPABASE_URL = os.environ.get('SUPABASE_URL')
+SUPABASE_KEY = os.environ.get('SUPABASE_KEY')
 SUPABASE_ANON_KEY = os.environ.get('SUPABASE_ANON_KEY', SUPABASE_KEY)  # Use SUPABASE_KEY as fallback
-SUPABASE_SERVICE_KEY = os.environ.get('SUPABASE_SERVICE_KEY', '***REMOVED***')
-SUPABASE_WEBHOOK_SECRET = os.environ.get('SUPABASE_WEBHOOK_SECRET', '***REMOVED***')
+SUPABASE_SERVICE_KEY = os.environ.get('SUPABASE_SERVICE_KEY')
+SUPABASE_WEBHOOK_SECRET = os.environ.get('SUPABASE_WEBHOOK_SECRET')
 SUPABASE_SYNC_ENABLED = os.environ.get('SUPABASE_SYNC_ENABLED', 'True').lower() in ('true', '1', 't', 'yes')
 
 # Define BYPASS_SUPABASE and BYPASS_SUPABASE_RATE_LIMITS here with defaults

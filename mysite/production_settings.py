@@ -17,7 +17,7 @@ except ImportError:
     Client = None
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.environ.get('SECRET_KEY', 'replace-with-secure-key-in-pythonanywhere')
+SECRET_KEY = os.environ.get('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
@@ -72,8 +72,8 @@ else:
 
 # Supabase settings
 # You MUST set these environment variables for authentication to work
-SUPABASE_URL = os.environ.get('SUPABASE_URL', 'https://***REMOVED***.supabase.co')
-SUPABASE_KEY = os.environ.get('SUPABASE_KEY', '***REMOVED***')
+SUPABASE_URL = os.environ.get('SUPABASE_URL')
+SUPABASE_KEY = os.environ.get('SUPABASE_KEY')
 SUPABASE_SERVICE_KEY = os.environ.get('SUPABASE_SERVICE_KEY', '')
 
 # Default to bypassing Supabase if service key is not set
